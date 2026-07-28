@@ -391,6 +391,13 @@ a {
   gap: 22px;
 }
 
+.admin-right-column {
+  display: grid;
+  grid-column: 3;
+  gap: 22px;
+  align-self: start;
+}
+
 .admin-section {
   padding: 16px;
   border: 1px solid rgba(217, 215, 207, 0.72);
@@ -474,7 +481,6 @@ a {
 }
 
 .admin-export-section {
-  grid-column: 3;
   background:
     radial-gradient(circle at 100% 0%, rgba(30, 147, 171, 0.09), transparent 35%),
     #fbfaf8;
@@ -2636,6 +2642,10 @@ legend,
     grid-template-columns: 1fr;
   }
 
+  .admin-right-column {
+    grid-column: auto;
+  }
+
   .admin-editor-section,
   .admin-donations,
   .admin-settings-section,
@@ -2646,10 +2656,6 @@ legend,
   .admin-actions {
     flex-direction: column-reverse;
     align-items: stretch;
-  }
-
-  .admin-export-section {
-    grid-column: auto;
   }
 
   .admin-export-range {

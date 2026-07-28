@@ -14,7 +14,7 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="src/styles.css?v=39" />
+    <link rel="stylesheet" href="src/styles.css?v=40" />
   </head>
   <body>
     <header class="topbar">
@@ -167,53 +167,55 @@
           </section>
         </section>
 
-        <section class="admin-section admin-settings-section">
-          <h3>3. Goal and checkout settings</h3>
-          <div class="admin-grid">
+        <div class="admin-right-column">
+          <section class="admin-section admin-settings-section">
+            <h3>3. Goal and checkout settings</h3>
+            <div class="admin-grid">
+              <label>
+                <span>Seed goal</span>
+                <input id="adminSeedGoal" type="number" min="1" step="1" />
+              </label>
+              <label>
+                <span>Starting seeds</span>
+                <input id="adminStartingSeeds" type="number" min="0" step="1" />
+              </label>
+              <label>
+                <span>Seed price</span>
+                <input id="adminSeedPrice" type="number" min="1" step="1" />
+              </label>
+              <label>
+                <span>Amount buttons</span>
+                <input id="adminAmountOptions" type="text" placeholder="6, 11, 33, 99" />
+              </label>
+            </div>
             <label>
-              <span>Seed goal</span>
-              <input id="adminSeedGoal" type="number" min="1" step="1" />
+              <span>Footer text</span>
+              <input id="adminFooterText" type="text" />
             </label>
-            <label>
-              <span>Starting seeds</span>
-              <input id="adminStartingSeeds" type="number" min="0" step="1" />
-            </label>
-            <label>
-              <span>Seed price</span>
-              <input id="adminSeedPrice" type="number" min="1" step="1" />
-            </label>
-            <label>
-              <span>Amount buttons</span>
-              <input id="adminAmountOptions" type="text" placeholder="6, 11, 33, 99" />
-            </label>
-          </div>
-          <label>
-            <span>Footer text</span>
-            <input id="adminFooterText" type="text" />
-          </label>
-          <div class="admin-actions">
-            <button class="button button-secondary" id="resetAdminButton" type="button">Reset defaults</button>
-            <button class="button button-primary" id="saveAdminButton" type="submit">Save changes</button>
-          </div>
-        </section>
+            <div class="admin-actions">
+              <button class="button button-secondary" id="resetAdminButton" type="button">Reset defaults</button>
+              <button class="button button-primary" id="saveAdminButton" type="submit">Save changes</button>
+            </div>
+          </section>
 
-        <section class="admin-section admin-export-section">
-          <div class="admin-export-heading">
-            <h3>4. Donation CSV export</h3>
-            <p>Choose a date range and download the same report-style CSV. The <strong>Item</strong> value exports as <strong>Tip to Creator</strong>.</p>
-          </div>
-          <div class="admin-export-range">
-            <label>
-              <span>From date</span>
-              <input id="adminExportStartDate" type="date" />
-            </label>
-            <label>
-              <span>To date</span>
-              <input id="adminExportEndDate" type="date" />
-            </label>
-          </div>
-          <button class="button button-secondary" id="adminExportCsvButton" type="button">Export CSV</button>
-        </section>
+          <section class="admin-section admin-export-section">
+            <div class="admin-export-heading">
+              <h3>4. Donation CSV export</h3>
+              <p>Choose a date range and download the same report-style CSV. The <strong>Item</strong> value exports as <strong>Tip to Creator</strong>.</p>
+            </div>
+            <div class="admin-export-range">
+              <label>
+                <span>From date</span>
+                <input id="adminExportStartDate" type="date" />
+              </label>
+              <label>
+                <span>To date</span>
+                <input id="adminExportEndDate" type="date" />
+              </label>
+            </div>
+            <button class="button button-secondary" id="adminExportCsvButton" type="button">Export CSV</button>
+          </section>
+        </div>
 
         <section class="admin-section admin-posts-section">
           <div class="admin-posts-heading">
