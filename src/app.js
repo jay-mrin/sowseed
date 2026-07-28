@@ -416,6 +416,19 @@ function normalizePosts(posts) {
 }
 
 function loadState() {
+  if (isBackendConfigured()) {
+    return {
+      donations: [],
+      followed: false,
+      posts: [],
+      settings: {
+        ...cloneDefaultSettings(),
+        startingSeeds: 0,
+      },
+      totals: { donationSeeds: 0 },
+    };
+  }
+
   const saved = localStorage.getItem(STORAGE_KEY);
 
   if (!saved) {
