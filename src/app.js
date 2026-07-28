@@ -650,6 +650,15 @@ function getSeedUnitsFromAmount(amount, seedPrice) {
   return numericAmount / numericSeedPrice;
 }
 
+function formatSeedUnits(value) {
+  const numericValue = Math.max(Number(value) || 0, 0);
+  const roundedValue = Number.isInteger(numericValue)
+    ? String(numericValue)
+    : numericValue.toFixed(2).replace(/\.?0+$/, "");
+
+  return `${roundedValue} Seed${numericValue === 1 ? "" : "s"}`;
+}
+
 function getCurrentGoalCycleAmount(totalAmount, goalAmount) {
   const numericTotal = Math.max(Number(totalAmount) || 0, 0);
   const numericGoal = Math.max(Number(goalAmount) || 0, 0);
@@ -1013,13 +1022,13 @@ function renderSettings() {
   renderParagraphs(elements.aboutExpanded, settings.aboutExpanded);
   elements.topicPill.textContent = settings.topicLabel;
   elements.supportTitle.textContent = settings.supportTitle;
-  elements.seedPriceLabel.textContent = `${money(settings.seedPrice)} each`;
   elements.postAuthorName.textContent = settings.postAuthorName;
   elements.paymentCopy.textContent = settings.paymentCopy;
   elements.paymentNote.textContent = settings.paymentNote;
   elements.footerText.textContent = settings.footerText;
   renderAmountOptions();
   renderAdminForm();
+  updateCheckoutLabel();
 }
 
 function renderTotals() {
@@ -1413,7 +1422,11 @@ function renderAdminCalendar() {
 function updateCheckoutLabel() {
   const amount = Math.max(getAmount(), 0);
   const cadence = currentFrequency === "monthly" ? "/mo" : "";
-  elements.checkoutLabel.textContent = `Donate ${money(amount)}${cadence}`;
+  const seedUnits = getSeedUnitsFromAmount(amount, state.settings.seedPrice);
+
+  elements.checkoutLabel.textContent = "Sow Your Seed 🌱";
+  elements.checkoutButton.setAttribute("aria-label", `Sow Your Seed ${money(amount)}${cadence}`);
+  elements.seedPriceLabel.textContent = formatSeedUnits(seedUnits);
 }
 
 function setAmount(amount) {
