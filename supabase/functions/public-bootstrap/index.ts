@@ -31,6 +31,12 @@ Deno.serve(async (request) => {
       .limit(50);
     if (donationsError) throw donationsError;
 
+    const { data: completedDonationTotals, error: totalsError } = await supabase
+      .from("donations")
+      .select("amount, seed_count")
+      .eq("paypal_status", "COMPLETED");
+    if (totalsError) throw totalsError;
+
     const { data: posts, error: postsError } = await supabase
       .from("posts")
       .select("id, title, description, image_url, published, created_at")
@@ -87,7 +93,7 @@ Deno.serve(async (request) => {
       };
     });
 
-    const donationSeeds = (donations || []).reduce((total, donation) => {
+    const donationSeeds = (completedDonationTotals || []).reduce((total, donation) => {
       return total + (donation.seed_count || amountToSeeds(Number(donation.amount)));
     }, 0);
 

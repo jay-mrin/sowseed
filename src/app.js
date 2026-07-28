@@ -424,6 +424,7 @@ function loadState() {
       followed: false,
       posts: cloneDefaultPosts(),
       settings: cloneDefaultSettings(),
+      totals: { donationSeeds: null },
     };
   }
 
@@ -434,6 +435,7 @@ function loadState() {
       followed: Boolean(parsed.followed),
       posts: normalizePosts(parsed.posts),
       settings: normalizeSettings(parsed.settings),
+      totals: normalizeTotals(parsed.totals),
     };
   } catch {
     return {
@@ -441,12 +443,21 @@ function loadState() {
       followed: false,
       posts: cloneDefaultPosts(),
       settings: cloneDefaultSettings(),
+      totals: { donationSeeds: null },
     };
   }
 }
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function normalizeTotals(totals) {
+  const donationSeeds = Number.parseInt(totals?.donationSeeds, 10);
+
+  return {
+    donationSeeds: Number.isFinite(donationSeeds) && donationSeeds >= 0 ? donationSeeds : null,
+  };
 }
 
 function isBackendConfigured() {
@@ -547,6 +558,7 @@ function applyBootstrap(payload) {
   state.settings = normalizeSettings(payload.settings);
   state.donations = Array.isArray(payload.donations) ? payload.donations : [];
   state.posts = normalizePosts(payload.posts);
+  state.totals = normalizeTotals(payload.totals);
   paymentConfig = {
     paypalClientId: payload.payment?.paypalClientId || PUBLIC_CONFIG.paypalClientId || "",
     currency: payload.payment?.currency || PUBLIC_CONFIG.paypalCurrency || CONFIG.currency,
@@ -589,7 +601,11 @@ function getSeedCountFromAmount(amount) {
 }
 
 function getTotals() {
-  const donationSeeds = state.donations.reduce((total, donation) => total + getSeedCountFromAmount(donation.amount), 0);
+  const backendDonationSeeds = state.totals?.donationSeeds;
+  const donationSeeds =
+    backendReady && Number.isFinite(backendDonationSeeds)
+      ? backendDonationSeeds
+      : state.donations.reduce((total, donation) => total + getSeedCountFromAmount(donation.amount), 0);
   const seeds = state.settings.startingSeeds + donationSeeds;
   return { seeds };
 }
@@ -762,7 +778,8 @@ function renderSettings() {
 
 function renderTotals() {
   const { seeds } = getTotals();
-  const percent = Math.min(Math.round((seeds / state.settings.seedGoal) * 100), 100);
+  const seedGoal = Math.max(Number.parseInt(state.settings.seedGoal, 10) || 1, 1);
+  const percent = Math.min(Math.max(Math.round((seeds / seedGoal) * 100), 0), 100);
 
   elements.progressPercent.textContent = `${percent}% of goal`;
   elements.progressFill.style.width = `${percent}%`;
