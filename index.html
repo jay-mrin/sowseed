@@ -14,7 +14,7 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="src/styles.css?v=36" />
+    <link rel="stylesheet" href="src/styles.css?v=37" />
   </head>
   <body>
     <header class="topbar">
@@ -64,6 +64,8 @@
           </svg>
         </button>
       </div>
+
+      <div class="admin-status" id="adminActionStatus" role="status" aria-live="polite" hidden></div>
 
       <form class="admin-form admin-portal-grid" id="adminForm">
         <section class="admin-section admin-editor-section">
@@ -191,7 +193,7 @@
           </label>
           <div class="admin-actions">
             <button class="button button-secondary" id="resetAdminButton" type="button">Reset defaults</button>
-            <button class="button button-primary" type="submit">Save changes</button>
+            <button class="button button-primary" id="saveAdminButton" type="submit">Save changes</button>
           </div>
         </section>
 
@@ -518,6 +520,6 @@
     </footer>
 
     <script src="src/config.js?v=1"></script>
-    <script src="src/app.js?v=31" defer></script>
+    <script src="src/app.js?v=32" defer></script>
   </body>
 </html>

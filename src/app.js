@@ -197,6 +197,7 @@ const elements = {
   aboutCollapsed: document.querySelector("#aboutCollapsed"),
   aboutExpanded: document.querySelector("#aboutExpanded"),
   aboutTitle: document.querySelector("#aboutTitle"),
+  adminActionStatus: document.querySelector("#adminActionStatus"),
   adminBackdrop: document.querySelector("#adminBackdrop"),
   adminCalendarDetails: document.querySelector("#adminCalendarDetails"),
   adminCalendarGrid: document.querySelector("#adminCalendarGrid"),
@@ -266,6 +267,7 @@ const elements = {
   receiptSummary: document.querySelector("#receiptSummary"),
   receiptTitle: document.querySelector("#receiptTitle"),
   resetAdminButton: document.querySelector("#resetAdminButton"),
+  saveAdminButton: document.querySelector("#saveAdminButton"),
   seedPriceLabel: document.querySelector("#seedPriceLabel"),
   sectionViews: document.querySelectorAll("[data-section-view]"),
   showMoreButtons: document.querySelectorAll("[data-toggle-target]"),
@@ -717,8 +719,17 @@ function getMonthKey(date) {
   return `${safeDate.getFullYear()}-${String(safeDate.getMonth() + 1).padStart(2, "0")}`;
 }
 
-async function loadAdminDonations() {
+async function loadAdminDonations(options = {}) {
   if (!isBackendConfigured() || !getAdminAccessToken()) return;
+
+  const announce = Boolean(options.announce);
+
+  if (announce) {
+    setAdminBusy(true);
+    elements.adminCalendarPrev.disabled = true;
+    elements.adminCalendarNext.disabled = true;
+    setAdminStatus(`Loading donations for ${formatMonthTitle(adminCalendarCursor)}...`, "loading", { persist: true });
+  }
 
   try {
     const payload = await callEdge(`admin-donations?month=${getMonthKey(adminCalendarCursor)}`, {
@@ -734,8 +745,20 @@ async function loadAdminDonations() {
       renderTopSupporters();
       renderTotals();
     }
+
+    if (announce) {
+      setAdminStatus(`Donation calendar loaded for ${formatMonthTitle(adminCalendarCursor)}.`, "success");
+    }
   } catch (error) {
-    showToast(error.message || "Could not load admin donation calendar.");
+    const message = error.message || "Could not load admin donation calendar.";
+    setAdminStatus(message, "error", { persist: true });
+    showToast(message);
+  } finally {
+    if (announce) {
+      elements.adminCalendarPrev.disabled = false;
+      elements.adminCalendarNext.disabled = false;
+      setAdminBusy(false);
+    }
   }
 }
 
@@ -1488,6 +1511,7 @@ function closeAdminLogin() {
 function openAdminPanel() {
   renderAdminForm();
   renderAdminCalendar();
+  setAdminStatus("Admin ready. Make edits, then use Save changes or Publish post.", "info", { persist: true });
   document.body.classList.add("admin-open");
   elements.adminBackdrop.hidden = false;
   elements.adminPanel.setAttribute("aria-hidden", "false");
@@ -1500,6 +1524,10 @@ function openAdminPanel() {
 
 function closeAdminPanel() {
   clearAdminSession();
+  window.clearTimeout(setAdminStatus.timeout);
+  if (elements.adminActionStatus) {
+    elements.adminActionStatus.hidden = true;
+  }
   document.body.classList.remove("admin-open");
   elements.adminBackdrop.classList.remove("is-open");
   elements.adminPanel.classList.remove("is-open");
@@ -1576,6 +1604,7 @@ function previewAdminUpload() {
   if (file.size > MAX_LOCAL_POST_IMAGE_BYTES) {
     elements.adminNewPostImage.value = "";
     elements.adminUploadPreview.hidden = true;
+    setAdminStatus("Choose an image under 2 MB for local preview.", "error", { persist: true });
     showToast("Choose an image under 2 MB for local preview.");
     return;
   }
@@ -1584,6 +1613,7 @@ function previewAdminUpload() {
   elements.adminUploadPreviewImage.src = previewUrl;
   elements.adminUploadFileName.textContent = file.name;
   elements.adminUploadPreview.hidden = false;
+  setAdminStatus("Photo selected. Add post text, then click Publish post.", "dirty", { persist: true });
 }
 
 async function publishAdminPost() {
@@ -1592,97 +1622,127 @@ async function publishAdminPost() {
   const imageFile = getSelectedPostImageFile();
 
   if (!title || !description) {
+    setAdminStatus("Add a post title and description before publishing.", "error", { persist: true });
     showToast("Add a post title and description.");
     return;
   }
 
   if (imageFile && !isBackendConfigured() && imageFile.size > MAX_LOCAL_POST_IMAGE_BYTES) {
+    setAdminStatus("Choose an image under 2 MB for local demo mode.", "error", { persist: true });
     showToast("Choose an image under 2 MB for local demo mode.");
     return;
   }
 
   if (imageFile && isBackendConfigured() && imageFile.size > MAX_REMOTE_POST_IMAGE_BYTES) {
+    setAdminStatus("Choose an image under 5 MB.", "error", { persist: true });
     showToast("Choose an image under 5 MB.");
     return;
   }
 
   if (isBackendConfigured() && getAdminAccessToken()) {
-    const form = new FormData();
-    form.append("title", title);
-    form.append("description", description);
-    if (imageFile) form.append("image", imageFile);
+    await runAdminAction(
+      {
+        button: elements.adminPublishPostButton,
+        busyText: "Publishing...",
+        loadingMessage: imageFile ? "Uploading image and publishing post..." : "Publishing post...",
+        successMessage: "Post published. Gallery and posts refreshed.",
+        errorMessage: "Could not publish post.",
+      },
+      async () => {
+        const form = new FormData();
+        form.append("title", title);
+        form.append("description", description);
+        if (imageFile) form.append("image", imageFile);
 
-    try {
-      const payload = await callEdge("admin-posts", {
-        admin: true,
-        body: form,
-        method: "POST",
+        const payload = await callEdge("admin-posts", {
+          admin: true,
+          body: form,
+          method: "POST",
+        });
+
+        clearAdminPostForm();
+        if (payload.post) {
+          state.posts.unshift(payload.post);
+        }
+        await loadBackendData();
+        renderApp();
+      },
+    );
+
+    return;
+  }
+
+  await runAdminAction(
+    {
+      button: elements.adminPublishPostButton,
+      busyText: "Publishing...",
+      loadingMessage: "Publishing local demo post...",
+      successMessage: "Post published locally. Gallery and posts refreshed.",
+      errorMessage: "Could not publish post.",
+    },
+    async () => {
+      let imageUrl = "assets/sow-cover.png";
+
+      if (imageFile) {
+        imageUrl = await readImageFileAsDataUrl(imageFile);
+      }
+
+      state.posts.unshift({
+        id: createPostId(),
+        title,
+        description,
+        imageUrl,
+        createdAt: new Date().toISOString(),
+        likes: 0,
+        liked: false,
+        comments: [],
       });
 
       clearAdminPostForm();
-      if (payload.post) {
-        state.posts.unshift(payload.post);
-      }
-      await loadBackendData();
+      saveState();
       renderApp();
-      showToast("Post published.");
-    } catch (error) {
-      showToast(error.message || "Could not publish post.");
-    }
-
-    return;
-  }
-
-  let imageUrl = "assets/sow-cover.png";
-
-  if (imageFile) {
-    try {
-      imageUrl = await readImageFileAsDataUrl(imageFile);
-    } catch {
-      showToast("Could not read that image. Try another upload.");
-      return;
-    }
-  }
-
-  state.posts.unshift({
-    id: createPostId(),
-    title,
-    description,
-    imageUrl,
-    createdAt: new Date().toISOString(),
-    likes: 0,
-    liked: false,
-    comments: [],
-  });
-
-  clearAdminPostForm();
-  saveState();
-  renderApp();
-  showToast("Post published.");
+    },
+  );
 }
 
-async function deleteAdminPost(postId) {
+async function deleteAdminPost(postId, triggerButton) {
   if (isBackendConfigured() && getAdminAccessToken()) {
-    try {
-      await callEdge("admin-posts", {
-        admin: true,
-        body: { postId },
-        method: "DELETE",
-      });
-      await loadBackendData();
-      renderApp();
-      showToast("Post deleted.");
-    } catch (error) {
-      showToast(error.message || "Could not delete post.");
-    }
+    await runAdminAction(
+      {
+        button: triggerButton,
+        busyText: "Deleting...",
+        loadingMessage: "Deleting post...",
+        successMessage: "Post deleted. Gallery and posts refreshed.",
+        errorMessage: "Could not delete post.",
+      },
+      async () => {
+        await callEdge("admin-posts", {
+          admin: true,
+          body: { postId },
+          method: "DELETE",
+        });
+        await loadBackendData();
+        renderApp();
+      },
+    );
 
     return;
   }
 
-  state.posts = state.posts.filter((post) => post.id !== postId);
-  saveState();
-  renderApp();
-  showToast("Post deleted.");
+  await runAdminAction(
+    {
+      button: triggerButton,
+      busyText: "Deleting...",
+      loadingMessage: "Deleting local demo post...",
+      successMessage: "Post deleted locally. Gallery and posts refreshed.",
+      errorMessage: "Could not delete post.",
+    },
+    async () => {
+      state.posts = state.posts.filter((post) => post.id !== postId);
+      saveState();
+      renderApp();
+    },
+  );
 }
 
 function findPost(postId) {
@@ -1814,6 +1874,75 @@ function setActiveView(viewId, updateHash = false) {
   }
 }
 
+function setAdminStatus(message, type = "info", options = {}) {
+  if (!elements.adminActionStatus) return;
+
+  window.clearTimeout(setAdminStatus.timeout);
+  elements.adminActionStatus.hidden = false;
+  elements.adminActionStatus.textContent = message;
+  elements.adminActionStatus.className = `admin-status is-${type}`;
+
+  if (!options.persist) {
+    setAdminStatus.timeout = window.setTimeout(() => {
+      elements.adminActionStatus.hidden = true;
+    }, options.delay || 5200);
+  }
+}
+
+function setAdminBusy(isBusy) {
+  elements.adminPanel.setAttribute("aria-busy", String(isBusy));
+  elements.adminPanel.classList.toggle("is-busy", isBusy);
+}
+
+function setButtonBusy(button, isBusy, busyText = "") {
+  if (!button) return;
+
+  if (!button.dataset.defaultText) {
+    button.dataset.defaultText = button.textContent;
+  }
+
+  button.disabled = isBusy;
+  button.classList.toggle("is-loading", isBusy);
+
+  if (busyText) {
+    button.textContent = isBusy ? busyText : button.dataset.defaultText;
+  } else if (!isBusy) {
+    button.textContent = button.dataset.defaultText;
+  }
+}
+
+function getSettingsChangeCount(previousSettings, nextSettings) {
+  const previous = normalizeSettings(previousSettings);
+  const next = normalizeSettings(nextSettings);
+
+  return Object.keys(next).reduce((count, key) => {
+    const before = Array.isArray(previous[key]) ? previous[key].join(",") : String(previous[key] ?? "");
+    const after = Array.isArray(next[key]) ? next[key].join(",") : String(next[key] ?? "");
+    return count + (before === after ? 0 : 1);
+  }, 0);
+}
+
+async function runAdminAction({ button, busyText, loadingMessage, successMessage, errorMessage }, action) {
+  setAdminBusy(true);
+  setButtonBusy(button, true, busyText);
+  setAdminStatus(loadingMessage, "loading", { persist: true });
+
+  try {
+    const result = await action();
+    setAdminStatus(successMessage, "success");
+    showToast(successMessage);
+    return result;
+  } catch (error) {
+    const message = error.message || errorMessage || "Admin action failed.";
+    setAdminStatus(message, "error", { persist: true });
+    showToast(message);
+    return null;
+  } finally {
+    setButtonBusy(button, false, busyText);
+    setAdminBusy(false);
+  }
+}
+
 async function copyText(text, successMessage) {
   try {
     await navigator.clipboard.writeText(text);
@@ -1879,14 +2008,14 @@ elements.adminCalendarPrev.addEventListener("click", () => {
   adminCalendarCursor = new Date(adminCalendarCursor.getFullYear(), adminCalendarCursor.getMonth() - 1, 1);
   selectedAdminCalendarDate = toDateKey(adminCalendarCursor);
   renderAdminCalendar();
-  loadAdminDonations();
+  loadAdminDonations({ announce: true });
 });
 
 elements.adminCalendarNext.addEventListener("click", () => {
   adminCalendarCursor = new Date(adminCalendarCursor.getFullYear(), adminCalendarCursor.getMonth() + 1, 1);
   selectedAdminCalendarDate = toDateKey(adminCalendarCursor);
   renderAdminCalendar();
-  loadAdminDonations();
+  loadAdminDonations({ announce: true });
 });
 
 elements.adminCalendarGrid.addEventListener("click", (event) => {
@@ -1907,10 +2036,18 @@ elements.profileTabs.forEach((tab) => {
 
 elements.adminPublishPostButton.addEventListener("click", publishAdminPost);
 elements.adminNewPostImage.addEventListener("change", previewAdminUpload);
+elements.adminForm.addEventListener("input", (event) => {
+  if (event.target.closest(".admin-posts-section")) {
+    setAdminStatus("Post draft changed. Click Publish post to update Posts and Gallery.", "dirty", { persist: true });
+    return;
+  }
+
+  setAdminStatus("Unsaved page changes. Click Save changes to publish them.", "dirty", { persist: true });
+});
 elements.adminPostList.addEventListener("click", (event) => {
   const deleteButton = event.target.closest("[data-delete-post]");
   if (!deleteButton) return;
-  deleteAdminPost(deleteButton.dataset.deletePost);
+  deleteAdminPost(deleteButton.dataset.deletePost, deleteButton);
 });
 
 [elements.sidebarPostList, elements.postsPageList].forEach((postList) => {
@@ -1980,7 +2117,7 @@ elements.adminLoginForm.addEventListener("submit", async (event) => {
       await signInAdmin(email, password);
       closeAdminLogin();
       openAdminPanel();
-      await loadAdminDonations();
+      await loadAdminDonations({ announce: true });
     } catch (error) {
       elements.adminPasswordError.textContent = error.message || "Could not sign in.";
       elements.adminPasswordInput.select();
@@ -2009,53 +2146,67 @@ elements.adminForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const nextSettings = getAdminSettings();
+  const changedCount = getSettingsChangeCount(state.settings, nextSettings);
+  const successMessage = changedCount
+    ? `Saved ${changedCount} setting${changedCount === 1 ? "" : "s"}. Page preview refreshed.`
+    : "No setting changes found. Page preview refreshed.";
 
-  if (isBackendConfigured() && getAdminAccessToken()) {
-    try {
-      const payload = await callEdge("admin-settings", {
-        admin: true,
-        body: { settings: nextSettings },
-        method: "PUT",
-      });
-      state.settings = normalizeSettings(payload.settings || nextSettings);
-      await loadBackendData();
-    } catch (error) {
-      showToast(error.message || "Could not save admin settings.");
-      return;
-    }
-  } else {
-    state.settings = nextSettings;
-    saveState();
-  }
+  await runAdminAction(
+    {
+      button: elements.saveAdminButton,
+      busyText: "Saving...",
+      loadingMessage: "Saving page settings and refreshing preview...",
+      successMessage,
+      errorMessage: "Could not save admin settings.",
+    },
+    async () => {
+      if (isBackendConfigured() && getAdminAccessToken()) {
+        const payload = await callEdge("admin-settings", {
+          admin: true,
+          body: { settings: nextSettings },
+          method: "PUT",
+        });
+        state.settings = normalizeSettings(payload.settings || nextSettings);
+        await loadBackendData();
+      } else {
+        state.settings = nextSettings;
+        saveState();
+      }
 
-  setAmount(state.settings.amountOptions[0] || state.settings.seedPrice);
-  renderApp();
-  showToast("Admin settings saved.");
+      setAmount(state.settings.amountOptions[0] || state.settings.seedPrice);
+      renderApp();
+    },
+  );
 });
 elements.resetAdminButton.addEventListener("click", async () => {
   const defaults = cloneDefaultSettings();
 
-  if (isBackendConfigured() && getAdminAccessToken()) {
-    try {
-      const payload = await callEdge("admin-settings", {
-        admin: true,
-        body: { settings: defaults },
-        method: "PUT",
-      });
-      state.settings = normalizeSettings(payload.settings || defaults);
-      await loadBackendData();
-    } catch (error) {
-      showToast(error.message || "Could not reset admin settings.");
-      return;
-    }
-  } else {
-    state.settings = defaults;
-    saveState();
-  }
+  await runAdminAction(
+    {
+      button: elements.resetAdminButton,
+      busyText: "Resetting...",
+      loadingMessage: "Restoring default settings and refreshing preview...",
+      successMessage: "Defaults restored. Page preview refreshed.",
+      errorMessage: "Could not reset admin settings.",
+    },
+    async () => {
+      if (isBackendConfigured() && getAdminAccessToken()) {
+        const payload = await callEdge("admin-settings", {
+          admin: true,
+          body: { settings: defaults },
+          method: "PUT",
+        });
+        state.settings = normalizeSettings(payload.settings || defaults);
+        await loadBackendData();
+      } else {
+        state.settings = defaults;
+        saveState();
+      }
 
-  setAmount(state.settings.amountOptions[0]);
-  renderApp();
-  showToast("Admin settings reset.");
+      setAmount(state.settings.amountOptions[0]);
+      renderApp();
+    },
+  );
 });
 
 elements.closeReceiptButton.addEventListener("click", closeReceipt);

@@ -25,6 +25,12 @@
   --topbar-height: 72px;
 }
 
+@keyframes admin-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -301,6 +307,76 @@ a {
 
 .admin-close-button {
   flex: 0 0 auto;
+}
+
+.admin-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(1440px, 100%);
+  min-height: 46px;
+  margin: -8px auto 18px;
+  padding: 12px 16px;
+  border: 1px solid rgba(217, 215, 207, 0.72);
+  border-radius: 18px;
+  color: #1d232c;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(248, 50, 184, 0.12), transparent 32%),
+    #fbfaf8;
+  box-shadow: 0 12px 30px rgba(25, 25, 25, 0.06);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.admin-status[hidden] {
+  display: none;
+}
+
+.admin-status::before {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(248, 50, 184, 0.1);
+  color: #f832b8;
+  content: "i";
+}
+
+.admin-status.is-loading::before {
+  border: 2px solid rgba(248, 50, 184, 0.28);
+  border-right-color: #f832b8;
+  background: transparent;
+  content: "";
+  animation: admin-spin 720ms linear infinite;
+}
+
+.admin-status.is-success {
+  border-color: rgba(34, 226, 120, 0.3);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(34, 226, 120, 0.14), transparent 32%),
+    #fbfaf8;
+}
+
+.admin-status.is-success::before,
+.admin-status.is-dirty::before {
+  content: "🌱";
+}
+
+.admin-status.is-error {
+  border-color: rgba(230, 39, 39, 0.28);
+  color: #8f1616;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(230, 39, 39, 0.12), transparent 32%),
+    #fffafa;
+}
+
+.admin-status.is-error::before {
+  color: #e62727;
+  background: rgba(230, 39, 39, 0.1);
+  content: "!";
 }
 
 .admin-form,
@@ -940,6 +1016,26 @@ main {
 
 .button:hover {
   transform: translateY(-2px);
+}
+
+.button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+  transform: none;
+}
+
+.button.is-loading {
+  pointer-events: none;
+}
+
+.button.is-loading::after {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  content: "";
+  animation: admin-spin 720ms linear infinite;
 }
 
 .button-primary {
