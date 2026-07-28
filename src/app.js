@@ -651,12 +651,9 @@ function getSeedUnitsFromAmount(amount, seedPrice) {
 }
 
 function formatSeedUnits(value) {
-  const numericValue = Math.max(Number(value) || 0, 0);
-  const roundedValue = Number.isInteger(numericValue)
-    ? String(numericValue)
-    : numericValue.toFixed(2).replace(/\.?0+$/, "");
+  const roundedValue = Math.max(Math.round(Number(value) || 0), 0);
 
-  return `${roundedValue} Seed${numericValue === 1 ? "" : "s"}`;
+  return `${roundedValue} Seed${roundedValue === 1 ? "" : "s"}`;
 }
 
 function getCurrentGoalCycleAmount(totalAmount, goalAmount) {
