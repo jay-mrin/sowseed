@@ -14,7 +14,7 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="src/styles.css?v=38" />
+    <link rel="stylesheet" href="src/styles.css?v=39" />
   </head>
   <body>
     <header class="topbar">
@@ -195,28 +195,29 @@
             <button class="button button-secondary" id="resetAdminButton" type="button">Reset defaults</button>
             <button class="button button-primary" id="saveAdminButton" type="submit">Save changes</button>
           </div>
-          <div class="admin-export-card">
-            <div>
-              <h4>Donation CSV export</h4>
-              <p>Choose a date range and download the same report-style CSV. The <strong>Item</strong> value exports as <strong>Tip to Creator</strong>.</p>
-            </div>
-            <div class="admin-export-range">
-              <label>
-                <span>From date</span>
-                <input id="adminExportStartDate" type="date" />
-              </label>
-              <label>
-                <span>To date</span>
-                <input id="adminExportEndDate" type="date" />
-              </label>
-            </div>
-            <button class="button button-secondary" id="adminExportCsvButton" type="button">Export CSV</button>
+        </section>
+
+        <section class="admin-section admin-export-section">
+          <div class="admin-export-heading">
+            <h3>4. Donation CSV export</h3>
+            <p>Choose a date range and download the same report-style CSV. The <strong>Item</strong> value exports as <strong>Tip to Creator</strong>.</p>
           </div>
+          <div class="admin-export-range">
+            <label>
+              <span>From date</span>
+              <input id="adminExportStartDate" type="date" />
+            </label>
+            <label>
+              <span>To date</span>
+              <input id="adminExportEndDate" type="date" />
+            </label>
+          </div>
+          <button class="button button-secondary" id="adminExportCsvButton" type="button">Export CSV</button>
         </section>
 
         <section class="admin-section admin-posts-section">
           <div class="admin-posts-heading">
-            <h3>4. Posts and gallery</h3>
+            <h3>5. Posts and gallery</h3>
             <p>Publish posts with a title, description, and uploaded photo.</p>
           </div>
           <div class="admin-post-editor">
@@ -537,6 +538,6 @@
     </footer>
 
     <script src="src/config.js?v=1"></script>
-    <script src="src/app.js?v=33" defer></script>
+    <script src="src/app.js?v=34" defer></script>
   </body>
 </html>

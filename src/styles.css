@@ -473,43 +473,30 @@ a {
   padding-inline: 16px;
 }
 
-.admin-export-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.75fr) auto;
-  gap: 14px;
-  align-items: center;
-  margin-top: 8px;
-  padding: 14px;
-  border: 1px solid rgba(217, 215, 207, 0.78);
-  border-radius: 18px;
+.admin-export-section {
+  grid-column: 3;
   background:
     radial-gradient(circle at 100% 0%, rgba(30, 147, 171, 0.09), transparent 35%),
-    #f6f4f1;
+    #fbfaf8;
 }
 
-.admin-export-card h4,
-.admin-export-card p {
+.admin-export-heading h3,
+.admin-export-heading p {
   margin: 0;
 }
 
-.admin-export-card h4 {
-  color: #1d232c;
-  font-size: 15px;
-  line-height: 1.2;
-}
-
-.admin-export-card p {
-  margin-top: 5px;
+.admin-export-heading p {
+  margin-top: 8px;
   color: #6c6570;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
-  line-height: 1.35;
+  line-height: 1.45;
 }
 
 .admin-export-range {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
 }
 
 .admin-export-range label {
@@ -517,13 +504,13 @@ a {
 }
 
 .admin-export-range input {
-  min-height: 40px;
-  font-size: 13px;
+  min-height: 42px;
+  font-size: 14px;
 }
 
-.admin-export-card .button {
-  min-height: 42px;
-  padding-inline: 16px;
+.admin-export-section .button {
+  width: 100%;
+  min-height: 44px;
 }
 
 .admin-posts-section {
@@ -2651,7 +2638,8 @@ legend,
 
   .admin-editor-section,
   .admin-donations,
-  .admin-settings-section {
+  .admin-settings-section,
+  .admin-export-section {
     max-height: none;
   }
 
@@ -2660,16 +2648,12 @@ legend,
     align-items: stretch;
   }
 
-  .admin-export-card {
-    grid-template-columns: 1fr;
+  .admin-export-section {
+    grid-column: auto;
   }
 
   .admin-export-range {
     grid-template-columns: 1fr;
-  }
-
-  .admin-export-card .button {
-    width: 100%;
   }
 
   .admin-calendar {

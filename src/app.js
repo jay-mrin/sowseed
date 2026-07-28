@@ -34,6 +34,7 @@ const DONATION_EXPORT_HEADERS = [
   "BuyerEmail",
   "PaymentProvider",
 ];
+const DONATION_EXPORT_HEADER_LINE = `DateTime (UTC),${DONATION_EXPORT_HEADERS.slice(1).map(csvQuotedCell).join(",")}`;
 const FORTUNE_MESSAGES = [
   "In Jesus' name, may the love between you and your soulmate grow softer, deeper, and more patient with every day.",
   "May your soulmate feel cherished by you, and may your family feel surrounded by peace, warmth, and protection.",
@@ -710,9 +711,8 @@ function formatCsvAmount(value) {
   return (Number.parseFloat(value) || 0).toFixed(2);
 }
 
-function csvCell(value) {
-  const text = String(value ?? "");
-  return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+function csvQuotedCell(value) {
+  return `"${String(value ?? "").replaceAll('"', '""')}"`;
 }
 
 function getDonationRawRow(donation) {
@@ -760,8 +760,8 @@ function buildDonationCsv(donations) {
     .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
   const rows = sortedDonations.map(getDonationExportRow);
   const lines = [
-    DONATION_EXPORT_HEADERS.map(csvCell).join(","),
-    ...rows.map((row) => DONATION_EXPORT_HEADERS.map((header) => csvCell(row[header])).join(",")),
+    DONATION_EXPORT_HEADER_LINE,
+    ...rows.map((row) => DONATION_EXPORT_HEADERS.map((header) => csvQuotedCell(row[header])).join(",")),
   ];
 
   return { csv: `\uFEFF${lines.join("\n")}\n`, rowCount: rows.length };
@@ -2220,7 +2220,7 @@ elements.adminPublishPostButton.addEventListener("click", publishAdminPost);
 elements.adminExportCsvButton.addEventListener("click", exportAdminDonationCsv);
 elements.adminNewPostImage.addEventListener("change", previewAdminUpload);
 elements.adminForm.addEventListener("input", (event) => {
-  if (event.target.closest(".admin-export-card")) {
+  if (event.target.closest(".admin-export-section")) {
     setAdminStatus("CSV export range selected. Click Export CSV to download the report.", "dirty", { persist: true });
     return;
   }
