@@ -96,6 +96,9 @@ Deno.serve(async (request) => {
     const donationSeeds = (completedDonationTotals || []).reduce((total, donation) => {
       return total + (donation.seed_count || amountToSeeds(Number(donation.amount)));
     }, 0);
+    const donationAmount = (completedDonationTotals || []).reduce((total, donation) => {
+      return total + Math.max(Number(donation.amount) || 0, 0);
+    }, 0);
 
     return jsonResponse({
       settings: settingsRow?.settings,
@@ -110,6 +113,7 @@ Deno.serve(async (request) => {
       posts: normalizedPosts,
       totals: {
         donationSeeds,
+        donationAmount,
       },
       payment: {
         paypalClientId: Deno.env.get("PAYPAL_CLIENT_ID") || "",

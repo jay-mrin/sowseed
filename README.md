@@ -80,6 +80,8 @@ This app uses PayPal Orders API with the PayPal JavaScript SDK. It renders a Pay
 
 For your India-registered PayPal Business account, keep the public wording as international PayPal/card checkout and test with sandbox buyer accounts before switching to live credentials.
 
+The public meter treats the admin goal as a dollar goal. Donations still display as whole seeds using `$6 = 1 seed`, but the bar fills from dollars received: with a `$600` goal, a `$6` tip adds `1%` and a `$12` tip adds `2%`.
+
 The current backend records `once` or `monthly` as donation frequency, but PayPal Orders captures a single payment. Automatic recurring monthly billing requires a separate PayPal Subscriptions flow with product/plan IDs.
 
 ## Verification

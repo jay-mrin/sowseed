@@ -141,8 +141,8 @@ const FORTUNE_MESSAGES = [
 const DEFAULT_SETTINGS = {
   profileTitle: "Sow Your Seed Here for Your Soulmate 💫",
   followersText: "167 Followers",
-  seedGoal: 230,
-  startingSeeds: 152,
+  seedGoal: 600,
+  startingSeeds: 0,
   seedPrice: 6,
   amountOptions: [6, 11, 33, 99],
   meterHeadline:
@@ -450,7 +450,7 @@ function loadState() {
         ...cloneDefaultSettings(),
         startingSeeds: 0,
       },
-      totals: { donationSeeds: 0 },
+      totals: { donationSeeds: 0, donationAmount: 0 },
     };
   }
 
@@ -462,7 +462,7 @@ function loadState() {
       followed: false,
       posts: cloneDefaultPosts(),
       settings: cloneDefaultSettings(),
-      totals: { donationSeeds: null },
+      totals: { donationSeeds: null, donationAmount: null },
     };
   }
 
@@ -481,7 +481,7 @@ function loadState() {
       followed: false,
       posts: cloneDefaultPosts(),
       settings: cloneDefaultSettings(),
-      totals: { donationSeeds: null },
+      totals: { donationSeeds: null, donationAmount: null },
     };
   }
 }
@@ -492,9 +492,11 @@ function saveState() {
 
 function normalizeTotals(totals) {
   const donationSeeds = Number.parseInt(totals?.donationSeeds, 10);
+  const donationAmount = Number.parseFloat(totals?.donationAmount);
 
   return {
     donationSeeds: Number.isFinite(donationSeeds) && donationSeeds >= 0 ? donationSeeds : null,
+    donationAmount: Number.isFinite(donationAmount) && donationAmount >= 0 ? donationAmount : null,
   };
 }
 
@@ -639,13 +641,24 @@ function getSeedCountFromAmount(amount) {
 }
 
 function getTotals() {
+  const seedPrice = Math.max(Number.parseInt(state.settings.seedPrice, 10) || SEED_DOLLAR_VALUE, 1);
   const backendDonationSeeds = state.totals?.donationSeeds;
   const donationSeeds =
     backendReady && Number.isFinite(backendDonationSeeds)
       ? backendDonationSeeds
       : state.donations.reduce((total, donation) => total + getSeedCountFromAmount(donation.amount), 0);
-  const seeds = state.settings.startingSeeds + donationSeeds;
-  return { seeds };
+  const backendDonationAmount = state.totals?.donationAmount;
+  const donationAmount =
+    backendReady && Number.isFinite(backendDonationAmount)
+      ? backendDonationAmount
+      : backendReady && Number.isFinite(backendDonationSeeds)
+        ? backendDonationSeeds * seedPrice
+        : state.donations.reduce((total, donation) => total + Math.max(Number(donation.amount) || 0, 0), 0);
+  const startingSeeds = Math.max(Number.parseInt(state.settings.startingSeeds, 10) || 0, 0);
+  const seeds = startingSeeds + donationSeeds;
+  const totalAmount = startingSeeds * seedPrice + donationAmount;
+
+  return { seeds, totalAmount };
 }
 
 function getSortedPosts() {
@@ -994,9 +1007,9 @@ function renderSettings() {
 }
 
 function renderTotals() {
-  const { seeds } = getTotals();
-  const seedGoal = Math.max(Number.parseInt(state.settings.seedGoal, 10) || 1, 1);
-  const percent = Math.min(Math.max(Math.round((seeds / seedGoal) * 100), 0), 100);
+  const { totalAmount } = getTotals();
+  const goalAmount = Math.max(Number.parseInt(state.settings.seedGoal, 10) || 1, 1);
+  const percent = Math.min(Math.max(Math.round((totalAmount / goalAmount) * 100), 0), 100);
 
   elements.progressPercent.textContent = `${percent}% of goal`;
   elements.progressFill.style.width = `${percent}%`;
