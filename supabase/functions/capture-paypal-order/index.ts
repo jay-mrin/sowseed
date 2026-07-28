@@ -76,6 +76,51 @@ function buildExportRow(input: {
   };
 }
 
+function getCurrentGoalCycleAmount(totalAmount: number, goalAmount: number) {
+  const numericTotal = Math.max(Number(totalAmount) || 0, 0);
+  const numericGoal = Math.max(Number(goalAmount) || 0, 0);
+
+  if (!numericGoal) return numericTotal;
+
+  return numericTotal % numericGoal;
+}
+
+async function advanceMeterCycle(supabase: ReturnType<typeof getSupabaseAdmin>, amount: number) {
+  const { data: settingsRow, error } = await supabase
+    .from("site_settings")
+    .select("settings")
+    .eq("id", true)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  const settings =
+    settingsRow?.settings && typeof settingsRow.settings === "object" && !Array.isArray(settingsRow.settings)
+      ? settingsRow.settings
+      : {};
+  const goalAmount = Math.max(Number(settings.seedGoal) || 0, 0);
+  const currentAmount = Math.max(Number(settings.meterCurrentAmount ?? settings.startingSeeds) || 0, 0);
+  const nextCurrentAmount = getCurrentGoalCycleAmount(currentAmount + amount, goalAmount);
+
+  const { error: updateError } = await supabase
+    .from("site_settings")
+    .upsert(
+      {
+        id: true,
+        settings: {
+          ...settings,
+          meterCurrentAmount: Number(nextCurrentAmount.toFixed(2)),
+          startingSeeds: 0,
+        },
+      },
+      { onConflict: "id" },
+    );
+
+  if (updateError) throw updateError;
+
+  return nextCurrentAmount;
+}
+
 Deno.serve(async (request) => {
   const options = handleOptions(request);
   if (options) return options;
@@ -178,11 +223,13 @@ Deno.serve(async (request) => {
     if (donationError) throw donationError;
 
     await supabase.from("donor_tokens").update({ donation_id: donation.id }).eq("id", donorToken.id);
+    const meterCurrentAmount = await advanceMeterCycle(supabase, capturedAmount);
 
     return jsonResponse({
       donation,
       fortune: fortune.message,
       donorAccessToken: rawDonorToken,
+      meterCurrentAmount,
     });
   } catch (error) {
     return errorResponse("Could not capture PayPal order.", 500, String(error));

@@ -142,6 +142,7 @@ const DEFAULT_SETTINGS = {
   followersText: "167 Followers",
   seedGoal: 600,
   startingSeeds: 0,
+  meterCurrentAmount: 0,
   seedPrice: 6,
   amountOptions: [6, 11, 33, 99],
   meterHeadline:
@@ -315,7 +316,7 @@ const elements = {
     profileTitle: document.querySelector("#adminProfileTitle"),
     seedGoal: document.querySelector("#adminSeedGoal"),
     seedPrice: document.querySelector("#adminSeedPrice"),
-    startingSeeds: document.querySelector("#adminStartingSeeds"),
+    meterCurrentAmount: document.querySelector("#adminMeterCurrentAmount"),
     supportTitle: document.querySelector("#adminSupportTitle"),
     topicLabel: document.querySelector("#adminTopicLabel"),
   },
@@ -369,6 +370,9 @@ function normalizeSettings(settings) {
 
   next.seedGoal = Math.max(Number.parseInt(next.seedGoal, 10) || defaults.seedGoal, 1);
   next.startingSeeds = Math.max(Number.parseInt(next.startingSeeds, 10) || 0, 0);
+  next.meterCurrentAmount = Math.max(Number.parseFloat(next.meterCurrentAmount ?? next.startingSeeds) || 0, 0);
+  next.meterCurrentAmount = getCurrentGoalCycleAmount(next.meterCurrentAmount, next.seedGoal);
+  next.startingSeeds = 0;
   next.seedPrice = Math.max(Number.parseInt(next.seedPrice, 10) || defaults.seedPrice, 1);
   next.amountOptions = parseAmountOptions(next.amountOptions);
 
@@ -1250,7 +1254,7 @@ function renderAdminForm() {
   const inputs = elements.adminInputs;
 
   inputs.seedGoal.value = settings.seedGoal;
-  inputs.startingSeeds.value = settings.startingSeeds;
+  inputs.meterCurrentAmount.value = settings.meterCurrentAmount;
   inputs.seedPrice.value = settings.seedPrice;
   inputs.amountOptions.value = settings.amountOptions.join(", ");
   inputs.profileTitle.value = settings.profileTitle;
@@ -1769,9 +1773,9 @@ function getAdminSettings() {
     paymentNote: inputs.paymentNote.value,
     postAuthorName: inputs.postAuthorName.value,
     profileTitle: inputs.profileTitle.value,
+    meterCurrentAmount: inputs.meterCurrentAmount.value,
     seedGoal: inputs.seedGoal.value,
     seedPrice: inputs.seedPrice.value,
-    startingSeeds: inputs.startingSeeds.value,
     supportTitle: inputs.supportTitle.value,
     topicLabel: inputs.topicLabel.value,
   });

@@ -80,7 +80,7 @@ This app uses PayPal Orders API with the PayPal JavaScript SDK. It renders a Pay
 
 For your India-registered PayPal Business account, keep the public wording as international PayPal/card checkout and test with sandbox buyer accounts before switching to live credentials.
 
-The public meter is a repeating goal cycle, separate from the full donation record/calendar/export. It treats the admin goal as a dollar goal and converts both the goal and paid amounts into seed units. With `$6 = 1 seed` and a `$600` goal, the target is `100 seeds`; a `$6` tip adds `1%`, a `$12` tip adds `2%`, and custom amounts contribute as `amount / 6`. When the current cycle reaches `$600`, the visible meter resets to `0%` and starts the next cycle.
+The public meter is a repeating goal cycle, separate from the full donation record/calendar/export. Admin sets the goal amount and current cycle amount in dollars. With `$6 = 1 seed` and a `$600` goal, the target is `100 seeds`; a `$6` tip adds `1%`, a `$12` tip adds `2%`, and custom amounts contribute as `amount / 6`. When the current cycle reaches `$600`, the visible meter resets to `0%` and starts the next cycle.
 
 The current backend records `once` or `monthly` as donation frequency, but PayPal Orders captures a single payment. Automatic recurring monthly billing requires a separate PayPal Subscriptions flow with product/plan IDs.
 

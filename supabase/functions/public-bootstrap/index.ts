@@ -1,20 +1,6 @@
 import { errorResponse, handleOptions, jsonResponse } from "../_shared/http.ts";
 import { getSupabaseAdmin, hashText } from "../_shared/supabase.ts";
 
-function getRawPaymentRow(donation: Record<string, any>) {
-  const rawPayment = donation.raw_payment;
-  return rawPayment && typeof rawPayment === "object" && !Array.isArray(rawPayment) ? rawPayment.row : null;
-}
-
-function countsTowardPublicMeter(donation: Record<string, any>) {
-  const rawRow = getRawPaymentRow(donation);
-  const item = String(rawRow?.Item || rawRow?.item || "").trim().toLowerCase();
-
-  if (!item) return true;
-
-  return item === "tip to creator";
-}
-
 function getCurrentGoalCycleAmount(totalAmount: number, goalAmount: number) {
   const numericTotal = Math.max(Number(totalAmount) || 0, 0);
   const numericGoal = Math.max(Number(goalAmount) || 0, 0);
@@ -43,6 +29,7 @@ Deno.serve(async (request) => {
     const settings = settingsRow?.settings && typeof settingsRow.settings === "object" ? settingsRow.settings : {};
     const goalAmount = Math.max(Number(settings.seedGoal) || 0, 0);
     const seedPrice = Math.max(Number(settings.seedPrice) || 6, 1);
+    const rawCurrentAmount = Math.max(Number(settings.meterCurrentAmount ?? settings.startingSeeds) || 0, 0);
 
     const { data: donations, error: donationsError } = await supabase
       .from("donations")
@@ -51,12 +38,6 @@ Deno.serve(async (request) => {
       .order("created_at", { ascending: false })
       .limit(50);
     if (donationsError) throw donationsError;
-
-    const { data: completedDonationTotals, error: totalsError } = await supabase
-      .from("donations")
-      .select("amount, seed_count, raw_payment")
-      .eq("paypal_status", "COMPLETED");
-    if (totalsError) throw totalsError;
 
     const { data: posts, error: postsError } = await supabase
       .from("posts")
@@ -114,11 +95,7 @@ Deno.serve(async (request) => {
       };
     });
 
-    const meterDonations = (completedDonationTotals || []).filter(countsTowardPublicMeter);
-    const totalMeterDonationAmount = meterDonations.reduce((total, donation) => {
-      return total + Math.max(Number(donation.amount) || 0, 0);
-    }, 0);
-    const donationAmount = goalAmount ? getCurrentGoalCycleAmount(totalMeterDonationAmount, goalAmount) : totalMeterDonationAmount;
+    const donationAmount = goalAmount ? getCurrentGoalCycleAmount(rawCurrentAmount, goalAmount) : rawCurrentAmount;
     const donationSeeds = Math.floor(donationAmount / seedPrice);
 
     return jsonResponse({

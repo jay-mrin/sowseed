@@ -189,6 +189,7 @@ values (
     'followersText', '167 Followers',
     'seedGoal', 600,
     'startingSeeds', 0,
+    'meterCurrentAmount', 0,
     'seedPrice', 6,
     'amountOptions', jsonb_build_array(6, 11, 33, 99),
     'meterHeadline', '༺💗༻ Click the Donate button to sow your seed now. With every seed you sow, you whisper to the universe: “Bring my soulmate to me.” 🌱💫🌹',
