@@ -19,7 +19,7 @@ const DONATION_EXPORT_HEADERS = [
   "DateTime (UTC)",
   "From",
   "Message",
-  "Tip",
+  "Item",
   "Received",
   "Given",
   "Currency",
@@ -226,6 +226,8 @@ const elements = {
   adminCalendarTitle: document.querySelector("#adminCalendarTitle"),
   adminEmailInput: document.querySelector("#adminEmailInput"),
   adminExportCsvButton: document.querySelector("#adminExportCsvButton"),
+  adminExportEndDate: document.querySelector("#adminExportEndDate"),
+  adminExportStartDate: document.querySelector("#adminExportStartDate"),
   adminForm: document.querySelector("#adminForm"),
   adminLoginDialog: document.querySelector("#adminLoginDialog"),
   adminLoginForm: document.querySelector("#adminLoginForm"),
@@ -731,14 +733,11 @@ function getPaymentProviderLabel(value) {
 }
 
 function getDonationExportRow(donation) {
-  const rawItem = getDonationRawValue(donation, "Item", "");
-  const tipValue = String(rawItem).trim() && rawItem !== "Ko-fi Support" ? rawItem : "Tip";
-
   return {
     "DateTime (UTC)": getDonationRawValue(donation, "DateTime (UTC)", formatCsvDateTime(donation.createdAt)),
     From: getDonationRawValue(donation, "From", donation.name || "Supporter"),
     Message: getDonationRawValue(donation, "Message", donation.message || ""),
-    Tip: tipValue,
+    Item: "Tip to Creator",
     Received: getDonationRawValue(donation, "Received", formatCsvAmount(donation.amount)),
     Given: getDonationRawValue(donation, "Given", "0"),
     Currency: getDonationRawValue(donation, "Currency", CONFIG.currency),
@@ -768,6 +767,33 @@ function buildDonationCsv(donations) {
   return { csv: `\uFEFF${lines.join("\n")}\n`, rowCount: rows.length };
 }
 
+function getAdminExportRange() {
+  const startDate = elements.adminExportStartDate?.value || "";
+  const endDate = elements.adminExportEndDate?.value || "";
+
+  if (startDate && endDate && startDate > endDate) {
+    throw new Error("Choose a start date before the end date.");
+  }
+
+  return { startDate, endDate };
+}
+
+function getDonationExportQuery({ startDate, endDate }) {
+  const params = new URLSearchParams({ export: "csv" });
+
+  if (startDate) params.set("startDate", startDate);
+  if (endDate) params.set("endDate", endDate);
+
+  return `admin-donations?${params.toString()}`;
+}
+
+function getDonationExportFilename({ startDate, endDate }) {
+  const dateStamp = toDateKey(new Date());
+  const rangeLabel = startDate || endDate ? `${startDate || "start"}-to-${endDate || "today"}` : dateStamp;
+
+  return `sow-your-seed-donations-${rangeLabel}.csv`;
+}
+
 function downloadTextFile(filename, text, mimeType = "text/csv;charset=utf-8") {
   const blob = new Blob([text], { type: mimeType });
   const url = URL.createObjectURL(blob);
@@ -787,24 +813,38 @@ async function exportAdminDonationCsv() {
     return;
   }
 
+  let range;
+  try {
+    range = getAdminExportRange();
+  } catch (error) {
+    setAdminStatus(error.message, "error", { persist: true });
+    showToast(error.message);
+    return;
+  }
+
+  const rangeText =
+    range.startDate || range.endDate
+      ? ` from ${range.startDate || "the first donation"} to ${range.endDate || "today"}`
+      : "";
+
   await runAdminAction(
     {
       button: elements.adminExportCsvButton,
       busyText: "Exporting...",
-      loadingMessage: "Preparing donation CSV export...",
-      successMessage: (result) => `Exported ${result?.rowCount || 0} donation row${result?.rowCount === 1 ? "" : "s"} as CSV.`,
+      loadingMessage: `Preparing donation CSV export${rangeText}...`,
+      successMessage: (result) =>
+        `Exported ${result?.rowCount || 0} donation row${result?.rowCount === 1 ? "" : "s"}${rangeText} as CSV.`,
       errorMessage: "Could not export donation CSV.",
     },
     async () => {
-      const payload = await callEdge("admin-donations?export=csv", {
+      const payload = await callEdge(getDonationExportQuery(range), {
         admin: true,
         method: "GET",
       });
       const donations = Array.isArray(payload.donations) ? payload.donations : [];
       const { csv, rowCount } = buildDonationCsv(donations);
-      const dateStamp = toDateKey(new Date());
 
-      downloadTextFile(`sow-your-seed-donations-${dateStamp}.csv`, csv);
+      downloadTextFile(getDonationExportFilename(range), csv);
       return { rowCount };
     },
   );
@@ -2180,6 +2220,11 @@ elements.adminPublishPostButton.addEventListener("click", publishAdminPost);
 elements.adminExportCsvButton.addEventListener("click", exportAdminDonationCsv);
 elements.adminNewPostImage.addEventListener("change", previewAdminUpload);
 elements.adminForm.addEventListener("input", (event) => {
+  if (event.target.closest(".admin-export-card")) {
+    setAdminStatus("CSV export range selected. Click Export CSV to download the report.", "dirty", { persist: true });
+    return;
+  }
+
   if (event.target.closest(".admin-posts-section")) {
     setAdminStatus("Post draft changed. Click Publish post to update Posts and Gallery.", "dirty", { persist: true });
     return;

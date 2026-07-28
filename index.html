@@ -14,7 +14,7 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="src/styles.css?v=37" />
+    <link rel="stylesheet" href="src/styles.css?v=38" />
   </head>
   <body>
     <header class="topbar">
@@ -198,7 +198,17 @@
           <div class="admin-export-card">
             <div>
               <h4>Donation CSV export</h4>
-              <p>Download a report-style CSV of all tips. The old Ko-fi support column exports as <strong>Tip</strong>.</p>
+              <p>Choose a date range and download the same report-style CSV. The <strong>Item</strong> value exports as <strong>Tip to Creator</strong>.</p>
+            </div>
+            <div class="admin-export-range">
+              <label>
+                <span>From date</span>
+                <input id="adminExportStartDate" type="date" />
+              </label>
+              <label>
+                <span>To date</span>
+                <input id="adminExportEndDate" type="date" />
+              </label>
             </div>
             <button class="button button-secondary" id="adminExportCsvButton" type="button">Export CSV</button>
           </div>
@@ -527,6 +537,6 @@
     </footer>
 
     <script src="src/config.js?v=1"></script>
-    <script src="src/app.js?v=32" defer></script>
+    <script src="src/app.js?v=33" defer></script>
   </body>
 </html>

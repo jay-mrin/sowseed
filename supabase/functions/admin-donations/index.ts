@@ -1,6 +1,15 @@
 import { errorResponse, handleOptions, jsonResponse } from "../_shared/http.ts";
 import { requireAdmin } from "../_shared/supabase.ts";
 
+function isDateOnly(value: string | null) {
+  return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
+}
+
+function getUtcDayStart(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
 Deno.serve(async (request) => {
   const options = handleOptions(request);
   if (options) return options;
@@ -10,6 +19,8 @@ Deno.serve(async (request) => {
     const url = new URL(request.url);
     const month = url.searchParams.get("month");
     const exportRows = url.searchParams.get("export") === "csv";
+    const startDate = url.searchParams.get("startDate");
+    const endDate = url.searchParams.get("endDate");
     let query = supabase
       .from("donations")
       .select(
@@ -30,6 +41,16 @@ Deno.serve(async (request) => {
         ].join(", "),
       )
       .order("created_at", { ascending: false });
+
+    if (exportRows && isDateOnly(startDate)) {
+      query = query.gte("created_at", getUtcDayStart(startDate as string).toISOString());
+    }
+
+    if (exportRows && isDateOnly(endDate)) {
+      const end = getUtcDayStart(endDate as string);
+      end.setUTCDate(end.getUTCDate() + 1);
+      query = query.lt("created_at", end.toISOString());
+    }
 
     if (!exportRows && month && /^\d{4}-\d{2}$/.test(month)) {
       const [year, monthIndex] = month.split("-").map(Number);

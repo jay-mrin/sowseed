@@ -475,7 +475,7 @@ a {
 
 .admin-export-card {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.75fr) auto;
   gap: 14px;
   align-items: center;
   margin-top: 8px;
@@ -504,6 +504,21 @@ a {
   font-size: 12px;
   font-weight: 700;
   line-height: 1.35;
+}
+
+.admin-export-range {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-export-range label {
+  gap: 6px;
+}
+
+.admin-export-range input {
+  min-height: 40px;
+  font-size: 13px;
 }
 
 .admin-export-card .button {
@@ -2646,6 +2661,10 @@ legend,
   }
 
   .admin-export-card {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-export-range {
     grid-template-columns: 1fr;
   }
 
