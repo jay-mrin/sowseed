@@ -1,6 +1,7 @@
 .env
 .env.*
 !.env.example
+keys.txt
 node_modules/
 .DS_Store
 desktop-check.png
