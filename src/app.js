@@ -15,6 +15,25 @@ const MAX_REMOTE_POST_IMAGE_BYTES = 5 * 1024 * 1024;
 const LEGACY_FOOTER_TEXT = "Sow Your Seed exists to make support feel generous, clear, and personal.";
 const DEFAULT_FOOTER_TEXT =
   "This is a creator tipping platform where supporters can voluntarily tip the creator for their work. Tips are freely given, paid directly to the creator, and are not tied to any indirect exchange, guaranteed result, or required purchase.";
+const DONATION_EXPORT_HEADERS = [
+  "DateTime (UTC)",
+  "From",
+  "Message",
+  "Tip",
+  "Received",
+  "Given",
+  "Currency",
+  "TransactionType",
+  "TransactionId",
+  "Reference",
+  "SalesTax",
+  "SalesTaxPercentage",
+  "SalesTaxIncludesShipping",
+  "BuyerCountry",
+  "BuyerStateOrProvince",
+  "BuyerEmail",
+  "PaymentProvider",
+];
 const FORTUNE_MESSAGES = [
   "In Jesus' name, may the love between you and your soulmate grow softer, deeper, and more patient with every day.",
   "May your soulmate feel cherished by you, and may your family feel surrounded by peace, warmth, and protection.",
@@ -206,6 +225,7 @@ const elements = {
   adminCalendarSummary: document.querySelector("#adminCalendarSummary"),
   adminCalendarTitle: document.querySelector("#adminCalendarTitle"),
   adminEmailInput: document.querySelector("#adminEmailInput"),
+  adminExportCsvButton: document.querySelector("#adminExportCsvButton"),
   adminForm: document.querySelector("#adminForm"),
   adminLoginDialog: document.querySelector("#adminLoginDialog"),
   adminLoginForm: document.querySelector("#adminLoginForm"),
@@ -667,6 +687,127 @@ function readableTime(dateString) {
     hour: "numeric",
     minute: "2-digit",
   }).format(new Date(dateString));
+}
+
+function padDatePart(value) {
+  return String(value).padStart(2, "0");
+}
+
+function formatCsvDateTime(dateString) {
+  const date = new Date(dateString || Date.now());
+  const safeDate = Number.isNaN(date.getTime()) ? new Date() : date;
+
+  return [
+    padDatePart(safeDate.getUTCMonth() + 1),
+    padDatePart(safeDate.getUTCDate()),
+    safeDate.getUTCFullYear(),
+  ].join("/") + ` ${padDatePart(safeDate.getUTCHours())}:${padDatePart(safeDate.getUTCMinutes())}`;
+}
+
+function formatCsvAmount(value) {
+  return (Number.parseFloat(value) || 0).toFixed(2);
+}
+
+function csvCell(value) {
+  const text = String(value ?? "");
+  return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+function getDonationRawRow(donation) {
+  const rawPayment = donation?.rawPayment && typeof donation.rawPayment === "object" ? donation.rawPayment : {};
+  return rawPayment.row && typeof rawPayment.row === "object" ? rawPayment.row : rawPayment;
+}
+
+function getDonationRawValue(donation, key, fallback = "") {
+  const rawRow = getDonationRawRow(donation);
+  const value = rawRow[key];
+  return value === undefined || value === null ? fallback : value;
+}
+
+function getPaymentProviderLabel(value) {
+  const provider = String(value || "").trim();
+  if (!provider) return "PayPal";
+  return provider.toLowerCase() === "paypal" ? "PayPal" : provider;
+}
+
+function getDonationExportRow(donation) {
+  const rawItem = getDonationRawValue(donation, "Item", "");
+  const tipValue = String(rawItem).trim() && rawItem !== "Ko-fi Support" ? rawItem : "Tip";
+
+  return {
+    "DateTime (UTC)": getDonationRawValue(donation, "DateTime (UTC)", formatCsvDateTime(donation.createdAt)),
+    From: getDonationRawValue(donation, "From", donation.name || "Supporter"),
+    Message: getDonationRawValue(donation, "Message", donation.message || ""),
+    Tip: tipValue,
+    Received: getDonationRawValue(donation, "Received", formatCsvAmount(donation.amount)),
+    Given: getDonationRawValue(donation, "Given", "0"),
+    Currency: getDonationRawValue(donation, "Currency", CONFIG.currency),
+    TransactionType: getDonationRawValue(donation, "TransactionType", "Tip"),
+    TransactionId: getDonationRawValue(donation, "TransactionId", donation.captureId || donation.id || ""),
+    Reference: getDonationRawValue(donation, "Reference", donation.orderId || ""),
+    SalesTax: getDonationRawValue(donation, "SalesTax", ""),
+    SalesTaxPercentage: getDonationRawValue(donation, "SalesTaxPercentage", ""),
+    SalesTaxIncludesShipping: getDonationRawValue(donation, "SalesTaxIncludesShipping", ""),
+    BuyerCountry: getDonationRawValue(donation, "BuyerCountry", ""),
+    BuyerStateOrProvince: getDonationRawValue(donation, "BuyerStateOrProvince", ""),
+    BuyerEmail: getDonationRawValue(donation, "BuyerEmail", donation.payerEmail || ""),
+    PaymentProvider: getPaymentProviderLabel(getDonationRawValue(donation, "PaymentProvider", donation.paymentMethod)),
+  };
+}
+
+function buildDonationCsv(donations) {
+  const sortedDonations = donations
+    .slice()
+    .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+  const rows = sortedDonations.map(getDonationExportRow);
+  const lines = [
+    DONATION_EXPORT_HEADERS.map(csvCell).join(","),
+    ...rows.map((row) => DONATION_EXPORT_HEADERS.map((header) => csvCell(row[header])).join(",")),
+  ];
+
+  return { csv: `\uFEFF${lines.join("\n")}\n`, rowCount: rows.length };
+}
+
+function downloadTextFile(filename, text, mimeType = "text/csv;charset=utf-8") {
+  const blob = new Blob([text], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function exportAdminDonationCsv() {
+  if (!isBackendConfigured() || !getAdminAccessToken()) {
+    setAdminStatus("Sign in as admin before exporting donations.", "error", { persist: true });
+    showToast("Sign in as admin before exporting donations.");
+    return;
+  }
+
+  await runAdminAction(
+    {
+      button: elements.adminExportCsvButton,
+      busyText: "Exporting...",
+      loadingMessage: "Preparing donation CSV export...",
+      successMessage: (result) => `Exported ${result?.rowCount || 0} donation row${result?.rowCount === 1 ? "" : "s"} as CSV.`,
+      errorMessage: "Could not export donation CSV.",
+    },
+    async () => {
+      const payload = await callEdge("admin-donations?export=csv", {
+        admin: true,
+        method: "GET",
+      });
+      const donations = Array.isArray(payload.donations) ? payload.donations : [];
+      const { csv, rowCount } = buildDonationCsv(donations);
+      const dateStamp = toDateKey(new Date());
+
+      downloadTextFile(`sow-your-seed-donations-${dateStamp}.csv`, csv);
+      return { rowCount };
+    },
+  );
 }
 
 function toDateKey(date) {
@@ -1929,8 +2070,9 @@ async function runAdminAction({ button, busyText, loadingMessage, successMessage
 
   try {
     const result = await action();
-    setAdminStatus(successMessage, "success");
-    showToast(successMessage);
+    const message = typeof successMessage === "function" ? successMessage(result) : successMessage;
+    setAdminStatus(message, "success");
+    showToast(message);
     return result;
   } catch (error) {
     const message = error.message || errorMessage || "Admin action failed.";
@@ -2035,6 +2177,7 @@ elements.profileTabs.forEach((tab) => {
 });
 
 elements.adminPublishPostButton.addEventListener("click", publishAdminPost);
+elements.adminExportCsvButton.addEventListener("click", exportAdminDonationCsv);
 elements.adminNewPostImage.addEventListener("change", previewAdminUpload);
 elements.adminForm.addEventListener("input", (event) => {
   if (event.target.closest(".admin-posts-section")) {
