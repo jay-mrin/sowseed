@@ -1,0 +1,25 @@
+project_id = "sow-your-seed"
+
+[functions.public-bootstrap]
+verify_jwt = false
+
+[functions.create-paypal-order]
+verify_jwt = false
+
+[functions.capture-paypal-order]
+verify_jwt = false
+
+[functions.paypal-webhook]
+verify_jwt = false
+
+[functions.admin-settings]
+verify_jwt = true
+
+[functions.admin-posts]
+verify_jwt = true
+
+[functions.admin-donations]
+verify_jwt = true
+
+[functions.post-engagement]
+verify_jwt = false
