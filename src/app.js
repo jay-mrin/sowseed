@@ -639,6 +639,13 @@ function getSeedCountFromAmount(amount) {
   return Math.max(1, Math.round(numericAmount / SEED_DOLLAR_VALUE));
 }
 
+function getSeedUnitsFromAmount(amount, seedPrice) {
+  const numericAmount = Math.max(Number(amount) || 0, 0);
+  const numericSeedPrice = Math.max(Number(seedPrice) || SEED_DOLLAR_VALUE, 1);
+
+  return numericAmount / numericSeedPrice;
+}
+
 function getTotals() {
   const seedPrice = Math.max(Number.parseInt(state.settings.seedPrice, 10) || SEED_DOLLAR_VALUE, 1);
   const backendDonationSeeds = state.totals?.donationSeeds;
@@ -653,11 +660,9 @@ function getTotals() {
       : backendReady && Number.isFinite(backendDonationSeeds)
         ? backendDonationSeeds * seedPrice
         : state.donations.reduce((total, donation) => total + Math.max(Number(donation.amount) || 0, 0), 0);
-  const startingSeeds = Math.max(Number.parseInt(state.settings.startingSeeds, 10) || 0, 0);
-  const seeds = startingSeeds + donationSeeds;
-  const totalAmount = startingSeeds * seedPrice + donationAmount;
+  const paidSeedUnits = getSeedUnitsFromAmount(donationAmount, seedPrice);
 
-  return { seeds, totalAmount };
+  return { donationAmount, paidSeedUnits, seeds: donationSeeds };
 }
 
 function getSortedPosts() {
@@ -1005,12 +1010,16 @@ function renderSettings() {
 }
 
 function renderTotals() {
-  const { totalAmount } = getTotals();
+  const { paidSeedUnits } = getTotals();
+  const seedPrice = Math.max(Number.parseInt(state.settings.seedPrice, 10) || SEED_DOLLAR_VALUE, 1);
   const goalAmount = Math.max(Number.parseInt(state.settings.seedGoal, 10) || 1, 1);
-  const percent = Math.min(Math.max(Math.round((totalAmount / goalAmount) * 100), 0), 100);
+  const goalSeedUnits = goalAmount / seedPrice;
+  const rawPercent = goalSeedUnits > 0 ? (paidSeedUnits / goalSeedUnits) * 100 : 0;
+  const boundedPercent = Math.min(Math.max(rawPercent, 0), 100);
+  const displayPercent = Math.round(boundedPercent);
 
-  elements.progressPercent.textContent = `${percent}% of goal`;
-  elements.progressFill.style.width = `${percent}%`;
+  elements.progressPercent.textContent = `${displayPercent}% of goal`;
+  elements.progressFill.style.width = `${boundedPercent}%`;
 }
 
 function renderFeed() {
