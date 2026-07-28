@@ -646,6 +646,15 @@ function getSeedUnitsFromAmount(amount, seedPrice) {
   return numericAmount / numericSeedPrice;
 }
 
+function getCurrentGoalCycleAmount(totalAmount, goalAmount) {
+  const numericTotal = Math.max(Number(totalAmount) || 0, 0);
+  const numericGoal = Math.max(Number(goalAmount) || 0, 0);
+
+  if (!numericGoal) return 0;
+
+  return numericTotal % numericGoal;
+}
+
 function getTotals() {
   const seedPrice = Math.max(Number.parseInt(state.settings.seedPrice, 10) || SEED_DOLLAR_VALUE, 1);
   const backendDonationSeeds = state.totals?.donationSeeds;
@@ -1010,13 +1019,15 @@ function renderSettings() {
 }
 
 function renderTotals() {
-  const { paidSeedUnits } = getTotals();
+  const { donationAmount } = getTotals();
   const seedPrice = Math.max(Number.parseInt(state.settings.seedPrice, 10) || SEED_DOLLAR_VALUE, 1);
   const goalAmount = Math.max(Number.parseInt(state.settings.seedGoal, 10) || 1, 1);
+  const cycleAmount = getCurrentGoalCycleAmount(donationAmount, goalAmount);
+  const paidSeedUnits = getSeedUnitsFromAmount(cycleAmount, seedPrice);
   const goalSeedUnits = goalAmount / seedPrice;
   const rawPercent = goalSeedUnits > 0 ? (paidSeedUnits / goalSeedUnits) * 100 : 0;
   const boundedPercent = Math.min(Math.max(rawPercent, 0), 100);
-  const displayPercent = Math.round(boundedPercent);
+  const displayPercent = Math.floor(boundedPercent);
 
   elements.progressPercent.textContent = `${displayPercent}% of goal`;
   elements.progressFill.style.width = `${boundedPercent}%`;

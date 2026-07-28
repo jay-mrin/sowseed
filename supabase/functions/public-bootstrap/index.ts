@@ -1,11 +1,6 @@
 import { errorResponse, handleOptions, jsonResponse } from "../_shared/http.ts";
 import { getSupabaseAdmin, hashText } from "../_shared/supabase.ts";
 
-function amountToSeeds(amount: number) {
-  if (!amount) return 0;
-  return Math.max(1, Math.round(amount / 6));
-}
-
 function getRawPaymentRow(donation: Record<string, any>) {
   const rawPayment = donation.raw_payment;
   return rawPayment && typeof rawPayment === "object" && !Array.isArray(rawPayment) ? rawPayment.row : null;
@@ -18,6 +13,15 @@ function countsTowardPublicMeter(donation: Record<string, any>) {
   if (!item) return true;
 
   return item === "tip to creator";
+}
+
+function getCurrentGoalCycleAmount(totalAmount: number, goalAmount: number) {
+  const numericTotal = Math.max(Number(totalAmount) || 0, 0);
+  const numericGoal = Math.max(Number(goalAmount) || 0, 0);
+
+  if (!numericGoal) return 0;
+
+  return numericTotal % numericGoal;
 }
 
 Deno.serve(async (request) => {
@@ -36,6 +40,9 @@ Deno.serve(async (request) => {
       .eq("id", true)
       .maybeSingle();
     if (settingsError) throw settingsError;
+    const settings = settingsRow?.settings && typeof settingsRow.settings === "object" ? settingsRow.settings : {};
+    const goalAmount = Math.max(Number(settings.seedGoal) || 0, 0);
+    const seedPrice = Math.max(Number(settings.seedPrice) || 6, 1);
 
     const { data: donations, error: donationsError } = await supabase
       .from("donations")
@@ -108,15 +115,14 @@ Deno.serve(async (request) => {
     });
 
     const meterDonations = (completedDonationTotals || []).filter(countsTowardPublicMeter);
-    const donationSeeds = meterDonations.reduce((total, donation) => {
-      return total + (donation.seed_count || amountToSeeds(Number(donation.amount)));
-    }, 0);
-    const donationAmount = meterDonations.reduce((total, donation) => {
+    const totalMeterDonationAmount = meterDonations.reduce((total, donation) => {
       return total + Math.max(Number(donation.amount) || 0, 0);
     }, 0);
+    const donationAmount = goalAmount ? getCurrentGoalCycleAmount(totalMeterDonationAmount, goalAmount) : totalMeterDonationAmount;
+    const donationSeeds = Math.floor(donationAmount / seedPrice);
 
     return jsonResponse({
-      settings: settingsRow?.settings,
+      settings,
       donations: (donations || []).map((donation) => ({
         id: donation.id,
         name: donation.display_name,
