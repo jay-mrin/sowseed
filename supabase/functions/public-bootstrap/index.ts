@@ -6,6 +6,20 @@ function amountToSeeds(amount: number) {
   return Math.max(1, Math.round(amount / 6));
 }
 
+function getRawPaymentRow(donation: Record<string, any>) {
+  const rawPayment = donation.raw_payment;
+  return rawPayment && typeof rawPayment === "object" && !Array.isArray(rawPayment) ? rawPayment.row : null;
+}
+
+function countsTowardPublicMeter(donation: Record<string, any>) {
+  const rawRow = getRawPaymentRow(donation);
+  const item = String(rawRow?.Item || rawRow?.item || "").trim().toLowerCase();
+
+  if (!item) return true;
+
+  return item === "tip to creator";
+}
+
 Deno.serve(async (request) => {
   const options = handleOptions(request);
   if (options) return options;
@@ -33,7 +47,7 @@ Deno.serve(async (request) => {
 
     const { data: completedDonationTotals, error: totalsError } = await supabase
       .from("donations")
-      .select("amount, seed_count")
+      .select("amount, seed_count, raw_payment")
       .eq("paypal_status", "COMPLETED");
     if (totalsError) throw totalsError;
 
@@ -93,10 +107,11 @@ Deno.serve(async (request) => {
       };
     });
 
-    const donationSeeds = (completedDonationTotals || []).reduce((total, donation) => {
+    const meterDonations = (completedDonationTotals || []).filter(countsTowardPublicMeter);
+    const donationSeeds = meterDonations.reduce((total, donation) => {
       return total + (donation.seed_count || amountToSeeds(Number(donation.amount)));
     }, 0);
-    const donationAmount = (completedDonationTotals || []).reduce((total, donation) => {
+    const donationAmount = meterDonations.reduce((total, donation) => {
       return total + Math.max(Number(donation.amount) || 0, 0);
     }, 0);
 
