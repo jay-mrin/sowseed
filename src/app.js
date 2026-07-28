@@ -18,7 +18,6 @@ const DEFAULT_FOOTER_TEXT =
 const DONATION_EXPORT_HEADERS = [
   "DateTime (UTC)",
   "From",
-  "Message",
   "Item",
   "Received",
   "Given",
@@ -749,7 +748,6 @@ function getDonationExportRow(donation) {
   return {
     "DateTime (UTC)": getDonationRawValue(donation, "DateTime (UTC)", formatCsvDateTime(donation.createdAt)),
     From: getDonationRawValue(donation, "From", donation.name || "Supporter"),
-    Message: getDonationRawValue(donation, "Message", donation.message || ""),
     Item: "Tip to Creator",
     Received: getDonationRawValue(donation, "Received", formatCsvAmount(donation.amount)),
     Given: getDonationRawValue(donation, "Given", "0"),

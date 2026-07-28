@@ -15,8 +15,65 @@ function seedCountFromAmount(amount: number) {
   return Math.max(1, Math.round(amount / 6));
 }
 
+function padDatePart(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+function formatCsvDateTime(dateValue?: string) {
+  const date = new Date(dateValue || Date.now());
+  const safeDate = Number.isNaN(date.getTime()) ? new Date() : date;
+
+  return [
+    padDatePart(safeDate.getUTCMonth() + 1),
+    padDatePart(safeDate.getUTCDate()),
+    safeDate.getUTCFullYear(),
+  ].join("/") + ` ${padDatePart(safeDate.getUTCHours())}:${padDatePart(safeDate.getUTCMinutes())}`;
+}
+
+function formatCsvAmount(value: number) {
+  return (Number(value) || 0).toFixed(2);
+}
+
 function captureFromOrder(order: Record<string, any>) {
   return order.purchase_units?.[0]?.payments?.captures?.[0] || null;
+}
+
+function getBuyerAddress(order: Record<string, any>) {
+  return order.payer?.address || order.purchase_units?.[0]?.shipping?.address || {};
+}
+
+function getSalesTax(order: Record<string, any>) {
+  const taxValue = order.purchase_units?.[0]?.amount?.breakdown?.tax_total?.value;
+  return taxValue === undefined || taxValue === null ? "" : String(taxValue);
+}
+
+function buildExportRow(input: {
+  order: Record<string, any>;
+  capture: Record<string, any>;
+  displayName: string;
+  amount: number;
+  currency: string;
+}) {
+  const address = getBuyerAddress(input.order);
+
+  return {
+    "DateTime (UTC)": formatCsvDateTime(input.capture.create_time || input.order.create_time),
+    From: input.displayName,
+    Item: "Tip to Creator",
+    Received: formatCsvAmount(input.amount),
+    Given: "0",
+    Currency: input.currency,
+    TransactionType: "Tip",
+    TransactionId: input.capture.id || "",
+    Reference: input.order.id || input.order.purchase_units?.[0]?.custom_id || "",
+    SalesTax: getSalesTax(input.order),
+    SalesTaxPercentage: "",
+    SalesTaxIncludesShipping: "",
+    BuyerCountry: address.country_code || "",
+    BuyerStateOrProvince: address.admin_area_1 || "",
+    BuyerEmail: input.order.payer?.email_address || "",
+    PaymentProvider: "PayPal",
+  };
 }
 
 Deno.serve(async (request) => {
@@ -74,6 +131,13 @@ Deno.serve(async (request) => {
       .slice(0, 80);
     const supporterMessage = String(body.donation?.message || "").trim().slice(0, 280);
     const frequency = body.donation?.frequency === "monthly" ? "monthly" : "once";
+    const exportRow = buildExportRow({
+      order,
+      capture,
+      displayName,
+      amount: capturedAmount,
+      currency,
+    });
     const rawDonorToken = createRandomToken();
     const donorTokenHash = await hashText(rawDonorToken);
 
@@ -103,7 +167,11 @@ Deno.serve(async (request) => {
         fortune_id: fortune.id,
         fortune_message: fortune.message,
         donor_token_id: donorToken.id,
-        raw_payment: order,
+        raw_payment: {
+          provider: "PayPal",
+          row: exportRow,
+          order,
+        },
       })
       .select("id, display_name, amount, seed_count, frequency, supporter_message, fortune_message, created_at")
       .single();

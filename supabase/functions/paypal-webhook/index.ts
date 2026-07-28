@@ -17,11 +17,24 @@ Deno.serve(async (request) => {
 
     if (captureId && status) {
       const supabase = getSupabaseAdmin();
+      const { data: existing } = await supabase
+        .from("donations")
+        .select("raw_payment")
+        .eq("paypal_capture_id", captureId)
+        .maybeSingle();
+      const existingRawPayment =
+        existing?.raw_payment && typeof existing.raw_payment === "object" && !Array.isArray(existing.raw_payment)
+          ? existing.raw_payment
+          : {};
+
       await supabase
         .from("donations")
         .update({
           paypal_status: status,
-          raw_payment: event,
+          raw_payment: {
+            ...existingRawPayment,
+            webhook: event,
+          },
         })
         .eq("paypal_capture_id", captureId);
     }
