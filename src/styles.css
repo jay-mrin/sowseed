@@ -9,6 +9,7 @@
   --muted: #636361;
   --line: #d9d7cf;
   --white: #ffffff;
+  --lavender: #f3efff;
   --soft: #fbfaf6;
   --success: #16884a;
   --shadow: 0 16px 40px rgba(25, 25, 25, 0.1);
@@ -106,7 +107,7 @@ a {
   gap: 18px;
   padding-inline: max(18px, calc((100vw - 1160px) / 2));
   border-bottom: 0;
-  background: var(--white);
+  background: var(--lavender);
 }
 
 .brand,
@@ -940,7 +941,7 @@ main {
   width: 100%;
   max-width: 100%;
   margin: 0;
-  background: linear-gradient(to bottom, var(--white) 0, var(--white) 500px, #faeef5 500px, #faeef5 100%);
+  background: linear-gradient(to bottom, var(--lavender) 0, var(--lavender) 500px, #faeef5 500px, #faeef5 100%);
 }
 
 .creator-shell {
@@ -2715,7 +2716,7 @@ legend,
   main {
     width: 100%;
     margin: 0;
-    background: linear-gradient(to bottom, var(--white) 0, var(--white) 520px, #faeef5 520px, #faeef5 100%);
+    background: linear-gradient(to bottom, var(--lavender) 0, var(--lavender) 520px, #faeef5 520px, #faeef5 100%);
   }
 
   .creator-shell,
