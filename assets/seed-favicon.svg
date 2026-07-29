@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="10" x2="54" y1="8" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fbf7ff" />
+      <stop offset="1" stop-color="#e8ddff" />
+    </linearGradient>
+    <linearGradient id="seed" x1="24" x2="45" y1="20" y2="50" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffe990" />
+      <stop offset=".52" stop-color="#f3bd31" />
+      <stop offset="1" stop-color="#b97112" />
+    </linearGradient>
+    <linearGradient id="leaf" x1="20" x2="46" y1="16" y2="36" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7de27a" />
+      <stop offset="1" stop-color="#16884a" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="18" fill="url(#bg)" />
+  <path
+    d="M25.4 24.5c8.2-8.4 20.8-4.2 22.4 7.4 1.8 13.2-12.8 22.6-23.8 15.2-8.3-5.6-6.5-14.6 1.4-22.6Z"
+    fill="url(#seed)"
+  />
+  <path
+    d="M24 26.5c4.8 2.4 9.4 5.9 13.7 10.5"
+    fill="none"
+    stroke="#8b570d"
+    stroke-linecap="round"
+    stroke-width="3.5"
+    opacity=".55"
+  />
+  <path
+    d="M31.4 22.9c.2-7.4 5.5-12.1 12.6-11.7.4 7.2-4.7 12.3-12.6 11.7Z"
+    fill="url(#leaf)"
+  />
+  <path
+    d="M30.8 23.7c-6.7-3.3-8.8-10-5.5-16.2 6.5 3.1 8.7 10 5.5 16.2Z"
+    fill="#49c768"
+  />
+  <path d="M31.4 25.5c2.2-5.5 6.2-9.1 11.3-11.2" fill="none" stroke="#0f6f3b" stroke-linecap="round" stroke-width="2.4" />
+  <path d="M30.2 25.2c-1.1-5.8-2.7-10.4-5.5-15.2" fill="none" stroke="#137d42" stroke-linecap="round" stroke-width="2.4" />
+</svg>
