@@ -8,7 +8,7 @@
     "check:js": "node --check src/app.js",
     "supabase:functions:serve": "supabase functions serve --env-file .env",
     "supabase:db:push": "supabase db push",
-    "supabase:deploy": "supabase functions deploy public-bootstrap create-paypal-order capture-paypal-order paypal-webhook admin-settings admin-posts admin-donations post-engagement"
+    "supabase:deploy": "supabase functions deploy public-bootstrap create-paypal-order capture-paypal-order paypal-webhook admin-settings admin-posts admin-donations admin-analytics post-engagement"
   },
   "devDependencies": {
     "supabase": "^2.39.2"

@@ -14,6 +14,8 @@ Then open `http://127.0.0.1:5173`.
 
 When `src/config.js` has `backendEnabled: false`, the app stays in local demo mode. When Supabase values are filled and `backendEnabled: true`, public data, admin edits, posts, donations, likes, comments, and PayPal checkout are loaded through Supabase Edge Functions.
 
+The admin portal also shows real page-view analytics for the last 24 hours. A public page load records one view session per visitor per hour, then the admin-only analytics endpoint reports unique visitors and total hourly view sessions.
+
 ## Files
 
 - `index.html` - static app entrypoint
@@ -95,5 +97,6 @@ Use PayPal sandbox first:
 - Cancelled checkout creates no donation.
 - Duplicate capture/webhook updates do not create duplicate donations.
 - Admin calendar can download a proof PDF for each digital-service order and mark orders fulfilled.
+- Admin analytics shows unique visitors and view sessions from the last 24 hours.
 - Admin login requires Supabase Auth and `admin_profiles`.
 - Donor comments require the same-browser donor token returned after a completed donation.

@@ -221,6 +221,7 @@ const elements = {
   aboutExpanded: document.querySelector("#aboutExpanded"),
   aboutTitle: document.querySelector("#aboutTitle"),
   adminActionStatus: document.querySelector("#adminActionStatus"),
+  adminAnalyticsUpdated: document.querySelector("#adminAnalyticsUpdated"),
   adminBackdrop: document.querySelector("#adminBackdrop"),
   adminCalendarDetails: document.querySelector("#adminCalendarDetails"),
   adminCalendarGrid: document.querySelector("#adminCalendarGrid"),
@@ -240,6 +241,7 @@ const elements = {
   adminNewPostImage: document.querySelector("#adminNewPostImage"),
   adminNewPostTitle: document.querySelector("#adminNewPostTitle"),
   adminPanel: document.querySelector("#adminPanel"),
+  adminPageViews24h: document.querySelector("#adminPageViews24h"),
   adminPasswordError: document.querySelector("#adminPasswordError"),
   adminPasswordInput: document.querySelector("#adminPasswordInput"),
   adminPostList: document.querySelector("#adminPostList"),
@@ -247,6 +249,7 @@ const elements = {
   adminUploadFileName: document.querySelector("#adminUploadFileName"),
   adminUploadPreview: document.querySelector("#adminUploadPreview"),
   adminUploadPreviewImage: document.querySelector("#adminUploadPreviewImage"),
+  adminUniqueVisitors24h: document.querySelector("#adminUniqueVisitors24h"),
   amountError: document.querySelector("#amountError"),
   amountGrid: document.querySelector("#amountGrid"),
   amountInput: document.querySelector("#amountInput"),
@@ -456,9 +459,38 @@ function normalizePosts(posts) {
   return normalized.length ? normalized : cloneDefaultPosts();
 }
 
+function createEmptyAnalytics() {
+  return {
+    generatedAt: null,
+    pageViewsLast24h: 0,
+    topPaths: [],
+    uniqueVisitorsLast24h: 0,
+  };
+}
+
+function normalizeAnalytics(analytics) {
+  const defaults = createEmptyAnalytics();
+  const topPaths = Array.isArray(analytics?.topPaths)
+    ? analytics.topPaths
+        .map((item) => ({
+          path: String(item?.path || "/").slice(0, 180),
+          views: Math.max(Number.parseInt(item?.views, 10) || 0, 0),
+        }))
+        .filter((item) => item.path)
+    : [];
+
+  return {
+    generatedAt: analytics?.generatedAt || defaults.generatedAt,
+    pageViewsLast24h: Math.max(Number.parseInt(analytics?.pageViewsLast24h, 10) || 0, 0),
+    topPaths,
+    uniqueVisitorsLast24h: Math.max(Number.parseInt(analytics?.uniqueVisitorsLast24h, 10) || 0, 0),
+  };
+}
+
 function loadState() {
   if (isBackendConfigured()) {
     return {
+      analytics: createEmptyAnalytics(),
       donations: [],
       followed: false,
       posts: [],
@@ -474,6 +506,7 @@ function loadState() {
 
   if (!saved) {
     return {
+      analytics: createEmptyAnalytics(),
       donations: seedFeed,
       followed: false,
       posts: cloneDefaultPosts(),
@@ -485,6 +518,7 @@ function loadState() {
   try {
     const parsed = JSON.parse(saved);
     return {
+      analytics: normalizeAnalytics(parsed.analytics),
       donations: Array.isArray(parsed.donations) ? parsed.donations : seedFeed,
       followed: Boolean(parsed.followed),
       posts: normalizePosts(parsed.posts),
@@ -493,6 +527,7 @@ function loadState() {
     };
   } catch {
     return {
+      analytics: createEmptyAnalytics(),
       donations: seedFeed,
       followed: false,
       posts: cloneDefaultPosts(),
@@ -627,8 +662,11 @@ async function loadBackendData() {
   if (!isBackendConfigured()) return;
 
   try {
-    const visitorKey = encodeURIComponent(getVisitorKey());
-    const payload = await callEdge(`public-bootstrap?visitorKey=${visitorKey}`, { method: "GET" });
+    const params = new URLSearchParams({
+      path: window.location.pathname || "/",
+      visitorKey: getVisitorKey(),
+    });
+    const payload = await callEdge(`public-bootstrap?${params.toString()}`, { method: "GET" });
     applyBootstrap(payload);
   } catch (error) {
     backendReady = false;
@@ -642,6 +680,13 @@ function money(value) {
     currency: CONFIG.currency,
     maximumFractionDigits: 0,
   }).format(value);
+}
+
+function formatCompactNumber(value) {
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 0,
+    notation: Number(value) >= 10000 ? "compact" : "standard",
+  }).format(Math.max(Number(value) || 0, 0));
 }
 
 function getAmount() {
@@ -1276,6 +1321,34 @@ async function loadAdminDonations(options = {}) {
   }
 }
 
+async function loadAdminAnalytics(options = {}) {
+  if (!isBackendConfigured() || !getAdminAccessToken()) return;
+
+  const announce = Boolean(options.announce);
+
+  if (announce) {
+    setAdminStatus("Loading page views from the last 24 hours...", "loading", { persist: true });
+  }
+
+  try {
+    const payload = await callEdge("admin-analytics", {
+      admin: true,
+      method: "GET",
+    });
+
+    state.analytics = normalizeAnalytics(payload);
+    renderAdminAnalytics();
+
+    if (announce) {
+      setAdminStatus("Page view analytics loaded for the last 24 hours.", "success");
+    }
+  } catch (error) {
+    const message = error.message || "Could not load page view analytics.";
+    setAdminStatus(message, "error", { persist: true });
+    showToast(message);
+  }
+}
+
 function renderTextWithBreaks(element, value) {
   if (!element) return;
   element.innerHTML = escapeHtml(value).replace(/\n/g, "<br />");
@@ -1576,6 +1649,21 @@ function renderAdminForm() {
   inputs.paymentNote.value = settings.paymentNote;
   inputs.footerText.value = settings.footerText;
   inputs.fortuneNumberEnabled.checked = Boolean(settings.fortuneNumberEnabled);
+}
+
+function renderAdminAnalytics() {
+  if (!elements.adminUniqueVisitors24h || !elements.adminPageViews24h || !elements.adminAnalyticsUpdated) return;
+
+  const analytics = normalizeAnalytics(state.analytics);
+  const generatedAt = analytics.generatedAt ? new Date(analytics.generatedAt) : null;
+  const hasValidDate = generatedAt && !Number.isNaN(generatedAt.getTime());
+  const topPath = analytics.topPaths[0];
+
+  elements.adminUniqueVisitors24h.textContent = formatCompactNumber(analytics.uniqueVisitorsLast24h);
+  elements.adminPageViews24h.textContent = formatCompactNumber(analytics.pageViewsLast24h);
+  elements.adminAnalyticsUpdated.textContent = hasValidDate
+    ? `Updated ${readableDate(generatedAt)} at ${readableTime(generatedAt)}${topPath ? ` · Top path: ${topPath.path}` : ""}`
+    : "Open the admin portal to load page-view analytics.";
 }
 
 function renderAdminCalendarDetails() {
@@ -2134,6 +2222,7 @@ function closeAdminLogin() {
 function openAdminPanel() {
   renderAdminForm();
   renderAdminCalendar();
+  renderAdminAnalytics();
   setAdminStatus("Admin ready. Make edits, then use Save changes or Publish post.", "info", { persist: true });
   document.body.classList.add("admin-open");
   elements.adminBackdrop.hidden = false;
@@ -2606,6 +2695,7 @@ function renderApp() {
   renderTopSupporters();
   renderFollowState();
   renderAdminCalendar();
+  renderAdminAnalytics();
   updateCheckoutLabel();
 }
 
@@ -2763,6 +2853,7 @@ elements.adminLoginForm.addEventListener("submit", async (event) => {
       closeAdminLogin();
       openAdminPanel();
       await loadAdminDonations({ announce: true });
+      await loadAdminAnalytics({ announce: true });
     } catch (error) {
       elements.adminPasswordError.textContent = error.message || "Could not sign in.";
       elements.adminPasswordInput.select();

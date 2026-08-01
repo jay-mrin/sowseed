@@ -10,6 +10,37 @@ function getCurrentGoalCycleAmount(totalAmount: number, goalAmount: number) {
   return numericTotal % numericGoal;
 }
 
+function getUtcHourStart(date = new Date()) {
+  const hour = new Date(date);
+  hour.setUTCMinutes(0, 0, 0);
+  return hour.toISOString();
+}
+
+function sanitizePath(value: string | null) {
+  const path = String(value || "/").trim();
+
+  if (!path || path.includes("://")) return "/";
+
+  return path.slice(0, 180);
+}
+
+async function recordPageView(supabase: ReturnType<typeof getSupabaseAdmin>, request: Request, visitorKeyHash: string, path: string) {
+  if (!visitorKeyHash) return;
+
+  const { error } = await supabase.from("page_views").upsert(
+    {
+      visitor_key_hash: visitorKeyHash,
+      view_hour: getUtcHourStart(),
+      path,
+      user_agent: (request.headers.get("user-agent") || "").slice(0, 220),
+      last_seen_at: new Date().toISOString(),
+    },
+    { onConflict: "visitor_key_hash,view_hour" },
+  );
+
+  if (error) throw error;
+}
+
 Deno.serve(async (request) => {
   const options = handleOptions(request);
   if (options) return options;
@@ -18,7 +49,14 @@ Deno.serve(async (request) => {
     const url = new URL(request.url);
     const visitorKey = url.searchParams.get("visitorKey") || "";
     const visitorKeyHash = visitorKey ? await hashText(visitorKey) : "";
+    const path = sanitizePath(url.searchParams.get("path"));
     const supabase = getSupabaseAdmin();
+
+    try {
+      await recordPageView(supabase, request, visitorKeyHash, path);
+    } catch (pageViewError) {
+      console.error("Could not record page view.", pageViewError);
+    }
 
     const { data: settingsRow, error: settingsError } = await supabase
       .from("site_settings")

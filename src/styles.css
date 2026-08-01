@@ -548,6 +548,63 @@ a {
   padding-inline: 16px;
 }
 
+.admin-analytics-section {
+  background:
+    radial-gradient(circle at 0% 0%, rgba(245, 50, 177, 0.12), transparent 38%),
+    radial-gradient(circle at 100% 0%, rgba(30, 147, 171, 0.1), transparent 34%),
+    #fbfaf8;
+}
+
+.admin-analytics-heading h3,
+.admin-analytics-heading p,
+.admin-analytics-updated {
+  margin: 0;
+}
+
+.admin-analytics-heading p {
+  margin-top: 8px;
+  color: #6c6570;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.admin-analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-analytics-grid article {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  background:
+    linear-gradient(#fbfaf8, #fbfaf8) padding-box,
+    var(--gradient-border) border-box;
+  box-shadow: 0 12px 28px rgba(245, 50, 177, 0.08);
+}
+
+.admin-analytics-grid span,
+.admin-analytics-grid small,
+.admin-analytics-updated {
+  display: block;
+  color: #8f95a5;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.admin-analytics-grid strong {
+  display: block;
+  margin: 5px 0 3px;
+  color: #1d232c;
+  font-size: 24px;
+  line-height: 1;
+}
+
 .admin-export-section {
   background:
     radial-gradient(circle at 100% 0%, rgba(30, 147, 171, 0.09), transparent 35%),
@@ -2989,6 +3046,7 @@ legend,
   .admin-editor-section,
   .admin-donations,
   .admin-settings-section,
+  .admin-analytics-section,
   .admin-export-section {
     max-height: none;
   }
@@ -2998,6 +3056,7 @@ legend,
     align-items: stretch;
   }
 
+  .admin-analytics-grid,
   .admin-export-range {
     grid-template-columns: 1fr;
   }
