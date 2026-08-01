@@ -12,6 +12,8 @@ const PAYMENT_ANIMATION_MS = 220;
 const SEED_DOLLAR_VALUE = 6;
 const MAX_LOCAL_POST_IMAGE_BYTES = 2 * 1024 * 1024;
 const MAX_REMOTE_POST_IMAGE_BYTES = 5 * 1024 * 1024;
+const FORTUNE_NUMBER_SPECIAL_CHANCE = 0.01;
+const DIGITAL_ORDER_ITEM_NAME = "Personalised Digital Blessing and Sowing Seed";
 const LEGACY_FOOTER_TEXT = "Sow Your Seed exists to make support feel generous, clear, and personal.";
 const DEFAULT_FOOTER_TEXT =
   "This is a creator tipping platform where supporters can voluntarily tip the creator for their work. Tips are freely given, paid directly to the creator, and are not tied to any indirect exchange, guaranteed result, or required purchase.";
@@ -168,6 +170,7 @@ const DEFAULT_SETTINGS = {
   paymentNote:
     "By proceeding with your payment, you acknowledge that you are paying Sow Your Seed Here for Your Soulmate 💫 directly. Tips are voluntary support and are not tied to any guaranteed result.",
   footerText: DEFAULT_FOOTER_TEXT,
+  fortuneNumberEnabled: false,
 };
 
 const seedFeed = [
@@ -263,6 +266,13 @@ const elements = {
   followButton: document.querySelector("#followButton"),
   followersText: document.querySelector("#followersText"),
   footerText: document.querySelector("#footerText"),
+  closeFortuneNumberButton: document.querySelector("#closeFortuneNumberButton"),
+  fortuneNumberCopy: document.querySelector("#fortuneNumberCopy"),
+  fortuneNumberDialog: document.querySelector("#fortuneNumberDialog"),
+  fortuneNumberDoneButton: document.querySelector("#fortuneNumberDoneButton"),
+  fortuneNumberResult: document.querySelector("#fortuneNumberResult"),
+  fortuneNumberTitle: document.querySelector("#fortuneNumberTitle"),
+  fortuneSeedButton: document.querySelector("#fortuneSeedButton"),
   galleryGrid: document.querySelector("#galleryGrid"),
   increaseQuantityButton: document.querySelector("#increaseQuantityButton"),
   messageInput: document.querySelector("#messageInput"),
@@ -307,6 +317,7 @@ const elements = {
     amountOptions: document.querySelector("#adminAmountOptions"),
     followersText: document.querySelector("#adminFollowersText"),
     footerText: document.querySelector("#adminFooterText"),
+    fortuneNumberEnabled: document.querySelector("#adminFortuneNumberEnabled"),
     meterCollapsed: document.querySelector("#adminMeterCollapsed"),
     meterExpanded: document.querySelector("#adminMeterExpanded"),
     meterHeadline: document.querySelector("#adminMeterHeadline"),
@@ -337,6 +348,7 @@ let quantity = 1;
 const initialAdminCalendarDate = getLatestDonationDateKey();
 let adminCalendarCursor = fromDateKey(initialAdminCalendarDate);
 let selectedAdminCalendarDate = initialAdminCalendarDate;
+let fortuneNumberPromptShown = false;
 
 function cloneDefaultSettings() {
   return {
@@ -375,6 +387,7 @@ function normalizeSettings(settings) {
   next.startingSeeds = 0;
   next.seedPrice = Math.max(Number.parseInt(next.seedPrice, 10) || defaults.seedPrice, 1);
   next.amountOptions = parseAmountOptions(next.amountOptions);
+  next.fortuneNumberEnabled = next.fortuneNumberEnabled === true || next.fortuneNumberEnabled === "true";
 
   Object.keys(defaults).forEach((key) => {
     if (key === "amountOptions" || typeof defaults[key] !== "string") return;
@@ -656,6 +669,44 @@ function formatSeedUnits(value) {
   return `${roundedValue} Seed${roundedValue === 1 ? "" : "s"}`;
 }
 
+function randomIntegerInRange(min, max) {
+  const floorMin = Math.ceil(min);
+  const floorMax = Math.floor(max);
+  return Math.floor(Math.random() * (floorMax - floorMin + 1)) + floorMin;
+}
+
+function getFortuneSeedNumber() {
+  if (Math.random() < FORTUNE_NUMBER_SPECIAL_CHANCE) {
+    return {
+      isSpecial: true,
+      seedCount: 25,
+      title: "You have a fortune of great",
+      message: "Sow Your Seed My Child. 25 Seeds.",
+    };
+  }
+
+  const roll = Math.random();
+
+  if (roll < 0.7) {
+    return {
+      isSpecial: false,
+      seedCount: randomIntegerInRange(0, 3),
+    };
+  }
+
+  if (roll < 0.9) {
+    return {
+      isSpecial: false,
+      seedCount: randomIntegerInRange(3, 15),
+    };
+  }
+
+  return {
+    isSpecial: false,
+    seedCount: randomIntegerInRange(15, 19),
+  };
+}
+
 function getCurrentGoalCycleAmount(totalAmount, goalAmount) {
   const numericTotal = Math.max(Number(totalAmount) || 0, 0);
   const numericGoal = Math.max(Number(goalAmount) || 0, 0);
@@ -831,6 +882,10 @@ function getDonationExportFilename({ startDate, endDate }) {
 
 function downloadTextFile(filename, text, mimeType = "text/csv;charset=utf-8") {
   const blob = new Blob([text], { type: mimeType });
+  downloadBlobFile(filename, blob);
+}
+
+function downloadBlobFile(filename, blob) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -881,6 +936,249 @@ async function exportAdminDonationCsv() {
 
       downloadTextFile(getDonationExportFilename(range), csv);
       return { rowCount };
+    },
+  );
+}
+
+function getDigitalOrder(donation) {
+  if (donation?.digitalOrder && typeof donation.digitalOrder === "object") {
+    return donation.digitalOrder;
+  }
+
+  const rawPayment = donation?.rawPayment && typeof donation.rawPayment === "object" ? donation.rawPayment : {};
+  const rawOrder = rawPayment.digitalOrder && typeof rawPayment.digitalOrder === "object" ? rawPayment.digitalOrder : {};
+
+  if (!Object.keys(rawOrder).length) return null;
+
+  return {
+    orderNumber: rawOrder.orderNumber,
+    itemName: rawOrder.itemName,
+    personalizedRequest: donation?.message || "",
+    blessingMessage: donation?.fortuneMessage || "",
+    fulfillmentStatus: rawOrder.fulfillmentStatus,
+    fulfillmentNote: rawOrder.fulfillmentNote,
+    fulfilledAt: rawOrder.fulfilledAt,
+  };
+}
+
+function getDigitalOrderValue(donation, key, fallback = "") {
+  const order = getDigitalOrder(donation);
+  const value = order?.[key];
+
+  return value === undefined || value === null || value === "" ? fallback : value;
+}
+
+function getFulfillmentStatusLabel(status) {
+  return status === "fulfilled" ? "Fulfilled" : "Paid, awaiting personalized writing";
+}
+
+function readableUtcDateTime(dateString) {
+  const date = new Date(dateString || Date.now());
+  const safeDate = Number.isNaN(date.getTime()) ? new Date() : date;
+
+  return `${formatCsvDateTime(safeDate.toISOString())} UTC`;
+}
+
+function normalizePdfText(value) {
+  return String(value ?? "")
+    .replaceAll("’", "'")
+    .replaceAll("‘", "'")
+    .replaceAll("“", '"')
+    .replaceAll("”", '"')
+    .replaceAll("–", "-")
+    .replaceAll("—", "-")
+    .normalize("NFKD")
+    .replace(/[^\x20-\x7E\n]/g, "")
+    .replace(/\s+\n/g, "\n")
+    .trim();
+}
+
+function wrapPdfText(value, maxLength = 86) {
+  const normalized = normalizePdfText(value);
+  const sourceLines = normalized ? normalized.split(/\n+/) : [""];
+  const lines = [];
+
+  sourceLines.forEach((sourceLine) => {
+    const words = sourceLine.split(/\s+/).filter(Boolean);
+    let line = "";
+
+    words.forEach((word) => {
+      const candidate = line ? `${line} ${word}` : word;
+      if (candidate.length > maxLength && line) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = candidate;
+      }
+    });
+
+    if (line) lines.push(line);
+  });
+
+  return lines.length ? lines : [""];
+}
+
+function pdfEscape(value) {
+  return normalizePdfText(value).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+}
+
+function buildProofPdfLines(donation) {
+  const order = getDigitalOrder(donation) || {};
+  const rawOrder = getDonationRawRow(donation);
+  const orderNumber = getDigitalOrderValue(donation, "orderNumber", getDonationRawValue(donation, "Reference", donation.orderId || donation.id || ""));
+  const itemName = getDigitalOrderValue(donation, "itemName", DIGITAL_ORDER_ITEM_NAME);
+  const request = getDigitalOrderValue(donation, "personalizedRequest", donation.message || "No personalized request was entered.");
+  const blessing = getDigitalOrderValue(donation, "blessingMessage", donation.fortuneMessage || "Blessing message was delivered after confirmed payment.");
+  const status = getDigitalOrderValue(donation, "fulfillmentStatus", "paid_awaiting_personalized_writing");
+  const fulfilledAt = getDigitalOrderValue(donation, "fulfilledAt", "");
+  const fulfillmentNote = getDigitalOrderValue(donation, "fulfillmentNote", "No fulfillment note has been added yet.");
+  const payerEmail = getDigitalOrderValue(donation, "payerEmail", donation.payerEmail || getDonationRawValue(donation, "BuyerEmail", ""));
+  const paypalOrderId = getDigitalOrderValue(donation, "paypalOrderId", donation.orderId || getDonationRawValue(donation, "Reference", ""));
+  const paypalCaptureId = getDigitalOrderValue(donation, "paypalCaptureId", donation.captureId || getDonationRawValue(donation, "TransactionId", ""));
+  const createdAt = donation.createdAt || order.createdAt || rawOrder["DateTime (UTC)"] || new Date().toISOString();
+  const amount = Number(donation.amount || order.amount || 0);
+  const currency = order.currency || getDonationRawValue(donation, "Currency", CONFIG.currency);
+  const lines = [
+    "Sow Your Seed - Digital Service Order Proof",
+    "",
+    `Generated: ${readableUtcDateTime(new Date().toISOString())}`,
+    `Order ID: ${orderNumber || "Not available"}`,
+    `Payment date: ${readableUtcDateTime(createdAt)}`,
+    `Customer name: ${donation.name || order.customerName || "Supporter"}`,
+    `Buyer email: ${payerEmail || "Not provided by PayPal"}`,
+    `Item: ${itemName}`,
+    `Amount received: ${formatCsvAmount(amount)} ${currency}`,
+    `Payment provider: ${getPaymentProviderLabel(donation.paymentMethod)}`,
+    `PayPal order ID: ${paypalOrderId || "Not available"}`,
+    `PayPal transaction/capture ID: ${paypalCaptureId || "Not available"}`,
+    `Payment status: ${donation.status || "COMPLETED"}`,
+    `Frequency: ${donation.frequency === "monthly" ? "Monthly" : "One time"}`,
+    `Fulfillment status: ${getFulfillmentStatusLabel(status)}`,
+    `Fulfilled at: ${fulfilledAt ? readableUtcDateTime(fulfilledAt) : "Not marked fulfilled yet"}`,
+    "",
+    "Personalized-writing request:",
+    ...wrapPdfText(request),
+    "",
+    "Heartfelt blessing delivered after payment:",
+    ...wrapPdfText(blessing),
+    "",
+    "Admin fulfillment note:",
+    ...wrapPdfText(fulfillmentNote),
+  ];
+
+  return lines.slice(0, 58);
+}
+
+function buildSimplePdf(lines) {
+  const pageLines = lines.map((line) => pdfEscape(line));
+  const content = [
+    "BT",
+    "/F1 18 Tf",
+    "50 760 Td",
+    `(${pageLines[0] || "Digital Service Order Proof"}) Tj`,
+    "/F1 10.5 Tf",
+    "0 -28 Td",
+    ...pageLines.slice(1).flatMap((line) => [`(${line}) Tj`, "0 -15 Td"]),
+    "ET",
+  ].join("\n");
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    `<< /Length ${content.length} >>\nstream\n${content}\nendstream`,
+  ];
+  let pdf = "%PDF-1.4\n";
+  const offsets = [0];
+
+  objects.forEach((object, index) => {
+    offsets.push(pdf.length);
+    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+  });
+
+  const xrefOffset = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  offsets.slice(1).forEach((offset) => {
+    pdf += `${String(offset).padStart(10, "0")} 00000 n \n`;
+  });
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+
+  return pdf;
+}
+
+function getDonationById(donationId) {
+  return state.donations.find((donation) => String(donation.id) === String(donationId)) || null;
+}
+
+function getOrderProofFilename(donation) {
+  const orderNumber = getDigitalOrderValue(donation, "orderNumber", donation.captureId || donation.id || "transaction");
+  const safeOrderNumber = String(orderNumber).replace(/[^a-z0-9-]+/gi, "-").replace(/^-+|-+$/g, "") || "transaction";
+
+  return `sow-your-seed-${safeOrderNumber}.pdf`;
+}
+
+function downloadOrderProofPdf(donationId) {
+  const donation = getDonationById(donationId);
+
+  if (!donation) {
+    setAdminStatus("Could not find that payment in the current calendar data.", "error", { persist: true });
+    showToast("Payment record not found.");
+    return;
+  }
+
+  const pdf = buildSimplePdf(buildProofPdfLines(donation));
+  downloadBlobFile(getOrderProofFilename(donation), new Blob([pdf], { type: "application/pdf" }));
+  setAdminStatus("Downloaded PayPal proof PDF for this digital-service order.", "success");
+}
+
+function updateDonationDigitalOrder(donationId, order) {
+  state.donations = state.donations.map((donation) =>
+    String(donation.id) === String(donationId)
+      ? {
+          ...donation,
+          digitalOrder: order,
+        }
+      : donation,
+  );
+}
+
+function cssAttributeValue(value) {
+  const stringValue = String(value);
+  return window.CSS?.escape ? window.CSS.escape(stringValue) : stringValue.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
+async function saveDigitalOrderFulfillment(donationId, button) {
+  const noteField = elements.adminCalendarDetails.querySelector(`[data-fulfillment-note="${cssAttributeValue(donationId)}"]`);
+  const note = noteField?.value || "";
+  const donation = getDonationById(donationId);
+  const order = getDigitalOrder(donation);
+  const nextStatus = order?.fulfillmentStatus === "fulfilled" ? "paid_awaiting_personalized_writing" : "fulfilled";
+
+  await runAdminAction(
+    {
+      button,
+      busyText: "Saving...",
+      loadingMessage: "Saving digital order fulfillment status...",
+      successMessage:
+        nextStatus === "fulfilled"
+          ? "Digital order marked fulfilled. The proof PDF will include this status."
+          : "Digital order moved back to awaiting personalized writing.",
+      errorMessage: "Could not update digital order fulfillment.",
+    },
+    async () => {
+      const payload = await callEdge("admin-donations", {
+        admin: true,
+        method: "PUT",
+        body: {
+          donationId,
+          fulfillmentStatus: nextStatus,
+          fulfillmentNote: note,
+        },
+      });
+
+      updateDonationDigitalOrder(donationId, payload.order);
+      renderAdminCalendar();
+      return payload;
     },
   );
 }
@@ -1277,6 +1575,7 @@ function renderAdminForm() {
   inputs.paymentCopy.value = settings.paymentCopy;
   inputs.paymentNote.value = settings.paymentNote;
   inputs.footerText.value = settings.footerText;
+  inputs.fortuneNumberEnabled.checked = Boolean(settings.fortuneNumberEnabled);
 }
 
 function renderAdminCalendarDetails() {
@@ -1287,7 +1586,7 @@ function renderAdminCalendarDetails() {
     .slice()
     .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
   const selectedDate = fromDateKey(selectedAdminCalendarDate);
-  const total = donations.reduce((sum, donation) => sum + (Number.parseInt(donation.amount, 10) || 0), 0);
+  const total = donations.reduce((sum, donation) => sum + (Number.parseFloat(donation.amount) || 0), 0);
 
   if (!donations.length) {
     elements.adminCalendarDetails.innerHTML = `
@@ -1311,17 +1610,51 @@ function renderAdminCalendarDetails() {
       ${donations
         .map((donation) => {
           const name = donation.anonymous ? "Private supporter" : donation.name || "Unknown supporter";
-          const amount = Number.parseInt(donation.amount, 10) || 0;
+          const amount = Number.parseFloat(donation.amount) || 0;
           const frequency = donation.frequency === "monthly" ? "Monthly" : "One time";
           const createdAt = donation.createdAt || new Date().toISOString();
+          const order = getDigitalOrder(donation);
+          const orderNumber = getDigitalOrderValue(
+            donation,
+            "orderNumber",
+            getDonationRawValue(donation, "Reference", donation.orderId || donation.id || "Pending"),
+          );
+          const captureId = getDigitalOrderValue(
+            donation,
+            "paypalCaptureId",
+            donation.captureId || getDonationRawValue(donation, "TransactionId", "Not available"),
+          );
+          const request = getDigitalOrderValue(donation, "personalizedRequest", donation.message || "No request entered.");
+          const status = getDigitalOrderValue(donation, "fulfillmentStatus", "paid_awaiting_personalized_writing");
+          const note = getDigitalOrderValue(donation, "fulfillmentNote", "");
+          const isFulfilled = status === "fulfilled";
 
           return `
             <article class="admin-calendar-donation">
-              <div>
-                <strong>${escapeHtml(name)}</strong>
-                <span>${frequency} · ${readableTime(createdAt)}</span>
+              <div class="admin-calendar-donation-main">
+                <div>
+                  <strong>${escapeHtml(name)}</strong>
+                  <span>${frequency} · ${readableTime(createdAt)}</span>
+                </div>
+                <b>${money(amount)}</b>
               </div>
-              <b>${money(amount)}</b>
+              <div class="admin-order-meta">
+                <span><strong>Order ID</strong>${escapeHtml(orderNumber)}</span>
+                <span><strong>Transaction ID</strong>${escapeHtml(captureId)}</span>
+                <span><strong>Item</strong>${escapeHtml(order?.itemName || DIGITAL_ORDER_ITEM_NAME)}</span>
+                <span><strong>Status</strong>${escapeHtml(getFulfillmentStatusLabel(status))}</span>
+              </div>
+              <p class="admin-order-request"><strong>Request:</strong> ${escapeHtml(request)}</p>
+              <label class="admin-fulfillment-field">
+                <span>Fulfillment note</span>
+                <textarea data-fulfillment-note="${escapeHtml(donation.id)}" placeholder="Write proof notes, delivery details, or custom writing summary.">${escapeHtml(note)}</textarea>
+              </label>
+              <div class="admin-order-actions">
+                <button class="button button-secondary" type="button" data-download-order-proof="${escapeHtml(donation.id)}">Download PDF</button>
+                <button class="button button-primary" type="button" data-save-fulfillment="${escapeHtml(donation.id)}">
+                  ${isFulfilled ? "Reopen order" : "Mark fulfilled"}
+                </button>
+              </div>
             </article>
           `;
         })
@@ -1613,6 +1946,8 @@ async function finishVerifiedDonation(payload) {
       amount: Number(donation.amount || pendingDonation?.amount || 0),
       frequency: donation.frequency || pendingDonation?.frequency || "once",
       message: donation.supporter_message || pendingDonation?.message || "",
+      fortuneMessage: donation.fortune_message || fortuneMessage,
+      digitalOrder: payload.digitalOrder || null,
       createdAt: donation.created_at || new Date().toISOString(),
     });
     selectedAdminCalendarDate = getDonationDateKey(state.donations[0]);
@@ -1697,6 +2032,68 @@ function closeReceipt() {
   elements.receiptDialog.close();
 }
 
+function resetFortuneNumberDialog() {
+  if (!elements.fortuneNumberDialog) return;
+
+  elements.fortuneNumberTitle.textContent = "Tap to get your Fortune Seed Number";
+  elements.fortuneNumberCopy.textContent = "A golden seed is waiting to reveal your number.";
+  elements.fortuneNumberResult.hidden = true;
+  elements.fortuneNumberResult.textContent = "";
+  elements.fortuneNumberDoneButton.hidden = true;
+  elements.fortuneSeedButton.disabled = false;
+  elements.fortuneSeedButton.classList.remove("is-revealed", "is-special");
+}
+
+function openFortuneNumberDialog() {
+  if (!elements.fortuneNumberDialog || elements.fortuneNumberDialog.open) return;
+
+  resetFortuneNumberDialog();
+  document.body.classList.add("fortune-number-open");
+
+  if (typeof elements.fortuneNumberDialog.showModal === "function") {
+    elements.fortuneNumberDialog.showModal();
+  } else {
+    elements.fortuneNumberDialog.setAttribute("open", "");
+  }
+}
+
+function closeFortuneNumberDialog() {
+  if (!elements.fortuneNumberDialog?.open) return;
+
+  document.body.classList.remove("fortune-number-open");
+  elements.fortuneNumberDialog.close();
+}
+
+function maybeOpenFortuneNumberDialog() {
+  if (fortuneNumberPromptShown || !state.settings.fortuneNumberEnabled) return;
+  if (document.body.classList.contains("admin-open") || document.body.classList.contains("payment-open")) return;
+
+  fortuneNumberPromptShown = true;
+  window.setTimeout(openFortuneNumberDialog, 520);
+}
+
+function revealFortuneSeedNumber() {
+  const fortune = getFortuneSeedNumber();
+  const seedLabel = `${fortune.seedCount} Seed${fortune.seedCount === 1 ? "" : "s"}`;
+
+  elements.fortuneSeedButton.disabled = true;
+  elements.fortuneSeedButton.classList.add("is-revealed");
+  elements.fortuneSeedButton.classList.toggle("is-special", Boolean(fortune.isSpecial));
+  elements.fortuneNumberDoneButton.hidden = false;
+  elements.fortuneNumberResult.hidden = false;
+
+  if (fortune.isSpecial) {
+    elements.fortuneNumberTitle.textContent = fortune.title;
+    elements.fortuneNumberCopy.textContent = "A rare golden blessing has opened for you.";
+    elements.fortuneNumberResult.textContent = fortune.message;
+    return;
+  }
+
+  elements.fortuneNumberTitle.textContent = "Your Fortune Seed Number";
+  elements.fortuneNumberCopy.textContent = "Carry this number as your seed of intention today.";
+  elements.fortuneNumberResult.textContent = seedLabel;
+}
+
 function openAdminLogin() {
   clearAdminSession();
   if (elements.adminEmailInput) {
@@ -1762,6 +2159,7 @@ function closeAdminPanel() {
   window.setTimeout(() => {
     if (!elements.adminPanel.classList.contains("is-open")) {
       elements.adminBackdrop.hidden = true;
+      maybeOpenFortuneNumberDialog();
     }
   }, 180);
 }
@@ -1776,6 +2174,7 @@ function getAdminSettings() {
     amountOptions: parseAmountOptions(inputs.amountOptions.value),
     followersText: inputs.followersText.value,
     footerText: inputs.footerText.value,
+    fortuneNumberEnabled: inputs.fortuneNumberEnabled.checked,
     meterCollapsed: inputs.meterCollapsed.value,
     meterExpanded: inputs.meterExpanded.value,
     meterHeadline: inputs.meterHeadline.value,
@@ -2254,6 +2653,19 @@ elements.adminCalendarGrid.addEventListener("click", (event) => {
   renderAdminCalendar();
 });
 
+elements.adminCalendarDetails.addEventListener("click", (event) => {
+  const proofButton = event.target.closest("[data-download-order-proof]");
+  if (proofButton) {
+    downloadOrderProofPdf(proofButton.dataset.downloadOrderProof);
+    return;
+  }
+
+  const fulfillmentButton = event.target.closest("[data-save-fulfillment]");
+  if (fulfillmentButton) {
+    saveDigitalOrderFulfillment(fulfillmentButton.dataset.saveFulfillment, fulfillmentButton);
+  }
+});
+
 elements.profileTabs.forEach((tab) => {
   tab.addEventListener("click", (event) => {
     event.preventDefault();
@@ -2447,6 +2859,16 @@ elements.doneButton.addEventListener("click", closeReceipt);
 elements.receiptDialog.addEventListener("close", () => {
   document.body.classList.remove("receipt-open");
 });
+elements.closeFortuneNumberButton.addEventListener("click", closeFortuneNumberDialog);
+elements.fortuneNumberDoneButton.addEventListener("click", closeFortuneNumberDialog);
+elements.fortuneSeedButton.addEventListener("click", revealFortuneSeedNumber);
+elements.fortuneNumberDialog.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeFortuneNumberDialog();
+});
+elements.fortuneNumberDialog.addEventListener("close", () => {
+  document.body.classList.remove("fortune-number-open");
+});
 
 window.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && document.body.classList.contains("admin-open")) {
@@ -2466,5 +2888,7 @@ window.addEventListener("load", async () => {
   setActiveView(getViewIdFromHash());
   if (window.location.hash === "#admin") {
     openAdminLogin();
+  } else {
+    maybeOpenFortuneNumberDialog();
   }
 });

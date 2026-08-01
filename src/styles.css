@@ -52,6 +52,7 @@ body {
 }
 
 body.admin-open,
+body.fortune-number-open,
 body.receipt-open,
 body.payment-open {
   overflow: hidden;
@@ -468,6 +469,72 @@ a {
   box-shadow: 0 0 0 4px rgba(30, 147, 171, 0.1);
 }
 
+.admin-toggle {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 13px 14px;
+  border: 1px solid rgba(242, 186, 50, 0.42);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 8% 20%, rgba(255, 232, 135, 0.32), transparent 34%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(255, 247, 218, 0.52));
+}
+
+.admin-form .admin-toggle input {
+  width: 48px;
+  min-width: 48px;
+  height: 28px;
+  min-height: 28px;
+  appearance: none;
+  padding: 0;
+  border: 1px solid rgba(217, 215, 207, 0.96);
+  border-radius: 999px;
+  background: #ded9d9;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.admin-form .admin-toggle input::before {
+  display: block;
+  width: 22px;
+  height: 22px;
+  margin: 2px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 3px 8px rgba(25, 25, 25, 0.16);
+  content: "";
+  transition: transform 160ms ease;
+}
+
+.admin-form .admin-toggle input:checked {
+  border-color: rgba(217, 154, 34, 0.76);
+  background: linear-gradient(135deg, #ffe178, #f2b32e);
+  box-shadow: 0 0 0 5px rgba(248, 198, 75, 0.18);
+}
+
+.admin-form .admin-toggle input:checked::before {
+  transform: translateX(20px);
+}
+
+.admin-toggle span {
+  display: grid;
+  gap: 3px;
+  color: #5f5141;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.admin-toggle strong {
+  color: #1d232c;
+  font-size: 14px;
+  font-weight: 900;
+}
+
 .admin-actions {
   position: static;
   z-index: 1;
@@ -672,7 +739,8 @@ a {
 
 .admin-calendar-header,
 .admin-calendar-detail-heading,
-.admin-calendar-donation {
+.admin-calendar-donation-main,
+.admin-order-actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -820,7 +888,7 @@ a {
 }
 
 .admin-calendar-detail-heading span,
-.admin-calendar-donation span {
+.admin-calendar-donation-main span {
   display: block;
   color: #8f95a5;
   font-size: 11px;
@@ -830,15 +898,15 @@ a {
 
 .admin-calendar-detail-heading strong,
 .admin-calendar-detail-heading b,
-.admin-calendar-donation strong,
-.admin-calendar-donation b {
+.admin-calendar-donation-main strong,
+.admin-calendar-donation-main b {
   color: #1d232c;
   font-size: 14px;
   line-height: 1.2;
 }
 
 .admin-calendar-detail-heading b,
-.admin-calendar-donation b {
+.admin-calendar-donation-main b {
   white-space: nowrap;
 }
 
@@ -848,10 +916,82 @@ a {
 }
 
 .admin-calendar-donation {
+  display: grid;
+  align-items: stretch;
+  gap: 10px;
   padding: 10px;
   border: 1px solid rgba(217, 215, 207, 0.64);
   border-radius: 14px;
   background: var(--white);
+}
+
+.admin-order-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-order-meta span {
+  min-width: 0;
+  padding: 8px;
+  border-radius: 10px;
+  color: #1d232c;
+  background: #f5f2f0;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.admin-order-meta strong,
+.admin-fulfillment-field span {
+  display: block;
+  margin-bottom: 3px;
+  color: #8f95a5;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.admin-order-request {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.admin-order-request strong {
+  color: #1d232c;
+}
+
+.admin-fulfillment-field {
+  display: grid;
+  gap: 4px;
+}
+
+.admin-fulfillment-field textarea {
+  min-height: 58px;
+  padding: 10px;
+  border: 1px solid rgba(217, 215, 207, 0.84);
+  border-radius: 12px;
+  color: #1d232c;
+  background: #f5f2f0;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.35;
+  resize: vertical;
+}
+
+.admin-order-actions {
+  flex-wrap: wrap;
+}
+
+.admin-order-actions .button {
+  min-height: 38px;
+  padding: 9px 14px;
+  font-size: 12px;
 }
 
 .admin-calendar-summary {
@@ -2410,6 +2550,205 @@ legend,
   background: transparent;
 }
 
+.fortune-number-dialog {
+  width: min(500px, calc(100% - 30px));
+  padding: 0;
+  border: 0;
+  border-radius: 32px;
+  background: transparent;
+}
+
+.fortune-number-dialog::backdrop {
+  background:
+    radial-gradient(circle at 50% 38%, rgba(248, 198, 75, 0.2), transparent 24%),
+    rgba(26, 20, 28, 0.58);
+  backdrop-filter: blur(11px) saturate(1.18);
+}
+
+.fortune-number-card {
+  position: relative;
+  overflow: hidden;
+  padding: 38px 34px 34px;
+  border: 1px solid rgba(242, 186, 50, 0.52);
+  border-radius: 32px;
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% -14%, rgba(255, 238, 149, 0.64), transparent 35%),
+    radial-gradient(circle at 12% 86%, rgba(243, 239, 255, 0.94), transparent 38%),
+    linear-gradient(145deg, #fffdf7 0%, #fff8e5 48%, #f7edff 100%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.74) inset,
+    0 30px 70px rgba(101, 63, 8, 0.26),
+    0 0 58px rgba(248, 198, 75, 0.28);
+}
+
+.fortune-number-card::before,
+.fortune-number-card::after {
+  position: absolute;
+  content: "";
+  pointer-events: none;
+}
+
+.fortune-number-card::before {
+  inset: 15px;
+  border: 1px solid rgba(242, 186, 50, 0.24);
+  border-radius: 25px;
+}
+
+.fortune-number-card::after {
+  width: 190px;
+  height: 190px;
+  right: -92px;
+  bottom: -96px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 216, 96, 0.48), transparent 68%);
+}
+
+.close-fortune-number {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+}
+
+.fortune-seed-button {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 122px;
+  height: 122px;
+  place-items: center;
+  margin: 0 auto 22px;
+  border: 0;
+  border-radius: 50%;
+  color: #6a4307;
+  background:
+    radial-gradient(circle at 36% 28%, #fff8cc, transparent 28%),
+    linear-gradient(135deg, #fff0a4 0%, #f8c84d 48%, #d89b25 100%);
+  box-shadow:
+    0 0 0 12px rgba(248, 198, 75, 0.13),
+    0 0 46px rgba(248, 198, 75, 0.58),
+    0 20px 44px rgba(217, 154, 34, 0.34);
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    filter 180ms ease;
+}
+
+.fortune-seed-button:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow:
+    0 0 0 14px rgba(248, 198, 75, 0.16),
+    0 0 58px rgba(248, 198, 75, 0.72),
+    0 24px 50px rgba(217, 154, 34, 0.36);
+}
+
+.fortune-seed-button:disabled {
+  cursor: default;
+}
+
+.fortune-seed-button.is-revealed {
+  filter: saturate(1.1);
+  transform: scale(0.96);
+}
+
+.fortune-seed-button.is-special {
+  animation: fortune-pulse 1.4s ease-in-out infinite;
+}
+
+.fortune-seed-button svg {
+  width: 70px;
+  height: 70px;
+  fill: none;
+  stroke: none;
+}
+
+.fortune-seed-core {
+  fill: #5b3906;
+  filter: drop-shadow(0 2px 5px rgba(92, 57, 6, 0.2));
+}
+
+.fortune-seed-shine,
+.fortune-seed-sprout {
+  fill: none;
+  stroke: #fff4b6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 6;
+}
+
+.fortune-number-card .section-kicker {
+  position: relative;
+  z-index: 1;
+  color: #9d6508;
+  text-shadow: 0 0 20px rgba(248, 198, 75, 0.42);
+}
+
+.fortune-number-card h2 {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 390px);
+  margin: 8px auto 12px;
+  color: #211506;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 42px;
+  font-weight: 700;
+  line-height: 1.02;
+  text-shadow:
+    0 1px 0 #fff4bf,
+    0 0 26px rgba(248, 198, 75, 0.34);
+}
+
+.fortune-number-copy,
+.fortune-number-result {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 370px);
+  margin-inline: auto;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-weight: 600;
+  line-height: 1.32;
+}
+
+.fortune-number-copy {
+  margin-top: 0;
+  color: #5a3d22;
+  font-size: 23px;
+}
+
+.fortune-number-result {
+  margin-top: 16px;
+  color: #7f4e04;
+  font-size: 34px;
+  text-shadow:
+    0 1px 0 #fff4bf,
+    0 0 24px rgba(248, 198, 75, 0.5);
+}
+
+.fortune-number-amen {
+  position: relative;
+  z-index: 1;
+  margin: 22px auto 0;
+}
+
+@keyframes fortune-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 12px rgba(248, 198, 75, 0.13),
+      0 0 46px rgba(248, 198, 75, 0.58),
+      0 20px 44px rgba(217, 154, 34, 0.34);
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 16px rgba(248, 198, 75, 0.18),
+      0 0 76px rgba(248, 198, 75, 0.8),
+      0 22px 48px rgba(217, 154, 34, 0.4);
+  }
+}
+
 .receipt-dialog::backdrop {
   background:
     radial-gradient(circle at 50% 40%, rgba(248, 198, 75, 0.16), transparent 28%),
@@ -2688,12 +3027,43 @@ legend,
   }
 
   .admin-calendar-detail-heading,
-  .admin-calendar-donation {
+  .admin-calendar-donation-main,
+  .admin-order-actions {
     align-items: flex-start;
+  }
+
+  .admin-order-meta {
+    grid-template-columns: 1fr;
   }
 
   .admin-calendar-summary {
     grid-template-columns: 1fr;
+  }
+
+  .fortune-number-card {
+    padding: 32px 22px 28px;
+  }
+
+  .fortune-seed-button {
+    width: 104px;
+    height: 104px;
+  }
+
+  .fortune-seed-button svg {
+    width: 60px;
+    height: 60px;
+  }
+
+  .fortune-number-card h2 {
+    font-size: 34px;
+  }
+
+  .fortune-number-copy {
+    font-size: 21px;
+  }
+
+  .fortune-number-result {
+    font-size: 30px;
   }
 
   .admin-posts-heading {

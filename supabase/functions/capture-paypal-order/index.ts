@@ -1,5 +1,10 @@
 import { errorResponse, handleOptions, jsonResponse, readJson } from "../_shared/http.ts";
-import { capturePayPalOrder, getPayPalCurrency } from "../_shared/paypal.ts";
+import {
+  capturePayPalOrder,
+  createDigitalOrderNumber,
+  DIGITAL_ORDER_ITEM_NAME,
+  getPayPalCurrency,
+} from "../_shared/paypal.ts";
 import { createRandomToken, getSupabaseAdmin, hashText } from "../_shared/supabase.ts";
 
 type CaptureBody = {
@@ -38,6 +43,14 @@ function captureFromOrder(order: Record<string, any>) {
   return order.purchase_units?.[0]?.payments?.captures?.[0] || null;
 }
 
+function getOrderNumberFromPayPal(order: Record<string, any>) {
+  const customId = String(order.purchase_units?.[0]?.custom_id || "").trim();
+
+  if (/^SYS-\d{8}-[A-Z0-9]{6,12}$/.test(customId)) return customId;
+
+  return createDigitalOrderNumber();
+}
+
 function getBuyerAddress(order: Record<string, any>) {
   return order.payer?.address || order.purchase_units?.[0]?.shipping?.address || {};
 }
@@ -74,6 +87,75 @@ function buildExportRow(input: {
     BuyerEmail: input.order.payer?.email_address || "",
     PaymentProvider: "PayPal",
   };
+}
+
+function mapDigitalOrder(order: Record<string, any> | null) {
+  if (!order) return null;
+
+  return {
+    id: order.id,
+    orderNumber: order.order_number,
+    donationId: order.donation_id,
+    itemName: order.item_name,
+    personalizedRequest: order.personalized_request,
+    blessingMessage: order.blessing_message,
+    fulfillmentStatus: order.fulfillment_status,
+    fulfillmentNote: order.fulfillment_note,
+    fulfilledAt: order.fulfilled_at,
+    createdAt: order.created_at,
+  };
+}
+
+async function ensureDigitalOrder(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  input: {
+    donationId: string;
+    orderNumber?: string;
+    paypalOrderId?: string | null;
+    paypalCaptureId?: string | null;
+    customerName: string;
+    payerEmail?: string | null;
+    amount: number;
+    currency: string;
+    personalizedRequest?: string | null;
+    blessingMessage?: string | null;
+  },
+) {
+  const { data: existing, error: existingError } = await supabase
+    .from("digital_orders")
+    .select(
+      "id, order_number, donation_id, item_name, personalized_request, blessing_message, fulfillment_status, fulfillment_note, fulfilled_at, created_at",
+    )
+    .eq("donation_id", input.donationId)
+    .maybeSingle();
+
+  if (existingError) throw existingError;
+  if (existing) return existing;
+
+  const { data: created, error: createError } = await supabase
+    .from("digital_orders")
+    .insert({
+      order_number: input.orderNumber || createDigitalOrderNumber(),
+      donation_id: input.donationId,
+      paypal_order_id: input.paypalOrderId || null,
+      paypal_capture_id: input.paypalCaptureId || null,
+      customer_name: input.customerName,
+      payer_email: input.payerEmail || null,
+      amount: input.amount,
+      currency: input.currency,
+      item_name: DIGITAL_ORDER_ITEM_NAME,
+      personalized_request: input.personalizedRequest || null,
+      blessing_message: input.blessingMessage || null,
+      fulfillment_status: "paid_awaiting_personalized_writing",
+    })
+    .select(
+      "id, order_number, donation_id, item_name, personalized_request, blessing_message, fulfillment_status, fulfillment_note, fulfilled_at, created_at",
+    )
+    .single();
+
+  if (createError) throw createError;
+
+  return created;
 }
 
 function getCurrentGoalCycleAmount(totalAmount: number, goalAmount: number) {
@@ -134,14 +216,36 @@ Deno.serve(async (request) => {
     const supabase = getSupabaseAdmin();
     const { data: existing } = await supabase
       .from("donations")
-      .select("id, fortune_message, display_name, amount, seed_count, frequency, created_at")
+      .select(
+        "id, fortune_message, display_name, amount, seed_count, frequency, supporter_message, paypal_order_id, paypal_capture_id, paypal_payer_email, raw_payment, created_at",
+      )
       .eq("paypal_order_id", orderId)
       .maybeSingle();
 
     if (existing) {
+      const rawPayment =
+        existing.raw_payment && typeof existing.raw_payment === "object" && !Array.isArray(existing.raw_payment)
+          ? existing.raw_payment
+          : {};
+      const rawOrder = rawPayment.order && typeof rawPayment.order === "object" ? rawPayment.order : {};
+      const rawRow = rawPayment.row && typeof rawPayment.row === "object" ? rawPayment.row : {};
+      const digitalOrder = await ensureDigitalOrder(supabase, {
+        donationId: existing.id,
+        orderNumber: rawPayment.digitalOrder?.orderNumber || getOrderNumberFromPayPal(rawOrder),
+        paypalOrderId: existing.paypal_order_id,
+        paypalCaptureId: existing.paypal_capture_id,
+        customerName: existing.display_name,
+        payerEmail: existing.paypal_payer_email,
+        amount: Number(existing.amount) || 0,
+        currency: rawRow.Currency || getPayPalCurrency(),
+        personalizedRequest: existing.supporter_message,
+        blessingMessage: existing.fortune_message,
+      });
+
       return jsonResponse({
         donation: existing,
         fortune: existing.fortune_message,
+        digitalOrder: mapDigitalOrder(digitalOrder),
         donorAccessToken: null,
         duplicate: true,
       });
@@ -176,6 +280,7 @@ Deno.serve(async (request) => {
       .slice(0, 80);
     const supporterMessage = String(body.donation?.message || "").trim().slice(0, 280);
     const frequency = body.donation?.frequency === "monthly" ? "monthly" : "once";
+    const orderNumber = getOrderNumberFromPayPal(order);
     const exportRow = buildExportRow({
       order,
       capture,
@@ -216,11 +321,29 @@ Deno.serve(async (request) => {
           provider: "PayPal",
           row: exportRow,
           order,
+          digitalOrder: {
+            orderNumber,
+            itemName: DIGITAL_ORDER_ITEM_NAME,
+            fulfillmentStatus: "paid_awaiting_personalized_writing",
+          },
         },
       })
       .select("id, display_name, amount, seed_count, frequency, supporter_message, fortune_message, created_at")
       .single();
     if (donationError) throw donationError;
+
+    const digitalOrder = await ensureDigitalOrder(supabase, {
+      donationId: donation.id,
+      orderNumber,
+      paypalOrderId: order.id,
+      paypalCaptureId: capture.id,
+      customerName: displayName,
+      payerEmail: order.payer?.email_address || null,
+      amount: capturedAmount,
+      currency,
+      personalizedRequest: supporterMessage,
+      blessingMessage: fortune.message,
+    });
 
     await supabase.from("donor_tokens").update({ donation_id: donation.id }).eq("id", donorToken.id);
     const meterCurrentAmount = await advanceMeterCycle(supabase, capturedAmount);
@@ -228,6 +351,7 @@ Deno.serve(async (request) => {
     return jsonResponse({
       donation,
       fortune: fortune.message,
+      digitalOrder: mapDigitalOrder(digitalOrder),
       donorAccessToken: rawDonorToken,
       meterCurrentAmount,
     });

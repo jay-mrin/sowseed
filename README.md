@@ -21,7 +21,7 @@ When `src/config.js` has `backendEnabled: false`, the app stays in local demo mo
 - `src/styles.css` - responsive UI and modal styling
 - `src/config.js` - local browser config, never store secrets here
 - `.env.example` - server secret placeholders
-- `supabase/migrations/202607280001_initial_backend.sql` - database, RLS, storage bucket, seed data
+- `supabase/migrations/*` - database, RLS, storage bucket, seed/order data
 - `supabase/functions/*` - public, admin, PayPal, and engagement Edge Functions
 
 ## Required Setup
@@ -82,6 +82,8 @@ For your India-registered PayPal Business account, keep the public wording as in
 
 The public meter is a repeating goal cycle, separate from the full donation record/calendar/export. Admin sets the goal amount and current cycle amount in dollars. With `$6 = 1 seed` and a `$600` goal, the target is `100 seeds`; a `$6` tip adds `1%`, a `$12` tip adds `2%`, and custom amounts contribute as `amount / 6`. When the current cycle reaches `$600`, the visible meter resets to `0%` and starts the next cycle.
 
+Every completed PayPal capture also creates a linked digital-service order for `Personalised Digital Blessing and Sowing Seed`. The admin calendar shows the order ID, PayPal transaction ID, personalized-writing request, fulfillment status, and a proof PDF download for each payment.
+
 The current backend records `once` or `monthly` as donation frequency, but PayPal Orders captures a single payment. Automatic recurring monthly billing requires a separate PayPal Subscriptions flow with product/plan IDs.
 
 ## Verification
@@ -92,5 +94,6 @@ Use PayPal sandbox first:
 - Successful eligible card capture creates one donation row and returns a fortune.
 - Cancelled checkout creates no donation.
 - Duplicate capture/webhook updates do not create duplicate donations.
+- Admin calendar can download a proof PDF for each digital-service order and mark orders fulfilled.
 - Admin login requires Supabase Auth and `admin_profiles`.
 - Donor comments require the same-browser donor token returned after a completed donation.

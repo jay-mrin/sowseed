@@ -1,5 +1,11 @@
-import { errorResponse, handleOptions, jsonResponse } from "../_shared/http.ts";
+import { errorResponse, handleOptions, jsonResponse, readJson } from "../_shared/http.ts";
 import { requireAdmin } from "../_shared/supabase.ts";
+
+type UpdateOrderBody = {
+  donationId?: string;
+  fulfillmentStatus?: string;
+  fulfillmentNote?: string;
+};
 
 function isDateOnly(value: string | null) {
   return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
@@ -10,12 +16,67 @@ function getUtcDayStart(value: string) {
   return new Date(Date.UTC(year, month - 1, day));
 }
 
+function mapDigitalOrder(value: any) {
+  const order = Array.isArray(value) ? value[0] : value;
+
+  if (!order) return null;
+
+  return {
+    id: order.id,
+    orderNumber: order.order_number,
+    donationId: order.donation_id,
+    paypalOrderId: order.paypal_order_id,
+    paypalCaptureId: order.paypal_capture_id,
+    customerName: order.customer_name,
+    payerEmail: order.payer_email,
+    amount: Number(order.amount),
+    currency: order.currency,
+    itemName: order.item_name,
+    personalizedRequest: order.personalized_request,
+    blessingMessage: order.blessing_message,
+    fulfillmentStatus: order.fulfillment_status,
+    fulfillmentNote: order.fulfillment_note,
+    fulfilledAt: order.fulfilled_at,
+    createdAt: order.created_at,
+    updatedAt: order.updated_at,
+  };
+}
+
 Deno.serve(async (request) => {
   const options = handleOptions(request);
   if (options) return options;
 
   try {
     const { supabase } = await requireAdmin(request);
+
+    if (request.method === "PUT") {
+      const body = await readJson<UpdateOrderBody>(request);
+      const donationId = String(body.donationId || "").trim();
+      const fulfillmentStatus =
+        body.fulfillmentStatus === "fulfilled" ? "fulfilled" : "paid_awaiting_personalized_writing";
+      const fulfillmentNote = String(body.fulfillmentNote || "").trim().slice(0, 1200);
+
+      if (!donationId) return errorResponse("Donation id is required.", 422);
+
+      const { data, error } = await supabase
+        .from("digital_orders")
+        .update({
+          fulfillment_status: fulfillmentStatus,
+          fulfillment_note: fulfillmentNote || null,
+          fulfilled_at: fulfillmentStatus === "fulfilled" ? new Date().toISOString() : null,
+        })
+        .eq("donation_id", donationId)
+        .select(
+          "id, order_number, donation_id, paypal_order_id, paypal_capture_id, customer_name, payer_email, amount, currency, item_name, personalized_request, blessing_message, fulfillment_status, fulfillment_note, fulfilled_at, created_at, updated_at",
+        )
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) return errorResponse("Digital order not found for this donation.", 404);
+
+      return jsonResponse({ order: mapDigitalOrder(data) });
+    }
+
     const url = new URL(request.url);
     const month = url.searchParams.get("month");
     const exportRows = url.searchParams.get("export") === "csv";
@@ -36,8 +97,10 @@ Deno.serve(async (request) => {
           "paypal_order_id",
           "paypal_capture_id",
           "paypal_payer_email",
+          "fortune_message",
           "raw_payment",
           "created_at",
+          "digital_orders(id, order_number, donation_id, paypal_order_id, paypal_capture_id, customer_name, payer_email, amount, currency, item_name, personalized_request, blessing_message, fulfillment_status, fulfillment_note, fulfilled_at, created_at, updated_at)",
         ].join(", "),
       )
       .order("created_at", { ascending: false });
@@ -75,7 +138,9 @@ Deno.serve(async (request) => {
         orderId: donation.paypal_order_id,
         captureId: donation.paypal_capture_id,
         payerEmail: donation.paypal_payer_email,
+        fortuneMessage: donation.fortune_message,
         rawPayment: donation.raw_payment,
+        digitalOrder: mapDigitalOrder(donation.digital_orders),
         createdAt: donation.created_at,
       })),
     });

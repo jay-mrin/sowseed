@@ -3,6 +3,23 @@ const PAYPAL_API_BASE = {
   live: "https://api-m.paypal.com",
 };
 
+export const DIGITAL_ORDER_ITEM_NAME = "Personalised Digital Blessing and Sowing Seed";
+
+function padDatePart(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+export function createDigitalOrderNumber(date = new Date()) {
+  const datePart = [
+    date.getUTCFullYear(),
+    padDatePart(date.getUTCMonth() + 1),
+    padDatePart(date.getUTCDate()),
+  ].join("");
+  const randomPart = crypto.randomUUID().replaceAll("-", "").slice(0, 8).toUpperCase();
+
+  return `SYS-${datePart}-${randomPart}`;
+}
+
 export function getPayPalBaseUrl() {
   const env = (Deno.env.get("PAYPAL_ENV") || "sandbox").toLowerCase();
   return PAYPAL_API_BASE[env === "live" ? "live" : "sandbox"];
@@ -48,6 +65,7 @@ export async function createPayPalOrder(input: {
   const accessToken = await getPayPalAccessToken();
   const currency = getPayPalCurrency();
   const amount = input.amount.toFixed(2);
+  const orderNumber = createDigitalOrderNumber();
 
   const response = await fetch(`${getPayPalBaseUrl()}/v2/checkout/orders`, {
     method: "POST",
@@ -60,8 +78,8 @@ export async function createPayPalOrder(input: {
       intent: "CAPTURE",
       purchase_units: [
         {
-          description: "Voluntary creator tip for Sow Your Seed",
-          custom_id: crypto.randomUUID(),
+          description: DIGITAL_ORDER_ITEM_NAME,
+          custom_id: orderNumber,
           amount: {
             currency_code: currency,
             value: amount,
