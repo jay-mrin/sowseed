@@ -16,6 +16,8 @@ When `src/config.js` has `backendEnabled: false`, the app stays in local demo mo
 
 The admin portal also shows real page-view analytics for the last 24 hours. A public page load records one view session per visitor per hour, then the admin-only analytics endpoint reports unique visitors and total hourly view sessions.
 
+The payment column includes a Blessing Wall loaded from `seed_comments`. The initial comments are imported from the old-site CSV, and each completed payment with a written blessing request adds one new public comment with the captured payment timestamp.
+
 ## Files
 
 - `index.html` - static app entrypoint
@@ -98,5 +100,6 @@ Use PayPal sandbox first:
 - Duplicate capture/webhook updates do not create duplicate donations.
 - Admin calendar can download a proof PDF for each digital-service order and mark orders fulfilled.
 - Admin analytics shows unique visitors and view sessions from the last 24 hours.
+- Public Blessing Wall loads imported legacy comments and appends paid blessing requests after confirmed payment capture.
 - Admin login requires Supabase Auth and `admin_profiles`.
 - Donor comments require the same-browser donor token returned after a completed donation.

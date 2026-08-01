@@ -77,6 +77,13 @@ Deno.serve(async (request) => {
       .limit(50);
     if (donationsError) throw donationsError;
 
+    const { data: seedComments, error: seedCommentsError } = await supabase
+      .from("seed_comments")
+      .select("id, display_name, body, amount, seed_count, source, created_at")
+      .order("created_at", { ascending: false })
+      .limit(520);
+    if (seedCommentsError) throw seedCommentsError;
+
     const { data: posts, error: postsError } = await supabase
       .from("posts")
       .select("id, title, description, image_url, published, created_at")
@@ -145,6 +152,15 @@ Deno.serve(async (request) => {
         frequency: donation.frequency,
         message: donation.supporter_message,
         createdAt: donation.created_at,
+      })),
+      seedComments: (seedComments || []).map((comment) => ({
+        id: comment.id,
+        name: comment.display_name,
+        text: comment.body,
+        amount: comment.amount === null ? null : Number(comment.amount),
+        seedCount: comment.seed_count,
+        source: comment.source,
+        createdAt: comment.created_at,
       })),
       posts: normalizedPosts,
       totals: {

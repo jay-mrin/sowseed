@@ -106,6 +106,20 @@ function mapDigitalOrder(order: Record<string, any> | null) {
   };
 }
 
+function mapSeedComment(comment: Record<string, any> | null) {
+  if (!comment) return null;
+
+  return {
+    id: comment.id,
+    name: comment.display_name,
+    text: comment.body,
+    amount: comment.amount === null ? null : Number(comment.amount),
+    seedCount: comment.seed_count,
+    source: comment.source,
+    createdAt: comment.created_at,
+  };
+}
+
 async function ensureDigitalOrder(
   supabase: ReturnType<typeof getSupabaseAdmin>,
   input: {
@@ -151,6 +165,49 @@ async function ensureDigitalOrder(
     .select(
       "id, order_number, donation_id, item_name, personalized_request, blessing_message, fulfillment_status, fulfillment_note, fulfilled_at, created_at",
     )
+    .single();
+
+  if (createError) throw createError;
+
+  return created;
+}
+
+async function ensureSeedComment(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  input: {
+    donationId: string;
+    displayName: string;
+    body?: string | null;
+    amount: number;
+    seedCount: number;
+    createdAt?: string | null;
+  },
+) {
+  const body = String(input.body || "").trim().slice(0, 280);
+
+  if (!body) return null;
+
+  const { data: existing, error: existingError } = await supabase
+    .from("seed_comments")
+    .select("id, display_name, body, amount, seed_count, source, created_at")
+    .eq("donation_id", input.donationId)
+    .maybeSingle();
+
+  if (existingError) throw existingError;
+  if (existing) return existing;
+
+  const { data: created, error: createError } = await supabase
+    .from("seed_comments")
+    .insert({
+      donation_id: input.donationId,
+      display_name: input.displayName,
+      body,
+      amount: input.amount,
+      seed_count: input.seedCount,
+      source: "payment",
+      created_at: input.createdAt || new Date().toISOString(),
+    })
+    .select("id, display_name, body, amount, seed_count, source, created_at")
     .single();
 
   if (createError) throw createError;
@@ -241,11 +298,20 @@ Deno.serve(async (request) => {
         personalizedRequest: existing.supporter_message,
         blessingMessage: existing.fortune_message,
       });
+      const seedComment = await ensureSeedComment(supabase, {
+        donationId: existing.id,
+        displayName: existing.display_name,
+        body: existing.supporter_message,
+        amount: Number(existing.amount) || 0,
+        seedCount: Number(existing.seed_count) || seedCountFromAmount(Number(existing.amount) || 0),
+        createdAt: existing.created_at,
+      });
 
       return jsonResponse({
         donation: existing,
         fortune: existing.fortune_message,
         digitalOrder: mapDigitalOrder(digitalOrder),
+        seedComment: mapSeedComment(seedComment),
         donorAccessToken: null,
         duplicate: true,
       });
@@ -344,6 +410,14 @@ Deno.serve(async (request) => {
       personalizedRequest: supporterMessage,
       blessingMessage: fortune.message,
     });
+    const seedComment = await ensureSeedComment(supabase, {
+      donationId: donation.id,
+      displayName,
+      body: supporterMessage,
+      amount: capturedAmount,
+      seedCount: seedCountFromAmount(capturedAmount),
+      createdAt: donation.created_at,
+    });
 
     await supabase.from("donor_tokens").update({ donation_id: donation.id }).eq("id", donorToken.id);
     const meterCurrentAmount = await advanceMeterCycle(supabase, capturedAmount);
@@ -352,6 +426,7 @@ Deno.serve(async (request) => {
       donation,
       fortune: fortune.message,
       digitalOrder: mapDigitalOrder(digitalOrder),
+      seedComment: mapSeedComment(seedComment),
       donorAccessToken: rawDonorToken,
       meterCurrentAmount,
     });

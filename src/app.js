@@ -304,6 +304,7 @@ const elements = {
   receiptTitle: document.querySelector("#receiptTitle"),
   resetAdminButton: document.querySelector("#resetAdminButton"),
   saveAdminButton: document.querySelector("#saveAdminButton"),
+  seedCommentsList: document.querySelector("#seedCommentsList"),
   seedPriceLabel: document.querySelector("#seedPriceLabel"),
   sectionViews: document.querySelectorAll("[data-section-view]"),
   showMoreButtons: document.querySelectorAll("[data-toggle-target]"),
@@ -429,6 +430,34 @@ function normalizeComments(comments) {
     : [];
 }
 
+function normalizeSeedComments(comments) {
+  return Array.isArray(comments)
+    ? comments
+        .map((comment, index) => {
+          const text = String(comment?.text || comment?.body || "").trim();
+          const name = String(comment?.name || comment?.display_name || "Supporter").trim().slice(0, 80) || "Supporter";
+          const createdAt = toSafeIsoDate(comment?.createdAt || comment?.created_at);
+
+          if (!text) return null;
+
+          return {
+            id: String(comment?.id || `seed-comment-${Date.now()}-${index}`),
+            name,
+            text: text.slice(0, 280),
+            amount: comment?.amount === null || comment?.amount === undefined ? null : Number(comment.amount),
+            seedCount:
+              comment?.seedCount === null || comment?.seedCount === undefined
+                ? null
+                : Math.max(Number.parseInt(comment.seedCount, 10) || 0, 0),
+            source: comment?.source === "payment" ? "payment" : "legacy",
+            createdAt,
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+    : [];
+}
+
 function normalizePosts(posts) {
   const normalized = Array.isArray(posts)
     ? posts
@@ -494,6 +523,7 @@ function loadState() {
       donations: [],
       followed: false,
       posts: [],
+      seedComments: [],
       settings: {
         ...cloneDefaultSettings(),
         startingSeeds: 0,
@@ -510,6 +540,7 @@ function loadState() {
       donations: seedFeed,
       followed: false,
       posts: cloneDefaultPosts(),
+      seedComments: [],
       settings: cloneDefaultSettings(),
       totals: { donationSeeds: null, donationAmount: null },
     };
@@ -522,6 +553,7 @@ function loadState() {
       donations: Array.isArray(parsed.donations) ? parsed.donations : seedFeed,
       followed: Boolean(parsed.followed),
       posts: normalizePosts(parsed.posts),
+      seedComments: normalizeSeedComments(parsed.seedComments),
       settings: normalizeSettings(parsed.settings),
       totals: normalizeTotals(parsed.totals),
     };
@@ -531,6 +563,7 @@ function loadState() {
       donations: seedFeed,
       followed: false,
       posts: cloneDefaultPosts(),
+      seedComments: [],
       settings: cloneDefaultSettings(),
       totals: { donationSeeds: null, donationAmount: null },
     };
@@ -648,6 +681,7 @@ function applyBootstrap(payload) {
 
   state.settings = normalizeSettings(payload.settings);
   state.donations = Array.isArray(payload.donations) ? payload.donations : [];
+  state.seedComments = normalizeSeedComments(payload.seedComments);
   state.posts = normalizePosts(payload.posts);
   state.totals = normalizeTotals(payload.totals);
   paymentConfig = {
@@ -1471,6 +1505,36 @@ function renderRecentDonations() {
     : `<p class="empty-state">No seeds have been recorded yet.</p>`;
 }
 
+function renderSeedComments() {
+  if (!elements.seedCommentsList) return;
+
+  const comments = normalizeSeedComments(state.seedComments);
+
+  elements.seedCommentsList.innerHTML = comments.length
+    ? comments
+        .map((comment) => {
+          const seedCount = Number.isFinite(comment.seedCount) && comment.seedCount > 0 ? comment.seedCount : null;
+          const seedLabel = seedCount
+            ? `Sowed ${seedCount} seed${seedCount === 1 ? "" : "s"}`
+            : "Blessing comment";
+
+          return `
+            <article class="seed-comment-item">
+              <span class="avatar">${initials(comment.name)}</span>
+              <div>
+                <div class="seed-comment-heading">
+                  <strong>${escapeHtml(comment.name)}</strong>
+                  <small>${seedLabel} · ${readableDate(comment.createdAt)} · ${readableTime(comment.createdAt)}</small>
+                </div>
+                <p>${escapeHtml(comment.text)}</p>
+              </div>
+            </article>
+          `;
+        })
+        .join("")
+    : `<p class="empty-state">Blessing comments will appear here after supporters sow a seed.</p>`;
+}
+
 function renderPostCard(post, compact = false) {
   const image = post.imageUrl
     ? `<img class="post-image" src="${escapeHtml(post.imageUrl)}" alt="${escapeHtml(post.title)}" />`
@@ -2040,6 +2104,23 @@ async function finishVerifiedDonation(payload) {
     });
     selectedAdminCalendarDate = getDonationDateKey(state.donations[0]);
     adminCalendarCursor = fromDateKey(selectedAdminCalendarDate);
+  }
+
+  if (payload.seedComment) {
+    state.seedComments = normalizeSeedComments([payload.seedComment, ...(state.seedComments || [])]);
+  } else if (!isBackendConfigured() && pendingDonation?.message) {
+    state.seedComments = normalizeSeedComments([
+      {
+        id: `seed-comment-${Date.now()}`,
+        name: pendingDonation.name || "Supporter",
+        text: pendingDonation.message,
+        amount: pendingDonation.amount,
+        seedCount: getSeedCountFromAmount(pendingDonation.amount),
+        source: "payment",
+        createdAt: new Date().toISOString(),
+      },
+      ...(state.seedComments || []),
+    ]);
   }
 
   if (isBackendConfigured()) {
@@ -2689,6 +2770,7 @@ function renderApp() {
   renderTotals();
   renderFeed();
   renderRecentDonations();
+  renderSeedComments();
   renderPublicPosts();
   renderGallery();
   renderAdminPosts();
