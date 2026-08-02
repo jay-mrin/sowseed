@@ -146,7 +146,7 @@ const DEFAULT_SETTINGS = {
   startingSeeds: 0,
   meterCurrentAmount: 0,
   seedPrice: 6,
-  amountOptions: [6, 11, 33, 99],
+  amountOptions: [6, 11, 33, 99, 111, 333, 666, 999],
   meterHeadline:
     "༺💗༻ Click the Donate button to sow your seed now. With every seed you sow, you whisper to the universe: “Bring my soulmate to me.” 🌱💫🌹",
   meterCollapsed:
@@ -298,6 +298,8 @@ const elements = {
   progressFill: document.querySelector("#progressFill"),
   progressPercent: document.querySelector("#progressPercent"),
   recentDonationList: document.querySelector("#recentDonationList"),
+  refreshAdminButton: document.querySelector("#refreshAdminButton"),
+  refreshSuperAdminButton: document.querySelector("#refreshSuperAdminButton"),
   quantityValue: document.querySelector("#quantityValue"),
   receiptDialog: document.querySelector("#receiptDialog"),
   receiptSummary: document.querySelector("#receiptSummary"),
@@ -311,6 +313,15 @@ const elements = {
   sidebarPostList: document.querySelector("#sidebarPostList"),
   supportForm: document.querySelector("#supportForm"),
   supportTitle: document.querySelector("#supportTitle"),
+  closeSuperAdminButton: document.querySelector("#closeSuperAdminButton"),
+  superAdminActionStatus: document.querySelector("#superAdminActionStatus"),
+  superAdminCalendarDetails: document.querySelector("#superAdminCalendarDetails"),
+  superAdminCalendarGrid: document.querySelector("#superAdminCalendarGrid"),
+  superAdminCalendarNext: document.querySelector("#superAdminCalendarNext"),
+  superAdminCalendarPrev: document.querySelector("#superAdminCalendarPrev"),
+  superAdminCalendarSummary: document.querySelector("#superAdminCalendarSummary"),
+  superAdminCalendarTitle: document.querySelector("#superAdminCalendarTitle"),
+  superAdminPanel: document.querySelector("#superAdminPanel"),
   toast: document.querySelector("#toast"),
   topSupporters: document.querySelector("#topSupporters"),
   topicPill: document.querySelector("#topicPill"),
@@ -340,9 +351,12 @@ const elements = {
 let currentFrequency = "once";
 let currentReceiptText = "";
 let backendReady = false;
-let paypalSdkPromise = null;
+const paypalSdkPromises = new Map();
+const paypalSdkKeysByRoute = new Map();
 let paymentConfig = {
   paypalClientId: PUBLIC_CONFIG.paypalClientId || "",
+  largePaypalClientId: PUBLIC_CONFIG.largePaypalClientId || "",
+  largeDonationThreshold: 99,
   currency: PUBLIC_CONFIG.paypalCurrency || CONFIG.currency,
   env: "sandbox",
 };
@@ -352,6 +366,9 @@ let quantity = 1;
 const initialAdminCalendarDate = getLatestDonationDateKey();
 let adminCalendarCursor = fromDateKey(initialAdminCalendarDate);
 let selectedAdminCalendarDate = initialAdminCalendarDate;
+let superAdminDonations = [];
+let superAdminCalendarCursor = new Date();
+let selectedSuperAdminCalendarDate = toDateKey(new Date());
 let fortuneNumberPromptShown = false;
 
 function cloneDefaultSettings() {
@@ -374,7 +391,7 @@ function parseAmountOptions(value) {
     .map((item) => Number.parseInt(item, 10))
     .filter((amount) => Number.isFinite(amount) && amount > 0);
 
-  return options.length ? [...new Set(options)].slice(0, 6) : [...DEFAULT_SETTINGS.amountOptions];
+  return options.length ? [...new Set(options)].slice(0, 8) : [...DEFAULT_SETTINGS.amountOptions];
 }
 
 function normalizeSettings(settings) {
@@ -676,6 +693,15 @@ async function signInAdmin(email, password) {
   return payload;
 }
 
+async function loadAdminProfile() {
+  const payload = await callEdge("admin-profile", {
+    admin: true,
+    method: "GET",
+  });
+
+  return payload.profile || null;
+}
+
 function applyBootstrap(payload) {
   if (!payload) return;
 
@@ -686,13 +712,15 @@ function applyBootstrap(payload) {
   state.totals = normalizeTotals(payload.totals);
   paymentConfig = {
     paypalClientId: payload.payment?.paypalClientId || PUBLIC_CONFIG.paypalClientId || "",
+    largePaypalClientId: payload.payment?.largePaypalClientId || PUBLIC_CONFIG.largePaypalClientId || "",
+    largeDonationThreshold: Number(payload.payment?.largeDonationThreshold || 99),
     currency: payload.payment?.currency || PUBLIC_CONFIG.paypalCurrency || CONFIG.currency,
     env: payload.payment?.env || "sandbox",
   };
   backendReady = true;
 }
 
-async function loadBackendData() {
+async function loadBackendData(options = {}) {
   if (!isBackendConfigured()) return;
 
   try {
@@ -704,6 +732,9 @@ async function loadBackendData() {
     applyBootstrap(payload);
   } catch (error) {
     backendReady = false;
+    if (options.throwOnError) {
+      throw error;
+    }
     showToast(error.message || "Backend data could not load.");
   }
 }
@@ -724,11 +755,11 @@ function formatCompactNumber(value) {
 }
 
 function getAmount() {
-  return Number.parseInt(elements.amountInput.value, 10) || 0;
+  return Number.parseFloat(elements.amountInput.value) || 0;
 }
 
 function getSeedCountFromAmount(amount) {
-  const numericAmount = Math.max(Number.parseInt(amount, 10) || 0, 0);
+  const numericAmount = Math.max(Number(amount) || 0, 0);
 
   if (!numericAmount) return 0;
 
@@ -1117,6 +1148,8 @@ function buildProofPdfLines(donation) {
   const createdAt = donation.createdAt || order.createdAt || rawOrder["DateTime (UTC)"] || new Date().toISOString();
   const amount = Number(donation.amount || order.amount || 0);
   const currency = order.currency || getDonationRawValue(donation, "Currency", CONFIG.currency);
+  const route = donation.paymentRoute === "large" ? "Large donation route" : "Standard donation route";
+  const receiverIdentifier = donation.receiverIdentifier || "Default PayPal receiver";
   const lines = [
     "Sow Your Seed - Digital Service Order Proof",
     "",
@@ -1128,6 +1161,8 @@ function buildProofPdfLines(donation) {
     `Item: ${itemName}`,
     `Amount received: ${formatCsvAmount(amount)} ${currency}`,
     `Payment provider: ${getPaymentProviderLabel(donation.paymentMethod)}`,
+    `Payment route: ${route}`,
+    `Receiver: ${receiverIdentifier}`,
     `PayPal order ID: ${paypalOrderId || "Not available"}`,
     `PayPal transaction/capture ID: ${paypalCaptureId || "Not available"}`,
     `Payment status: ${donation.status || "COMPLETED"}`,
@@ -1186,7 +1221,11 @@ function buildSimplePdf(lines) {
 }
 
 function getDonationById(donationId) {
-  return state.donations.find((donation) => String(donation.id) === String(donationId)) || null;
+  return (
+    state.donations.find((donation) => String(donation.id) === String(donationId)) ||
+    superAdminDonations.find((donation) => String(donation.id) === String(donationId)) ||
+    null
+  );
 }
 
 function getOrderProofFilename(donation) {
@@ -1198,20 +1237,30 @@ function getOrderProofFilename(donation) {
 
 function downloadOrderProofPdf(donationId) {
   const donation = getDonationById(donationId);
+  const route = donation?.paymentRoute === "large" ? "large" : "standard";
+  const statusElement = route === "large" ? elements.superAdminActionStatus : elements.adminActionStatus;
 
   if (!donation) {
-    setAdminStatus("Could not find that payment in the current calendar data.", "error", { persist: true });
+    setAdminStatus("Could not find that payment in the current calendar data.", "error", { persist: true, statusElement });
     showToast("Payment record not found.");
     return;
   }
 
   const pdf = buildSimplePdf(buildProofPdfLines(donation));
   downloadBlobFile(getOrderProofFilename(donation), new Blob([pdf], { type: "application/pdf" }));
-  setAdminStatus("Downloaded PayPal proof PDF for this digital-service order.", "success");
+  setAdminStatus("Downloaded PayPal proof PDF for this digital-service order.", "success", { statusElement });
 }
 
 function updateDonationDigitalOrder(donationId, order) {
   state.donations = state.donations.map((donation) =>
+    String(donation.id) === String(donationId)
+      ? {
+          ...donation,
+          digitalOrder: order,
+        }
+      : donation,
+  );
+  superAdminDonations = superAdminDonations.map((donation) =>
     String(donation.id) === String(donationId)
       ? {
           ...donation,
@@ -1227,14 +1276,20 @@ function cssAttributeValue(value) {
 }
 
 async function saveDigitalOrderFulfillment(donationId, button) {
-  const noteField = elements.adminCalendarDetails.querySelector(`[data-fulfillment-note="${cssAttributeValue(donationId)}"]`);
-  const note = noteField?.value || "";
   const donation = getDonationById(donationId);
+  const route = donation?.paymentRoute === "large" ? "large" : "standard";
+  const statusElement = route === "large" ? elements.superAdminActionStatus : elements.adminActionStatus;
+  const panel = route === "large" ? elements.superAdminPanel : elements.adminPanel;
+  const detailRoot = route === "large" ? elements.superAdminCalendarDetails : elements.adminCalendarDetails;
+  const noteField = detailRoot.querySelector(`[data-fulfillment-note="${cssAttributeValue(donationId)}"]`);
+  const note = noteField?.value || "";
   const order = getDigitalOrder(donation);
   const nextStatus = order?.fulfillmentStatus === "fulfilled" ? "paid_awaiting_personalized_writing" : "fulfilled";
 
   await runAdminAction(
     {
+      panel,
+      statusElement,
       button,
       busyText: "Saving...",
       loadingMessage: "Saving digital order fulfillment status...",
@@ -1245,7 +1300,7 @@ async function saveDigitalOrderFulfillment(donationId, button) {
       errorMessage: "Could not update digital order fulfillment.",
     },
     async () => {
-      const payload = await callEdge("admin-donations", {
+      const payload = await callEdge(`admin-donations?route=${route}`, {
         admin: true,
         method: "PUT",
         body: {
@@ -1256,7 +1311,11 @@ async function saveDigitalOrderFulfillment(donationId, button) {
       });
 
       updateDonationDigitalOrder(donationId, payload.order);
-      renderAdminCalendar();
+      if (route === "large") {
+        renderSuperAdminCalendar();
+      } else {
+        renderAdminCalendar();
+      }
       return payload;
     },
   );
@@ -1291,8 +1350,8 @@ function getLatestDonationDateKey() {
   return latestDonation ? getDonationDateKey(latestDonation) : toDateKey(new Date());
 }
 
-function getDonationsByDate() {
-  return state.donations.reduce((groups, donation) => {
+function getDonationsByDate(donations = state.donations) {
+  return donations.reduce((groups, donation) => {
     const dateKey = getDonationDateKey(donation);
     groups[dateKey] = groups[dateKey] || [];
     groups[dateKey].push(donation);
@@ -1355,6 +1414,50 @@ async function loadAdminDonations(options = {}) {
   }
 }
 
+async function loadSuperAdminDonations(options = {}) {
+  if (!isBackendConfigured() || !getAdminAccessToken()) return;
+
+  const announce = Boolean(options.announce);
+
+  if (announce) {
+    setAdminBusy(true, elements.superAdminPanel);
+    elements.superAdminCalendarPrev.disabled = true;
+    elements.superAdminCalendarNext.disabled = true;
+    setAdminStatus(`Loading large donations for ${formatMonthTitle(superAdminCalendarCursor)}...`, "loading", {
+      persist: true,
+      statusElement: elements.superAdminActionStatus,
+    });
+  }
+
+  try {
+    const payload = await callEdge(`admin-donations?month=${getMonthKey(superAdminCalendarCursor)}&route=large`, {
+      admin: true,
+      method: "GET",
+    });
+
+    if (Array.isArray(payload.donations)) {
+      superAdminDonations = payload.donations;
+      renderSuperAdminCalendar();
+    }
+
+    if (announce) {
+      setAdminStatus(`Large donation calendar loaded for ${formatMonthTitle(superAdminCalendarCursor)}.`, "success", {
+        statusElement: elements.superAdminActionStatus,
+      });
+    }
+  } catch (error) {
+    const message = error.message || "Could not load large donation calendar.";
+    setAdminStatus(message, "error", { persist: true, statusElement: elements.superAdminActionStatus });
+    showToast(message);
+  } finally {
+    if (announce) {
+      elements.superAdminCalendarPrev.disabled = false;
+      elements.superAdminCalendarNext.disabled = false;
+      setAdminBusy(false, elements.superAdminPanel);
+    }
+  }
+}
+
 async function loadAdminAnalytics(options = {}) {
   if (!isBackendConfigured() || !getAdminAccessToken()) return;
 
@@ -1380,6 +1483,72 @@ async function loadAdminAnalytics(options = {}) {
     const message = error.message || "Could not load page view analytics.";
     setAdminStatus(message, "error", { persist: true });
     showToast(message);
+  }
+}
+
+async function refreshAdminPortalData() {
+  if (!isBackendConfigured() || !getAdminAccessToken()) {
+    setAdminStatus("Sign in as admin before reloading portal data.", "error", { persist: true });
+    return;
+  }
+
+  setAdminBusy(true);
+  setButtonBusy(elements.refreshAdminButton, true, "Reloading...");
+  if (elements.adminCalendarPrev) elements.adminCalendarPrev.disabled = true;
+  if (elements.adminCalendarNext) elements.adminCalendarNext.disabled = true;
+  setAdminStatus("Reloading page content, donations, posts, and page views...", "loading", { persist: true });
+
+  try {
+    await loadBackendData({ throwOnError: true });
+    renderApp();
+    await Promise.all([loadAdminDonations(), loadAdminAnalytics()]);
+    setAdminStatus("Admin portal data reloaded.", "success");
+    showToast("Admin portal data reloaded.");
+  } catch (error) {
+    const message = error.message || "Could not reload admin portal data.";
+    setAdminStatus(message, "error", { persist: true });
+    showToast(message);
+  } finally {
+    if (elements.adminCalendarPrev) elements.adminCalendarPrev.disabled = false;
+    if (elements.adminCalendarNext) elements.adminCalendarNext.disabled = false;
+    setButtonBusy(elements.refreshAdminButton, false, "Reloading...");
+    setAdminBusy(false);
+  }
+}
+
+async function refreshSuperAdminPortalData() {
+  if (!isBackendConfigured() || !getAdminAccessToken()) {
+    setAdminStatus("Sign in as super admin before reloading large donations.", "error", {
+      persist: true,
+      statusElement: elements.superAdminActionStatus,
+    });
+    return;
+  }
+
+  setAdminBusy(true, elements.superAdminPanel);
+  setButtonBusy(elements.refreshSuperAdminButton, true, "Reloading...");
+  if (elements.superAdminCalendarPrev) elements.superAdminCalendarPrev.disabled = true;
+  if (elements.superAdminCalendarNext) elements.superAdminCalendarNext.disabled = true;
+  setAdminStatus("Reloading private large-donation calendar...", "loading", {
+    persist: true,
+    statusElement: elements.superAdminActionStatus,
+  });
+
+  try {
+    await loadSuperAdminDonations();
+    setAdminStatus("Super admin large-donation calendar reloaded.", "success", {
+      statusElement: elements.superAdminActionStatus,
+    });
+    showToast("Super admin data reloaded.");
+  } catch (error) {
+    const message = error.message || "Could not reload super admin data.";
+    setAdminStatus(message, "error", { persist: true, statusElement: elements.superAdminActionStatus });
+    showToast(message);
+  } finally {
+    if (elements.superAdminCalendarPrev) elements.superAdminCalendarPrev.disabled = false;
+    if (elements.superAdminCalendarNext) elements.superAdminCalendarNext.disabled = false;
+    setButtonBusy(elements.refreshSuperAdminButton, false, "Reloading...");
+    setAdminBusy(false, elements.superAdminPanel);
   }
 }
 
@@ -1901,6 +2070,179 @@ function renderAdminCalendar() {
   renderAdminCalendarSummary();
 }
 
+function getSuperAdminMonthDonations() {
+  const year = superAdminCalendarCursor.getFullYear();
+  const month = superAdminCalendarCursor.getMonth();
+
+  return superAdminDonations.filter((donation) => {
+    const date = new Date(donation.createdAt || Date.now());
+    return date.getFullYear() === year && date.getMonth() === month;
+  });
+}
+
+function renderSuperAdminCalendarDetails() {
+  if (!elements.superAdminCalendarDetails) return;
+
+  const donationsByDate = getDonationsByDate(superAdminDonations);
+  const donations = (donationsByDate[selectedSuperAdminCalendarDate] || [])
+    .slice()
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  const selectedDate = fromDateKey(selectedSuperAdminCalendarDate);
+  const total = donations.reduce((sum, donation) => sum + (Number.parseFloat(donation.amount) || 0), 0);
+
+  if (!donations.length) {
+    elements.superAdminCalendarDetails.innerHTML = `
+      <div class="admin-calendar-empty">
+        <strong>${readableDate(selectedDate)}</strong>
+        <span>No large donations recorded on this day.</span>
+      </div>
+    `;
+    return;
+  }
+
+  elements.superAdminCalendarDetails.innerHTML = `
+    <div class="admin-calendar-detail-heading">
+      <div>
+        <span>Selected day</span>
+        <strong>${readableDate(selectedDate)}</strong>
+      </div>
+      <b>${donations.length} large donation${donations.length === 1 ? "" : "s"} · ${money(total)}</b>
+    </div>
+    <div class="admin-calendar-list">
+      ${donations
+        .map((donation) => {
+          const name = donation.anonymous ? "Private supporter" : donation.name || "Unknown supporter";
+          const amount = Number.parseFloat(donation.amount) || 0;
+          const frequency = donation.frequency === "monthly" ? "Monthly" : "One time";
+          const createdAt = donation.createdAt || new Date().toISOString();
+          const order = getDigitalOrder(donation);
+          const orderNumber = getDigitalOrderValue(
+            donation,
+            "orderNumber",
+            getDonationRawValue(donation, "Reference", donation.orderId || donation.id || "Pending"),
+          );
+          const captureId = getDigitalOrderValue(
+            donation,
+            "paypalCaptureId",
+            donation.captureId || getDonationRawValue(donation, "TransactionId", "Not available"),
+          );
+          const request = getDigitalOrderValue(donation, "personalizedRequest", donation.message || "No request entered.");
+          const status = getDigitalOrderValue(donation, "fulfillmentStatus", "paid_awaiting_personalized_writing");
+          const note = getDigitalOrderValue(donation, "fulfillmentNote", "");
+          const isFulfilled = status === "fulfilled";
+          const receiver = donation.receiverIdentifier || "Large PayPal receiver";
+
+          return `
+            <article class="admin-calendar-donation large-calendar-donation">
+              <div class="admin-calendar-donation-main">
+                <div>
+                  <strong>${escapeHtml(name)}</strong>
+                  <span>${frequency} · ${readableTime(createdAt)}</span>
+                </div>
+                <b>${money(amount)}</b>
+              </div>
+              <div class="admin-order-meta">
+                <span><strong>Order ID</strong>${escapeHtml(orderNumber)}</span>
+                <span><strong>Transaction ID</strong>${escapeHtml(captureId)}</span>
+                <span><strong>Receiver</strong>${escapeHtml(receiver)}</span>
+                <span><strong>Status</strong>${escapeHtml(getFulfillmentStatusLabel(status))}</span>
+              </div>
+              <p class="admin-order-request"><strong>Request:</strong> ${escapeHtml(request)}</p>
+              <label class="admin-fulfillment-field">
+                <span>Fulfillment note</span>
+                <textarea data-fulfillment-note="${escapeHtml(donation.id)}" placeholder="Write proof notes, delivery details, or custom writing summary.">${escapeHtml(note)}</textarea>
+              </label>
+              <div class="admin-order-actions">
+                <button class="button button-secondary" type="button" data-download-order-proof="${escapeHtml(donation.id)}">Download PDF</button>
+                <button class="button button-primary" type="button" data-save-fulfillment="${escapeHtml(donation.id)}">
+                  ${isFulfilled ? "Reopen order" : "Mark fulfilled"}
+                </button>
+              </div>
+            </article>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function renderSuperAdminCalendarSummary() {
+  if (!elements.superAdminCalendarSummary) return;
+
+  const donationsByDate = getDonationsByDate(superAdminDonations);
+  const dayDonations = donationsByDate[selectedSuperAdminCalendarDate] || [];
+  const monthDonations = getSuperAdminMonthDonations();
+  const dayTotal = dayDonations.reduce((sum, donation) => sum + (Number.parseFloat(donation.amount) || 0), 0);
+  const monthTotal = monthDonations.reduce((sum, donation) => sum + (Number.parseFloat(donation.amount) || 0), 0);
+
+  elements.superAdminCalendarSummary.innerHTML = `
+    <article>
+      <span>${readableDate(fromDateKey(selectedSuperAdminCalendarDate))}</span>
+      <strong>${money(dayTotal)}</strong>
+      <small>${dayDonations.length} large donation${dayDonations.length === 1 ? "" : "s"} selected day</small>
+    </article>
+    <article>
+      <span>${formatMonthTitle(superAdminCalendarCursor)}</span>
+      <strong>${money(monthTotal)}</strong>
+      <small>${monthDonations.length} large donation${monthDonations.length === 1 ? "" : "s"} this month</small>
+    </article>
+  `;
+}
+
+function renderSuperAdminCalendar() {
+  if (!elements.superAdminCalendarGrid || !elements.superAdminCalendarTitle) return;
+
+  const donationsByDate = getDonationsByDate(superAdminDonations);
+  const year = superAdminCalendarCursor.getFullYear();
+  const month = superAdminCalendarCursor.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const todayKey = toDateKey(new Date());
+  const cells = [];
+
+  for (let offset = 0; offset < firstDay.getDay(); offset += 1) {
+    cells.push(`<span class="admin-calendar-day is-empty" role="presentation"></span>`);
+  }
+
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const date = new Date(year, month, day);
+    const dateKey = toDateKey(date);
+    const donations = donationsByDate[dateKey] || [];
+    const total = donations.reduce((sum, donation) => sum + (Number.parseFloat(donation.amount) || 0), 0);
+    const classes = [
+      "admin-calendar-day",
+      "large-calendar-day",
+      donations.length ? "has-donations" : "",
+      dateKey === selectedSuperAdminCalendarDate ? "is-selected" : "",
+      dateKey === todayKey ? "is-today" : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+    const donationLabel = donations.length
+      ? `${donations.length} large donation${donations.length === 1 ? "" : "s"}, ${money(total)}`
+      : "no large donations";
+
+    cells.push(`
+      <button
+        class="${classes}"
+        type="button"
+        role="gridcell"
+        aria-selected="${dateKey === selectedSuperAdminCalendarDate}"
+        aria-label="${readableDate(date)}, ${donationLabel}"
+        data-super-admin-calendar-date="${dateKey}"
+      >
+        <span>${day}</span>
+        ${donations.length ? `<small>${money(total)}</small>` : ""}
+      </button>
+    `);
+  }
+
+  elements.superAdminCalendarTitle.textContent = formatMonthTitle(superAdminCalendarCursor);
+  elements.superAdminCalendarGrid.innerHTML = cells.join("");
+  renderSuperAdminCalendarDetails();
+  renderSuperAdminCalendarSummary();
+}
+
 function updateCheckoutLabel() {
   const amount = Math.max(getAmount(), 0);
   const cadence = currentFrequency === "monthly" ? "/mo" : "";
@@ -1982,34 +2324,110 @@ function submitDonation(event) {
   openPaymentDialog();
 }
 
-function loadPayPalSdk() {
-  if (!paymentConfig.paypalClientId) {
-    return Promise.reject(new Error("Missing PayPal client id."));
+function getPaymentRouteForAmount(amount) {
+  const threshold = Number(paymentConfig.largeDonationThreshold || 99);
+
+  return Number(amount) > threshold ? "large" : "standard";
+}
+
+function getPayPalClientIdForRoute(route) {
+  return route === "large" ? paymentConfig.largePaypalClientId : paymentConfig.paypalClientId;
+}
+
+function getPayPalNamespaceForRoute(route) {
+  return route === "large" ? "paypalSysLarge" : "paypalSysStandard";
+}
+
+function isValidPayPalSdk(paypal) {
+  return Boolean(paypal && typeof paypal.Buttons === "function" && paypal.FUNDING);
+}
+
+function resetPayPalSdk(route) {
+  const routes = route ? [route] : ["standard", "large"];
+
+  routes.forEach((currentRoute) => {
+    const namespace = getPayPalNamespaceForRoute(currentRoute);
+    const sdkKey = paypalSdkKeysByRoute.get(currentRoute);
+
+    document
+      .querySelectorAll(`script[data-sys-paypal-route="${currentRoute}"]`)
+      .forEach((script) => script.remove());
+
+    if (sdkKey) {
+      paypalSdkPromises.delete(sdkKey);
+      paypalSdkKeysByRoute.delete(currentRoute);
+    }
+
+    try {
+      delete window[namespace];
+    } catch {
+      window[namespace] = undefined;
+    }
+  });
+}
+
+function loadPayPalSdk(route = "standard") {
+  const clientId = getPayPalClientIdForRoute(route);
+  const sdkKey = `${route}:${clientId}:${paymentConfig.currency || CONFIG.currency}`;
+  const namespace = getPayPalNamespaceForRoute(route);
+
+  if (!clientId) {
+    return Promise.reject(
+      new Error(route === "large" ? "Missing super admin PayPal client id." : "Missing PayPal client id."),
+    );
   }
 
-  if (window.paypal) {
-    return Promise.resolve(window.paypal);
+  if (isValidPayPalSdk(window[namespace])) {
+    return Promise.resolve(window[namespace]);
   }
 
-  if (paypalSdkPromise) return paypalSdkPromise;
+  if (window[namespace]) {
+    resetPayPalSdk(route);
+  }
 
-  paypalSdkPromise = new Promise((resolve, reject) => {
+  const existingRouteKey = paypalSdkKeysByRoute.get(route);
+  if (existingRouteKey && existingRouteKey !== sdkKey) {
+    resetPayPalSdk(route);
+  }
+
+  if (paypalSdkPromises.has(sdkKey)) return paypalSdkPromises.get(sdkKey);
+
+  const sdkPromise = new Promise((resolve, reject) => {
     const script = document.createElement("script");
     const params = new URLSearchParams({
-      "client-id": paymentConfig.paypalClientId,
+      "client-id": clientId,
       currency: paymentConfig.currency || CONFIG.currency,
       intent: "capture",
       components: "buttons",
       "enable-funding": "card",
     });
 
+    script.dataset.sysPaypalSdk = "true";
+    script.dataset.sysPaypalRoute = route;
+    script.setAttribute("data-namespace", namespace);
     script.src = `https://www.paypal.com/sdk/js?${params.toString()}`;
-    script.onload = () => resolve(window.paypal);
-    script.onerror = () => reject(new Error("PayPal checkout could not load."));
+    script.onload = () => {
+      const paypal = window[namespace];
+
+      if (isValidPayPalSdk(paypal)) {
+        resolve(paypal);
+        return;
+      }
+
+      resetPayPalSdk(route);
+      reject(new Error("PayPal checkout loaded without buttons. Please refresh and try again."));
+    };
+    script.onerror = () => {
+      resetPayPalSdk(route);
+      reject(new Error("PayPal checkout could not load."));
+    };
     document.head.append(script);
   });
 
-  return paypalSdkPromise;
+  paypalSdkKeysByRoute.set(route, sdkKey);
+  paypalSdkPromises.set(sdkKey, sdkPromise);
+
+  return sdkPromise;
 }
 
 function clearPayPalButtons() {
@@ -2017,18 +2435,22 @@ function clearPayPalButtons() {
   if (elements.cardButtonContainer) elements.cardButtonContainer.innerHTML = "";
 }
 
-function buildPayPalButtonOptions(fundingSource) {
+function buildPayPalButtonOptions(paypal, fundingSource, route) {
   return {
     fundingSource,
     style: {
       layout: "vertical",
       shape: "pill",
-      label: fundingSource === window.paypal.FUNDING.CARD ? "pay" : "paypal",
+      label: fundingSource === paypal.FUNDING.CARD ? "pay" : "paypal",
       height: 44,
     },
     createOrder: async () => {
       if (!pendingDonation) throw new Error("Donation details are missing.");
-      setPaymentStatus("Opening secure international PayPal checkout...");
+      setPaymentStatus(
+        route === "large"
+          ? "Opening secure super admin PayPal checkout..."
+          : "Opening secure international PayPal checkout...",
+      );
       const payload = await callEdge("create-paypal-order", {
         body: pendingDonation,
       });
@@ -2062,22 +2484,27 @@ async function renderPayPalButtons() {
   }
 
   try {
-    const paypal = await loadPayPalSdk();
-    const paypalButtons = paypal.Buttons(buildPayPalButtonOptions(paypal.FUNDING.PAYPAL));
+    const route = getPaymentRouteForAmount(pendingDonation?.amount || getAmount());
+    const paypal = await loadPayPalSdk(route);
+    const paypalButtons = paypal.Buttons(buildPayPalButtonOptions(paypal, paypal.FUNDING.PAYPAL, route));
     if (paypalButtons.isEligible()) {
       await paypalButtons.render(elements.paypalButtonContainer);
     } else {
       elements.paypalButtonContainer.innerHTML = `<small>PayPal checkout is unavailable for this session.</small>`;
     }
 
-    const cardButtons = paypal.Buttons(buildPayPalButtonOptions(paypal.FUNDING.CARD));
+    const cardButtons = paypal.Buttons(buildPayPalButtonOptions(paypal, paypal.FUNDING.CARD, route));
     if (cardButtons.isEligible()) {
       await cardButtons.render(elements.cardButtonContainer);
     } else {
       elements.cardButtonContainer.innerHTML = `<small>Card checkout is currently unavailable. Please use PayPal.</small>`;
     }
 
-    setPaymentStatus("International PayPal/card checkout is ready.");
+    setPaymentStatus(
+      route === "large"
+        ? "Super admin PayPal/card checkout is ready."
+        : "International PayPal/card checkout is ready.",
+    );
   } catch (error) {
     setPaymentStatus(error.message || "Payment buttons could not load.", true);
   }
@@ -2086,12 +2513,13 @@ async function renderPayPalButtons() {
 async function finishVerifiedDonation(payload) {
   const donation = payload.donation;
   const fortuneMessage = payload.fortune || donation?.fortune_message || getRandomFortuneMessage();
+  const paymentRoute = payload.paymentRoute || donation?.paymentRoute || donation?.payment_route || "standard";
 
   if (payload.donorAccessToken) {
     setDonorToken(payload.donorAccessToken);
   }
 
-  if (donation) {
+  if (donation && paymentRoute !== "large") {
     state.donations.unshift({
       id: donation.id,
       name: donation.display_name || donation.name || pendingDonation?.name || "Supporter",
@@ -2100,6 +2528,7 @@ async function finishVerifiedDonation(payload) {
       message: donation.supporter_message || pendingDonation?.message || "",
       fortuneMessage: donation.fortune_message || fortuneMessage,
       digitalOrder: payload.digitalOrder || null,
+      paymentRoute,
       createdAt: donation.created_at || new Date().toISOString(),
     });
     selectedAdminCalendarDate = getDonationDateKey(state.donations[0]);
@@ -2315,19 +2744,40 @@ function openAdminPanel() {
   });
 }
 
+function openSuperAdminPanel() {
+  renderSuperAdminCalendar();
+  setAdminStatus("Super admin ready. Large donations over $99 are shown here only.", "info", {
+    persist: true,
+    statusElement: elements.superAdminActionStatus,
+  });
+  document.body.classList.add("admin-open");
+  elements.adminBackdrop.hidden = false;
+  elements.superAdminPanel.setAttribute("aria-hidden", "false");
+  elements.adminMenuButton.setAttribute("aria-expanded", "true");
+  window.requestAnimationFrame(() => {
+    elements.adminBackdrop.classList.add("is-open");
+    elements.superAdminPanel.classList.add("is-open");
+  });
+}
+
 function closeAdminPanel() {
   clearAdminSession();
   window.clearTimeout(setAdminStatus.timeout);
   if (elements.adminActionStatus) {
     elements.adminActionStatus.hidden = true;
   }
+  if (elements.superAdminActionStatus) {
+    elements.superAdminActionStatus.hidden = true;
+  }
   document.body.classList.remove("admin-open");
   elements.adminBackdrop.classList.remove("is-open");
   elements.adminPanel.classList.remove("is-open");
+  elements.superAdminPanel.classList.remove("is-open");
   elements.adminPanel.setAttribute("aria-hidden", "true");
+  elements.superAdminPanel.setAttribute("aria-hidden", "true");
   elements.adminMenuButton.setAttribute("aria-expanded", "false");
   window.setTimeout(() => {
-    if (!elements.adminPanel.classList.contains("is-open")) {
+    if (!elements.adminPanel.classList.contains("is-open") && !elements.superAdminPanel.classList.contains("is-open")) {
       elements.adminBackdrop.hidden = true;
       maybeOpenFortuneNumberDialog();
     }
@@ -2670,23 +3120,25 @@ function setActiveView(viewId, updateHash = false) {
 }
 
 function setAdminStatus(message, type = "info", options = {}) {
-  if (!elements.adminActionStatus) return;
+  const statusElement = options.statusElement || elements.adminActionStatus;
+  if (!statusElement) return;
 
   window.clearTimeout(setAdminStatus.timeout);
-  elements.adminActionStatus.hidden = false;
-  elements.adminActionStatus.textContent = message;
-  elements.adminActionStatus.className = `admin-status is-${type}`;
+  statusElement.hidden = false;
+  statusElement.textContent = message;
+  statusElement.className = `admin-status is-${type}`;
 
   if (!options.persist) {
     setAdminStatus.timeout = window.setTimeout(() => {
-      elements.adminActionStatus.hidden = true;
+      statusElement.hidden = true;
     }, options.delay || 5200);
   }
 }
 
-function setAdminBusy(isBusy) {
-  elements.adminPanel.setAttribute("aria-busy", String(isBusy));
-  elements.adminPanel.classList.toggle("is-busy", isBusy);
+function setAdminBusy(isBusy, panel = elements.adminPanel) {
+  if (!panel) return;
+  panel.setAttribute("aria-busy", String(isBusy));
+  panel.classList.toggle("is-busy", isBusy);
 }
 
 function setButtonBusy(button, isBusy, busyText = "") {
@@ -2718,24 +3170,28 @@ function getSettingsChangeCount(previousSettings, nextSettings) {
 }
 
 async function runAdminAction({ button, busyText, loadingMessage, successMessage, errorMessage }, action) {
-  setAdminBusy(true);
+  const config = arguments[0] || {};
+  const panel = config.panel || elements.adminPanel;
+  const statusElement = config.statusElement || elements.adminActionStatus;
+
+  setAdminBusy(true, panel);
   setButtonBusy(button, true, busyText);
-  setAdminStatus(loadingMessage, "loading", { persist: true });
+  setAdminStatus(loadingMessage, "loading", { persist: true, statusElement });
 
   try {
     const result = await action();
     const message = typeof successMessage === "function" ? successMessage(result) : successMessage;
-    setAdminStatus(message, "success");
+    setAdminStatus(message, "success", { statusElement });
     showToast(message);
     return result;
   } catch (error) {
     const message = error.message || errorMessage || "Admin action failed.";
-    setAdminStatus(message, "error", { persist: true });
+    setAdminStatus(message, "error", { persist: true, statusElement });
     showToast(message);
     return null;
   } finally {
     setButtonBusy(button, false, busyText);
-    setAdminBusy(false);
+    setAdminBusy(false, panel);
   }
 }
 
@@ -2777,6 +3233,7 @@ function renderApp() {
   renderTopSupporters();
   renderFollowState();
   renderAdminCalendar();
+  renderSuperAdminCalendar();
   renderAdminAnalytics();
   updateCheckoutLabel();
 }
@@ -2838,6 +3295,50 @@ elements.adminCalendarDetails.addEventListener("click", (event) => {
   }
 });
 
+elements.superAdminCalendarPrev.addEventListener("click", () => {
+  superAdminCalendarCursor = new Date(
+    superAdminCalendarCursor.getFullYear(),
+    superAdminCalendarCursor.getMonth() - 1,
+    1,
+  );
+  selectedSuperAdminCalendarDate = toDateKey(superAdminCalendarCursor);
+  renderSuperAdminCalendar();
+  loadSuperAdminDonations({ announce: true });
+});
+
+elements.superAdminCalendarNext.addEventListener("click", () => {
+  superAdminCalendarCursor = new Date(
+    superAdminCalendarCursor.getFullYear(),
+    superAdminCalendarCursor.getMonth() + 1,
+    1,
+  );
+  selectedSuperAdminCalendarDate = toDateKey(superAdminCalendarCursor);
+  renderSuperAdminCalendar();
+  loadSuperAdminDonations({ announce: true });
+});
+
+elements.superAdminCalendarGrid.addEventListener("click", (event) => {
+  const dateButton = event.target.closest("[data-super-admin-calendar-date]");
+  if (!dateButton) return;
+
+  selectedSuperAdminCalendarDate = dateButton.dataset.superAdminCalendarDate;
+  superAdminCalendarCursor = fromDateKey(selectedSuperAdminCalendarDate);
+  renderSuperAdminCalendar();
+});
+
+elements.superAdminCalendarDetails.addEventListener("click", (event) => {
+  const proofButton = event.target.closest("[data-download-order-proof]");
+  if (proofButton) {
+    downloadOrderProofPdf(proofButton.dataset.downloadOrderProof);
+    return;
+  }
+
+  const fulfillmentButton = event.target.closest("[data-save-fulfillment]");
+  if (fulfillmentButton) {
+    saveDigitalOrderFulfillment(fulfillmentButton.dataset.saveFulfillment, fulfillmentButton);
+  }
+});
+
 elements.profileTabs.forEach((tab) => {
   tab.addEventListener("click", (event) => {
     event.preventDefault();
@@ -2847,6 +3348,8 @@ elements.profileTabs.forEach((tab) => {
 
 elements.adminPublishPostButton.addEventListener("click", publishAdminPost);
 elements.adminExportCsvButton.addEventListener("click", exportAdminDonationCsv);
+elements.refreshAdminButton.addEventListener("click", refreshAdminPortalData);
+elements.refreshSuperAdminButton.addEventListener("click", refreshSuperAdminPortalData);
 elements.adminNewPostImage.addEventListener("change", previewAdminUpload);
 elements.adminForm.addEventListener("input", (event) => {
   if (event.target.closest(".admin-export-section")) {
@@ -2932,10 +3435,17 @@ elements.adminLoginForm.addEventListener("submit", async (event) => {
 
     try {
       await signInAdmin(email, password);
+      const profile = await loadAdminProfile();
       closeAdminLogin();
-      openAdminPanel();
-      await loadAdminDonations({ announce: true });
-      await loadAdminAnalytics({ announce: true });
+
+      if (profile?.role === "super_admin") {
+        openSuperAdminPanel();
+        await loadSuperAdminDonations({ announce: true });
+      } else {
+        openAdminPanel();
+        await loadAdminDonations({ announce: true });
+        await loadAdminAnalytics({ announce: true });
+      }
     } catch (error) {
       elements.adminPasswordError.textContent = error.message || "Could not sign in.";
       elements.adminPasswordInput.select();
@@ -2959,6 +3469,7 @@ elements.adminLoginDialog.addEventListener("close", () => {
   elements.adminPasswordError.textContent = "";
 });
 elements.closeAdminButton.addEventListener("click", closeAdminPanel);
+elements.closeSuperAdminButton.addEventListener("click", closeAdminPanel);
 elements.adminBackdrop.addEventListener("click", closeAdminPanel);
 elements.adminForm.addEventListener("submit", async (event) => {
   event.preventDefault();

@@ -8,7 +8,7 @@ Deno.serve(async (request) => {
 
   try {
     const rawBody = await request.text();
-    await verifyPayPalWebhook(request.headers, rawBody);
+    const verification = await verifyPayPalWebhook(request.headers, rawBody);
 
     const event = JSON.parse(rawBody);
     const resource = event.resource || {};
@@ -34,6 +34,7 @@ Deno.serve(async (request) => {
           raw_payment: {
             ...existingRawPayment,
             webhook: event,
+            webhookRoute: verification.paymentRoute || "standard",
           },
         })
         .eq("paypal_capture_id", captureId);

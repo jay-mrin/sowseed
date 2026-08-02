@@ -6,7 +6,7 @@ Deno.serve(async (request) => {
   if (options) return options;
 
   try {
-    const { supabase } = await requireAdmin(request);
+    const { supabase } = await requireAdmin(request, { allowedRoles: ["admin"] });
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
     const { data, error } = await supabase

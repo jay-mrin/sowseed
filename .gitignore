@@ -2,6 +2,7 @@
 .env.*
 !.env.example
 keys.txt
+SUPERADMIN.txt
 node_modules/
 .DS_Store
 desktop-check.png

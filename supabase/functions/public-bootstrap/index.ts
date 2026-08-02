@@ -1,4 +1,5 @@
 import { errorResponse, handleOptions, jsonResponse } from "../_shared/http.ts";
+import { centsToMoney, getLargeDonationThresholdCents, getPayPalClientId } from "../_shared/paypal.ts";
 import { getSupabaseAdmin, hashText } from "../_shared/supabase.ts";
 
 function getCurrentGoalCycleAmount(totalAmount: number, goalAmount: number) {
@@ -73,6 +74,7 @@ Deno.serve(async (request) => {
       .from("donations")
       .select("id, display_name, amount, seed_count, frequency, supporter_message, paypal_status, created_at")
       .eq("paypal_status", "COMPLETED")
+      .eq("payment_route", "standard")
       .order("created_at", { ascending: false })
       .limit(50);
     if (donationsError) throw donationsError;
@@ -168,7 +170,9 @@ Deno.serve(async (request) => {
         donationAmount,
       },
       payment: {
-        paypalClientId: Deno.env.get("PAYPAL_CLIENT_ID") || "",
+        paypalClientId: getPayPalClientId("standard"),
+        largePaypalClientId: getPayPalClientId("large"),
+        largeDonationThreshold: centsToMoney(getLargeDonationThresholdCents()),
         currency: Deno.env.get("PAYPAL_CURRENCY") || "USD",
         env: Deno.env.get("PAYPAL_ENV") || "sandbox",
       },

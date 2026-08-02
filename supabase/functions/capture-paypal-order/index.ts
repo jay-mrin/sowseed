@@ -1,15 +1,20 @@
 import { errorResponse, handleOptions, jsonResponse, readJson } from "../_shared/http.ts";
 import {
   capturePayPalOrder,
+  centsToMoney,
   createDigitalOrderNumber,
   DIGITAL_ORDER_ITEM_NAME,
   getPayPalCurrency,
+  getReceiverIdentifierFromPayPalOrder,
+  parseMoneyToCents,
+  resolvePayPalRouting,
 } from "../_shared/paypal.ts";
 import { createRandomToken, getSupabaseAdmin, hashText } from "../_shared/supabase.ts";
 
 type CaptureBody = {
   orderId?: string;
   donation?: {
+    amount?: number;
     name?: string;
     frequency?: string;
     message?: string;
@@ -274,12 +279,13 @@ Deno.serve(async (request) => {
     const { data: existing } = await supabase
       .from("donations")
       .select(
-        "id, fortune_message, display_name, amount, seed_count, frequency, supporter_message, paypal_order_id, paypal_capture_id, paypal_payer_email, raw_payment, created_at",
+        "id, fortune_message, display_name, amount, seed_count, frequency, supporter_message, paypal_order_id, paypal_capture_id, paypal_payer_email, payment_route, receiver_identifier, raw_payment, created_at",
       )
       .eq("paypal_order_id", orderId)
       .maybeSingle();
 
     if (existing) {
+      const paymentRoute = existing.payment_route === "large" ? "large" : "standard";
       const rawPayment =
         existing.raw_payment && typeof existing.raw_payment === "object" && !Array.isArray(existing.raw_payment)
           ? existing.raw_payment
@@ -298,38 +304,53 @@ Deno.serve(async (request) => {
         personalizedRequest: existing.supporter_message,
         blessingMessage: existing.fortune_message,
       });
-      const seedComment = await ensureSeedComment(supabase, {
-        donationId: existing.id,
-        displayName: existing.display_name,
-        body: existing.supporter_message,
-        amount: Number(existing.amount) || 0,
-        seedCount: Number(existing.seed_count) || seedCountFromAmount(Number(existing.amount) || 0),
-        createdAt: existing.created_at,
-      });
+      const seedComment =
+        paymentRoute === "standard"
+          ? await ensureSeedComment(supabase, {
+              donationId: existing.id,
+              displayName: existing.display_name,
+              body: existing.supporter_message,
+              amount: Number(existing.amount) || 0,
+              seedCount: Number(existing.seed_count) || seedCountFromAmount(Number(existing.amount) || 0),
+              createdAt: existing.created_at,
+            })
+          : null;
 
       return jsonResponse({
-        donation: existing,
+        donation: {
+          ...existing,
+          paymentRoute,
+          receiverIdentifier: existing.receiver_identifier || null,
+        },
         fortune: existing.fortune_message,
         digitalOrder: mapDigitalOrder(digitalOrder),
         seedComment: mapSeedComment(seedComment),
         donorAccessToken: null,
+        paymentRoute,
         duplicate: true,
       });
     }
 
-    const order = await capturePayPalOrder(orderId);
+    const requestedAmountCents = parseMoneyToCents(body.donation?.amount);
+    const requestedRoute = requestedAmountCents > 0 ? resolvePayPalRouting(requestedAmountCents).route : "standard";
+    const order = await capturePayPalOrder(orderId, requestedRoute);
     const capture = captureFromOrder(order);
 
     if (!capture || capture.status !== "COMPLETED") {
       return errorResponse("PayPal payment was not completed.", 422, order);
     }
 
-    const capturedAmount = Number(capture.amount?.value || 0);
+    const capturedAmountCents = parseMoneyToCents(capture.amount?.value);
+    const capturedAmount = centsToMoney(capturedAmountCents);
     const currency = capture.amount?.currency_code || getPayPalCurrency();
 
-    if (!capturedAmount || currency !== getPayPalCurrency()) {
+    if (!capturedAmountCents || currency !== getPayPalCurrency()) {
       return errorResponse("PayPal captured amount or currency is invalid.", 422, order);
     }
+
+    const routing = resolvePayPalRouting(capturedAmountCents);
+    const paymentRoute = routing.route;
+    const receiverIdentifier = getReceiverIdentifierFromPayPalOrder(order) || routing.receiverIdentifier;
 
     const { data: fortunes, error: fortuneError } = await supabase
       .from("fortunes")
@@ -380,11 +401,18 @@ Deno.serve(async (request) => {
         paypal_capture_id: capture.id,
         paypal_payer_email: order.payer?.email_address || null,
         paypal_status: capture.status,
+        payment_route: paymentRoute,
+        receiver_identifier: receiverIdentifier,
         fortune_id: fortune.id,
         fortune_message: fortune.message,
         donor_token_id: donorToken.id,
         raw_payment: {
           provider: "PayPal",
+          routing: {
+            route: paymentRoute,
+            thresholdCents: routing.thresholdCents,
+            receiverIdentifier,
+          },
           row: exportRow,
           order,
           digitalOrder: {
@@ -410,25 +438,33 @@ Deno.serve(async (request) => {
       personalizedRequest: supporterMessage,
       blessingMessage: fortune.message,
     });
-    const seedComment = await ensureSeedComment(supabase, {
-      donationId: donation.id,
-      displayName,
-      body: supporterMessage,
-      amount: capturedAmount,
-      seedCount: seedCountFromAmount(capturedAmount),
-      createdAt: donation.created_at,
-    });
+    const seedComment =
+      paymentRoute === "standard"
+        ? await ensureSeedComment(supabase, {
+            donationId: donation.id,
+            displayName,
+            body: supporterMessage,
+            amount: capturedAmount,
+            seedCount: seedCountFromAmount(capturedAmount),
+            createdAt: donation.created_at,
+          })
+        : null;
 
     await supabase.from("donor_tokens").update({ donation_id: donation.id }).eq("id", donorToken.id);
-    const meterCurrentAmount = await advanceMeterCycle(supabase, capturedAmount);
+    const meterCurrentAmount = paymentRoute === "standard" ? await advanceMeterCycle(supabase, capturedAmount) : null;
 
     return jsonResponse({
-      donation,
+      donation: {
+        ...donation,
+        paymentRoute,
+        receiverIdentifier,
+      },
       fortune: fortune.message,
       digitalOrder: mapDigitalOrder(digitalOrder),
       seedComment: mapSeedComment(seedComment),
       donorAccessToken: rawDonorToken,
       meterCurrentAmount,
+      paymentRoute,
     });
   } catch (error) {
     return errorResponse("Could not capture PayPal order.", 500, String(error));

@@ -1,6 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { jsonResponse } from "./http.ts";
 
+export type AdminRole = "admin" | "super_admin";
+
 export function getSupabaseAdmin() {
   const url = Deno.env.get("SUPABASE_URL");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -17,9 +19,15 @@ export function getSupabaseAdmin() {
   });
 }
 
-export async function requireAdmin(request: Request) {
+export async function requireAdmin(
+  request: Request,
+  options: {
+    allowedRoles?: AdminRole[];
+  } = {},
+) {
   const authHeader = request.headers.get("Authorization") || "";
   const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+  const allowedRoles = options.allowedRoles || ["admin", "super_admin"];
 
   if (!token) {
     throw jsonResponse({ error: "Missing admin bearer token." }, 401);
@@ -34,7 +42,7 @@ export async function requireAdmin(request: Request) {
 
   const { data: adminProfile, error: adminError } = await supabase
     .from("admin_profiles")
-    .select("user_id")
+    .select("user_id, email, display_name, role")
     .eq("user_id", data.user.id)
     .maybeSingle();
 
@@ -42,7 +50,22 @@ export async function requireAdmin(request: Request) {
     throw jsonResponse({ error: "This account is not an admin." }, 403);
   }
 
-  return { supabase, user: data.user };
+  const role: AdminRole = adminProfile.role === "super_admin" ? "super_admin" : "admin";
+
+  if (!allowedRoles.includes(role)) {
+    throw jsonResponse({ error: "This admin account cannot access this portal." }, 403);
+  }
+
+  return {
+    supabase,
+    user: data.user,
+    adminProfile: {
+      userId: adminProfile.user_id,
+      email: adminProfile.email || data.user.email || "",
+      displayName: adminProfile.display_name || "",
+      role,
+    },
+  };
 }
 
 export async function hashText(value: string) {

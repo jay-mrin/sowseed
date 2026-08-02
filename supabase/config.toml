@@ -12,6 +12,9 @@ verify_jwt = false
 [functions.paypal-webhook]
 verify_jwt = false
 
+[functions.admin-profile]
+verify_jwt = true
+
 [functions.admin-settings]
 verify_jwt = true
 

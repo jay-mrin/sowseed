@@ -16,7 +16,7 @@ Deno.serve(async (request) => {
   if (options) return options;
 
   try {
-    const { supabase } = await requireAdmin(request);
+    const { supabase } = await requireAdmin(request, { allowedRoles: ["admin"] });
 
     if (request.method === "DELETE") {
       const body = await readJson<{ postId?: string }>(request);

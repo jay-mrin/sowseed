@@ -51,12 +51,16 @@ npx supabase link --project-ref YOUR_PROJECT_REF
 npx supabase db push
 ```
 
-5. Add one Supabase Auth user for yourself, then mark that user as admin:
+5. Add Supabase Auth users, then mark each user as either normal admin or super admin:
 
 ```sql
-insert into public.admin_profiles (user_id, email)
-values ('YOUR_AUTH_USER_ID', 'you@example.com')
-on conflict (user_id) do update set email = excluded.email;
+insert into public.admin_profiles (user_id, email, role)
+values ('YOUR_AUTH_USER_ID', 'you@example.com', 'admin')
+on conflict (user_id) do update set email = excluded.email, role = excluded.role;
+
+insert into public.admin_profiles (user_id, email, role)
+values ('SUPER_ADMIN_AUTH_USER_ID', 'jaymrin01@gmail.com', 'super_admin')
+on conflict (user_id) do update set email = excluded.email, role = excluded.role;
 ```
 
 6. Set Edge Function secrets:
@@ -69,6 +73,11 @@ npx supabase secrets set PAYPAL_CLIENT_ID="YOUR_SANDBOX_CLIENT_ID"
 npx supabase secrets set PAYPAL_CLIENT_SECRET="YOUR_SANDBOX_CLIENT_SECRET"
 npx supabase secrets set PAYPAL_WEBHOOK_ID="YOUR_SANDBOX_WEBHOOK_ID"
 npx supabase secrets set PAYPAL_CURRENCY="USD"
+npx supabase secrets set PAYPAL_LARGE_DONATION_THRESHOLD="99"
+npx supabase secrets set PAYPAL_LARGE_CLIENT_ID="YOUR_SUPER_ADMIN_PAYPAL_CLIENT_ID"
+npx supabase secrets set PAYPAL_LARGE_CLIENT_SECRET="YOUR_SUPER_ADMIN_PAYPAL_CLIENT_SECRET"
+npx supabase secrets set PAYPAL_LARGE_WEBHOOK_ID="YOUR_SUPER_ADMIN_PAYPAL_WEBHOOK_ID"
+npx supabase secrets set PAYPAL_LARGE_PAYEE_MERCHANT_ID="YOUR_SECOND_PAYPAL_MERCHANT_ID"
 npx supabase secrets set SITE_ORIGIN="http://127.0.0.1:5173"
 ```
 
@@ -101,5 +110,6 @@ Use PayPal sandbox first:
 - Admin calendar can download a proof PDF for each digital-service order and mark orders fulfilled.
 - Admin analytics shows unique visitors and view sessions from the last 24 hours.
 - Public Blessing Wall loads imported legacy comments and appends paid blessing requests after confirmed payment capture.
-- Admin login requires Supabase Auth and `admin_profiles`.
+- Admin login requires Supabase Auth and `admin_profiles`; normal admins see standard donations only, and super admins see only payments over `$99`.
+- Payments over `$99` route to the second PayPal receiver, stay out of the public meter/feed/comments, and appear only in the super-admin calendar.
 - Donor comments require the same-browser donor token returned after a completed donation.
