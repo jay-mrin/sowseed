@@ -10,6 +10,7 @@ const VISITOR_KEY_KEY = "sow-your-seed:visitor-key";
 const ADMIN_PASSWORD = "sowseed";
 const PAYMENT_ANIMATION_MS = 220;
 const SEED_DOLLAR_VALUE = 6;
+const GOLDEN_SEED_AMOUNTS = new Set([111, 333, 666, 999]);
 const MAX_LOCAL_POST_IMAGE_BYTES = 2 * 1024 * 1024;
 const MAX_REMOTE_POST_IMAGE_BYTES = 5 * 1024 * 1024;
 const FORTUNE_NUMBER_SPECIAL_CHANCE = 0.01;
@@ -369,8 +370,6 @@ let selectedAdminCalendarDate = initialAdminCalendarDate;
 let superAdminDonations = [];
 let superAdminCalendarCursor = new Date();
 let selectedSuperAdminCalendarDate = toDateKey(new Date());
-let fortuneNumberPromptShown = false;
-
 function cloneDefaultSettings() {
   return {
     ...DEFAULT_SETTINGS,
@@ -736,6 +735,56 @@ async function loadBackendData(options = {}) {
       throw error;
     }
     showToast(error.message || "Backend data could not load.");
+  }
+}
+
+function wait(ms) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+function waitForInitialAssets() {
+  const imagePromises = Array.from(document.querySelectorAll(".brand-avatar, .cover-image, .profile-photo")).map(
+    (image) => {
+      if (image.complete) return Promise.resolve();
+
+      return new Promise((resolve) => {
+        image.addEventListener("load", resolve, { once: true });
+        image.addEventListener("error", resolve, { once: true });
+      });
+    },
+  );
+  const fontPromise = document.fonts?.ready?.catch?.(() => undefined) || Promise.resolve();
+
+  return Promise.race([Promise.all([...imagePromises, fontPromise]), wait(1800)]);
+}
+
+function finishInitialLoading() {
+  document.body.classList.remove("app-loading");
+  document.body.classList.add("app-ready");
+
+  const loader = document.querySelector("#appLoader");
+  if (loader) {
+    window.setTimeout(() => {
+      loader.hidden = true;
+    }, 260);
+  }
+}
+
+async function initializeApp() {
+  try {
+    await loadBackendData();
+    setAmount(state.settings.amountOptions[0] || state.settings.seedPrice);
+    renderApp();
+    setActiveView(getViewIdFromHash());
+    await waitForInitialAssets();
+  } finally {
+    finishInitialLoading();
+
+    if (window.location.hash === "#admin") {
+      openAdminLogin();
+    }
   }
 }
 
@@ -2633,16 +2682,17 @@ function closeReceipt() {
 function resetFortuneNumberDialog() {
   if (!elements.fortuneNumberDialog) return;
 
-  elements.fortuneNumberTitle.textContent = "Tap to get your Fortune Seed Number";
-  elements.fortuneNumberCopy.textContent = "A golden seed is waiting to reveal your number.";
+  elements.fortuneNumberTitle.textContent = "A golden seed, My Child";
+  elements.fortuneNumberCopy.textContent = "The blessing is in your hand. Sow the seed.";
   elements.fortuneNumberResult.hidden = true;
   elements.fortuneNumberResult.textContent = "";
-  elements.fortuneNumberDoneButton.hidden = true;
+  elements.fortuneNumberDoneButton.hidden = false;
   elements.fortuneSeedButton.disabled = false;
-  elements.fortuneSeedButton.classList.remove("is-revealed", "is-special");
+  elements.fortuneSeedButton.classList.add("is-revealed");
+  elements.fortuneSeedButton.classList.remove("is-special");
 }
 
-function openFortuneNumberDialog() {
+function openGoldenSeedBlessingDialog() {
   if (!elements.fortuneNumberDialog || elements.fortuneNumberDialog.open) return;
 
   resetFortuneNumberDialog();
@@ -2660,14 +2710,6 @@ function closeFortuneNumberDialog() {
 
   document.body.classList.remove("fortune-number-open");
   elements.fortuneNumberDialog.close();
-}
-
-function maybeOpenFortuneNumberDialog() {
-  if (fortuneNumberPromptShown || !state.settings.fortuneNumberEnabled) return;
-  if (document.body.classList.contains("admin-open") || document.body.classList.contains("payment-open")) return;
-
-  fortuneNumberPromptShown = true;
-  window.setTimeout(openFortuneNumberDialog, 520);
 }
 
 function revealFortuneSeedNumber() {
@@ -2779,7 +2821,6 @@ function closeAdminPanel() {
   window.setTimeout(() => {
     if (!elements.adminPanel.classList.contains("is-open") && !elements.superAdminPanel.classList.contains("is-open")) {
       elements.adminBackdrop.hidden = true;
-      maybeOpenFortuneNumberDialog();
     }
   }, 180);
 }
@@ -3241,9 +3282,14 @@ function renderApp() {
 elements.amountGrid.addEventListener("click", (event) => {
   const button = event.target.closest(".amount-option");
   if (!button) return;
+  const amount = Number(button.dataset.amount);
   quantity = 1;
   elements.quantityValue.textContent = quantity;
-  setAmount(Number(button.dataset.amount));
+  setAmount(amount);
+
+  if (GOLDEN_SEED_AMOUNTS.has(amount)) {
+    openGoldenSeedBlessingDialog();
+  }
 });
 
 elements.amountInput.addEventListener("input", () => {
@@ -3545,7 +3591,6 @@ elements.receiptDialog.addEventListener("close", () => {
 });
 elements.closeFortuneNumberButton.addEventListener("click", closeFortuneNumberDialog);
 elements.fortuneNumberDoneButton.addEventListener("click", closeFortuneNumberDialog);
-elements.fortuneSeedButton.addEventListener("click", revealFortuneSeedNumber);
 elements.fortuneNumberDialog.addEventListener("cancel", (event) => {
   event.preventDefault();
   closeFortuneNumberDialog();
@@ -3565,14 +3610,8 @@ window.addEventListener("hashchange", () => {
   setActiveView(getViewIdFromHash());
 });
 
-window.addEventListener("load", async () => {
-  await loadBackendData();
-  setAmount(state.settings.amountOptions[0] || state.settings.seedPrice);
-  renderApp();
-  setActiveView(getViewIdFromHash());
-  if (window.location.hash === "#admin") {
-    openAdminLogin();
-  } else {
-    maybeOpenFortuneNumberDialog();
-  }
-});
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initializeApp, { once: true });
+} else {
+  initializeApp();
+}
