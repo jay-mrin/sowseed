@@ -9,6 +9,7 @@ import {
   parseMoneyToCents,
   resolvePayPalRouting,
 } from "../_shared/paypal.ts";
+import { isLargeDonationRoutingEnabled } from "../_shared/site-settings.ts";
 import { createRandomToken, getSupabaseAdmin, hashText } from "../_shared/supabase.ts";
 
 type CaptureBody = {
@@ -331,8 +332,12 @@ Deno.serve(async (request) => {
       });
     }
 
+    const largeDonationRoutingEnabled = await isLargeDonationRoutingEnabled(supabase);
     const requestedAmountCents = parseMoneyToCents(body.donation?.amount);
-    const requestedRoute = requestedAmountCents > 0 ? resolvePayPalRouting(requestedAmountCents).route : "standard";
+    const requestedRoute =
+      requestedAmountCents > 0
+        ? resolvePayPalRouting(requestedAmountCents, { largeDonationRoutingEnabled }).route
+        : "standard";
     const order = await capturePayPalOrder(orderId, requestedRoute);
     const capture = captureFromOrder(order);
 
@@ -348,7 +353,7 @@ Deno.serve(async (request) => {
       return errorResponse("PayPal captured amount or currency is invalid.", 422, order);
     }
 
-    const routing = resolvePayPalRouting(capturedAmountCents);
+    const routing = resolvePayPalRouting(capturedAmountCents, { largeDonationRoutingEnabled });
     const paymentRoute = routing.route;
     const receiverIdentifier = getReceiverIdentifierFromPayPalOrder(order) || routing.receiverIdentifier;
 

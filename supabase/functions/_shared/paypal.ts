@@ -71,10 +71,15 @@ export function getReceiverIdentifierFromPayPalOrder(order: Record<string, any>)
   return String(payee.merchant_id || payee.email_address || "").trim() || null;
 }
 
-export function resolvePayPalRouting(amountCents: number): PayPalRouting {
+export function resolvePayPalRouting(
+  amountCents: number,
+  options: {
+    largeDonationRoutingEnabled?: boolean;
+  } = {},
+): PayPalRouting {
   const thresholdCents = getLargeDonationThresholdCents();
 
-  if (amountCents <= thresholdCents) {
+  if (options.largeDonationRoutingEnabled === false || amountCents <= thresholdCents) {
     return {
       route: "standard",
       thresholdCents,
@@ -125,7 +130,9 @@ function assertPayPalCredentials(route: PaymentRoute) {
 }
 
 export function assertLargeGatewayReady() {
-  const { receiverIdentifier } = resolvePayPalRouting(getLargeDonationThresholdCents() + 1);
+  const { receiverIdentifier } = resolvePayPalRouting(getLargeDonationThresholdCents() + 1, {
+    largeDonationRoutingEnabled: true,
+  });
   assertPayPalCredentials("large");
 
   if (!receiverIdentifier) {
@@ -158,9 +165,12 @@ export async function createPayPalOrder(input: {
   amountCents: number;
   displayName: string;
   frequency: string;
+  largeDonationRoutingEnabled?: boolean;
   supporterMessage?: string;
 }) {
-  const routing = resolvePayPalRouting(input.amountCents);
+  const routing = resolvePayPalRouting(input.amountCents, {
+    largeDonationRoutingEnabled: input.largeDonationRoutingEnabled,
+  });
 
   if (routing.route === "large") {
     assertLargeGatewayReady();

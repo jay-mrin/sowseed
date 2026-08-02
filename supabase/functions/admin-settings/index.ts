@@ -1,4 +1,5 @@
 import { errorResponse, handleOptions, jsonResponse, readJson } from "../_shared/http.ts";
+import { normalizeLargeDonationRoutingEnabled } from "../_shared/site-settings.ts";
 import { requireAdmin } from "../_shared/supabase.ts";
 
 Deno.serve(async (request) => {
@@ -23,9 +24,27 @@ Deno.serve(async (request) => {
       return errorResponse("Settings payload is required.", 422);
     }
 
+    const { data: existingSettingsRow, error: existingSettingsError } = await supabase
+      .from("site_settings")
+      .select("settings")
+      .eq("id", true)
+      .maybeSingle();
+    if (existingSettingsError) throw existingSettingsError;
+
+    const existingSettings =
+      existingSettingsRow?.settings &&
+      typeof existingSettingsRow.settings === "object" &&
+      !Array.isArray(existingSettingsRow.settings)
+        ? existingSettingsRow.settings
+        : {};
+    const settings = {
+      ...body.settings,
+      largeDonationRoutingEnabled: normalizeLargeDonationRoutingEnabled(existingSettings),
+    };
+
     const { data, error } = await supabase
       .from("site_settings")
-      .upsert({ id: true, settings: body.settings }, { onConflict: "id" })
+      .upsert({ id: true, settings }, { onConflict: "id" })
       .select("settings")
       .single();
 

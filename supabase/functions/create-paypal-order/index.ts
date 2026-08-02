@@ -1,5 +1,7 @@
 import { errorResponse, handleOptions, jsonResponse, readJson } from "../_shared/http.ts";
 import { createPayPalOrder, parseMoneyToCents } from "../_shared/paypal.ts";
+import { isLargeDonationRoutingEnabled } from "../_shared/site-settings.ts";
+import { getSupabaseAdmin } from "../_shared/supabase.ts";
 
 type CreateOrderBody = {
   amount?: number;
@@ -22,10 +24,13 @@ Deno.serve(async (request) => {
     if (amountCents < 100) return errorResponse("Amount must be at least $1.", 422);
     if (!displayName) return errorResponse("Display name is required.", 422);
 
+    const supabase = getSupabaseAdmin();
+    const largeDonationRoutingEnabled = await isLargeDonationRoutingEnabled(supabase);
     const order = await createPayPalOrder({
       amountCents,
       displayName,
       frequency,
+      largeDonationRoutingEnabled,
       supporterMessage,
     });
 

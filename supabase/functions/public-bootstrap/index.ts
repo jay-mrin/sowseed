@@ -1,5 +1,6 @@
 import { errorResponse, handleOptions, jsonResponse } from "../_shared/http.ts";
 import { centsToMoney, getLargeDonationThresholdCents, getPayPalClientId } from "../_shared/paypal.ts";
+import { normalizeLargeDonationRoutingEnabled } from "../_shared/site-settings.ts";
 import { getSupabaseAdmin, hashText } from "../_shared/supabase.ts";
 
 function getCurrentGoalCycleAmount(totalAmount: number, goalAmount: number) {
@@ -66,6 +67,7 @@ Deno.serve(async (request) => {
       .maybeSingle();
     if (settingsError) throw settingsError;
     const settings = settingsRow?.settings && typeof settingsRow.settings === "object" ? settingsRow.settings : {};
+    const largeDonationRoutingEnabled = normalizeLargeDonationRoutingEnabled(settings);
     const goalAmount = Math.max(Number(settings.seedGoal) || 0, 0);
     const seedPrice = Math.max(Number(settings.seedPrice) || 6, 1);
     const rawCurrentAmount = Math.max(Number(settings.meterCurrentAmount ?? settings.startingSeeds) || 0, 0);
@@ -146,7 +148,10 @@ Deno.serve(async (request) => {
     const donationSeeds = Math.floor(donationAmount / seedPrice);
 
     return jsonResponse({
-      settings,
+      settings: {
+        ...settings,
+        largeDonationRoutingEnabled,
+      },
       donations: (donations || []).map((donation) => ({
         id: donation.id,
         name: donation.display_name,
@@ -172,6 +177,7 @@ Deno.serve(async (request) => {
       payment: {
         paypalClientId: getPayPalClientId("standard"),
         largePaypalClientId: getPayPalClientId("large"),
+        largeDonationRoutingEnabled,
         largeDonationThreshold: centsToMoney(getLargeDonationThresholdCents()),
         currency: Deno.env.get("PAYPAL_CURRENCY") || "USD",
         env: Deno.env.get("PAYPAL_ENV") || "sandbox",

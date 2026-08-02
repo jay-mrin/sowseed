@@ -911,6 +911,80 @@ a {
     #faeef5;
 }
 
+.super-admin-routing-section {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  width: min(920px, 100%);
+  margin: 0 auto;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(242, 186, 50, 0.14), transparent 34%),
+    radial-gradient(circle at 0% 100%, rgba(30, 147, 171, 0.08), transparent 38%),
+    #fbfaf8;
+}
+
+.super-admin-routing-copy h3,
+.super-admin-routing-copy p {
+  margin: 0;
+}
+
+.super-admin-routing-copy p {
+  margin-top: 6px;
+  color: #6c6570;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.42;
+}
+
+.super-admin-routing-toggle {
+  min-width: min(360px, 100%);
+}
+
+.super-admin-routing-toggle small {
+  color: #7a7180;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.super-admin-routing-toggle input {
+  width: 48px;
+  min-width: 48px;
+  height: 28px;
+  min-height: 28px;
+  appearance: none;
+  padding: 0;
+  border: 1px solid rgba(217, 215, 207, 0.96);
+  border-radius: 999px;
+  background: #ded9d9;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.super-admin-routing-toggle input::before {
+  display: block;
+  width: 22px;
+  height: 22px;
+  margin: 2px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 3px 8px rgba(25, 25, 25, 0.16);
+  content: "";
+  transition: transform 160ms ease;
+}
+
+.super-admin-routing-toggle input:checked {
+  border-color: rgba(217, 154, 34, 0.76);
+  background: linear-gradient(135deg, #ffe178, #f2b32e);
+  box-shadow: 0 0 0 5px rgba(248, 198, 75, 0.18);
+}
+
+.super-admin-routing-toggle input:checked::before {
+  transform: translateX(20px);
+}
+
 .super-admin-panel .super-admin-donations {
   width: min(920px, 100%);
   max-height: none;

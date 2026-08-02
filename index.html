@@ -16,7 +16,7 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="src/styles.css?v=50" />
+    <link rel="stylesheet" href="src/styles.css?v=51" />
   </head>
   <body class="app-loading">
     <div class="app-loader" id="appLoader" role="status" aria-live="polite" aria-label="Loading Sow Your Seed">
@@ -321,10 +321,24 @@
 
       <div class="admin-status" id="superAdminActionStatus" role="status" aria-live="polite" hidden></div>
 
+      <section class="admin-section super-admin-routing-section" aria-labelledby="superAdminRoutingTitle">
+        <div class="super-admin-routing-copy">
+          <h3 id="superAdminRoutingTitle">Large payment gateway</h3>
+          <p id="superAdminRoutingState">$0-$99 stays normal. $100+ routes to the Super Admin PayPal account.</p>
+        </div>
+        <label class="admin-toggle super-admin-routing-toggle">
+          <input id="superAdminLargeRoutingToggle" type="checkbox" checked />
+          <span>
+            <strong>Route $100+ to Super Admin</strong>
+            <small>Turn off to send every payment through the normal admin PayPal gateway.</small>
+          </span>
+        </label>
+      </section>
+
       <section class="admin-section admin-donations super-admin-donations">
         <div class="admin-donation-heading">
-          <h3>Payments over $99</h3>
-          <p>Private large-donation records only. These do not appear in the public meter or normal admin portal.</p>
+          <h3>$100+ payment calendar</h3>
+          <p>Private Super Admin records only. $0-$99 stays in the normal admin portal.</p>
         </div>
         <section class="admin-calendar" aria-labelledby="superAdminCalendarTitle">
           <div class="admin-calendar-header">
@@ -686,6 +700,6 @@
     </footer>
 
     <script src="src/config.js?v=1"></script>
-    <script src="src/app.js?v=50" defer></script>
+    <script src="src/app.js?v=52" defer></script>
   </body>
 </html>

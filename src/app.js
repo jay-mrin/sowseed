@@ -172,6 +172,7 @@ const DEFAULT_SETTINGS = {
     "By proceeding with your payment, you acknowledge that you are paying Sow Your Seed Here for Your Soulmate 💫 directly. Tips are voluntary support and are not tied to any guaranteed result.",
   footerText: DEFAULT_FOOTER_TEXT,
   fortuneNumberEnabled: false,
+  largeDonationRoutingEnabled: true,
 };
 
 const seedFeed = [
@@ -322,7 +323,9 @@ const elements = {
   superAdminCalendarPrev: document.querySelector("#superAdminCalendarPrev"),
   superAdminCalendarSummary: document.querySelector("#superAdminCalendarSummary"),
   superAdminCalendarTitle: document.querySelector("#superAdminCalendarTitle"),
+  superAdminLargeRoutingToggle: document.querySelector("#superAdminLargeRoutingToggle"),
   superAdminPanel: document.querySelector("#superAdminPanel"),
+  superAdminRoutingState: document.querySelector("#superAdminRoutingState"),
   toast: document.querySelector("#toast"),
   topSupporters: document.querySelector("#topSupporters"),
   topicPill: document.querySelector("#topicPill"),
@@ -357,6 +360,7 @@ const paypalSdkKeysByRoute = new Map();
 let paymentConfig = {
   paypalClientId: PUBLIC_CONFIG.paypalClientId || "",
   largePaypalClientId: PUBLIC_CONFIG.largePaypalClientId || "",
+  largeDonationRoutingEnabled: true,
   largeDonationThreshold: 99,
   currency: PUBLIC_CONFIG.paypalCurrency || CONFIG.currency,
   env: "sandbox",
@@ -408,6 +412,8 @@ function normalizeSettings(settings) {
   next.seedPrice = Math.max(Number.parseInt(next.seedPrice, 10) || defaults.seedPrice, 1);
   next.amountOptions = parseAmountOptions(next.amountOptions);
   next.fortuneNumberEnabled = next.fortuneNumberEnabled === true || next.fortuneNumberEnabled === "true";
+  next.largeDonationRoutingEnabled =
+    next.largeDonationRoutingEnabled !== false && next.largeDonationRoutingEnabled !== "false";
 
   Object.keys(defaults).forEach((key) => {
     if (key === "amountOptions" || typeof defaults[key] !== "string") return;
@@ -709,13 +715,19 @@ function applyBootstrap(payload) {
   state.seedComments = normalizeSeedComments(payload.seedComments);
   state.posts = normalizePosts(payload.posts);
   state.totals = normalizeTotals(payload.totals);
+  const largeDonationRoutingEnabled =
+    payload.payment?.largeDonationRoutingEnabled !== undefined
+      ? payload.payment.largeDonationRoutingEnabled !== false && payload.payment.largeDonationRoutingEnabled !== "false"
+      : state.settings.largeDonationRoutingEnabled !== false;
   paymentConfig = {
     paypalClientId: payload.payment?.paypalClientId || PUBLIC_CONFIG.paypalClientId || "",
     largePaypalClientId: payload.payment?.largePaypalClientId || PUBLIC_CONFIG.largePaypalClientId || "",
+    largeDonationRoutingEnabled,
     largeDonationThreshold: Number(payload.payment?.largeDonationThreshold || 99),
     currency: payload.payment?.currency || PUBLIC_CONFIG.paypalCurrency || CONFIG.currency,
     env: payload.payment?.env || "sandbox",
   };
+  state.settings.largeDonationRoutingEnabled = largeDonationRoutingEnabled;
   backendReady = true;
 }
 
@@ -772,10 +784,15 @@ function finishInitialLoading() {
   }
 }
 
+function getInitialDonationAmount() {
+  const preferredAmounts = [99, 111];
+  return preferredAmounts[Math.floor(Math.random() * preferredAmounts.length)];
+}
+
 async function initializeApp() {
   try {
     await loadBackendData();
-    setAmount(state.settings.amountOptions[0] || state.settings.seedPrice);
+    setAmount(getInitialDonationAmount());
     renderApp();
     setActiveView(getViewIdFromHash());
     await waitForInitialAssets();
@@ -1507,6 +1524,74 @@ async function loadSuperAdminDonations(options = {}) {
   }
 }
 
+function renderSuperAdminRoutingToggle() {
+  if (!elements.superAdminLargeRoutingToggle || !elements.superAdminRoutingState) return;
+
+  const enabled = getLargeDonationRoutingEnabled();
+  const threshold = money(Number(paymentConfig.largeDonationThreshold || 99));
+
+  elements.superAdminLargeRoutingToggle.checked = enabled;
+  elements.superAdminRoutingState.textContent = enabled
+    ? `ON: $0-${threshold} stays normal. $100+ routes to the Super Admin PayPal account.`
+    : "OFF: every payment routes through the normal admin PayPal account.";
+}
+
+async function loadSuperAdminPaymentRouting() {
+  if (!isBackendConfigured() || !getAdminAccessToken()) return;
+
+  const payload = await callEdge("admin-payment-routing", {
+    admin: true,
+    method: "GET",
+  });
+  const enabled = payload.largeDonationRoutingEnabled !== false;
+
+  state.settings.largeDonationRoutingEnabled = enabled;
+  paymentConfig.largeDonationRoutingEnabled = enabled;
+  renderSuperAdminRoutingToggle();
+}
+
+async function saveSuperAdminPaymentRouting(enabled) {
+  if (!isBackendConfigured() || !getAdminAccessToken()) return;
+
+  const toggle = elements.superAdminLargeRoutingToggle;
+
+  if (toggle) toggle.disabled = true;
+  setAdminStatus("Saving payment routing switch...", "loading", {
+    persist: true,
+    statusElement: elements.superAdminActionStatus,
+  });
+
+  try {
+    const payload = await callEdge("admin-payment-routing", {
+      admin: true,
+      body: { largeDonationRoutingEnabled: Boolean(enabled) },
+      method: "PUT",
+    });
+    const savedEnabled = payload.largeDonationRoutingEnabled !== false;
+
+    state.settings.largeDonationRoutingEnabled = savedEnabled;
+    paymentConfig.largeDonationRoutingEnabled = savedEnabled;
+    resetPayPalSdk();
+    renderSuperAdminRoutingToggle();
+    setAdminStatus(
+      savedEnabled
+        ? "Large routing is ON. $0-$99 stays normal; $100+ uses Super Admin PayPal."
+        : "Large routing is OFF. All payments will use normal admin PayPal.",
+      "success",
+      { statusElement: elements.superAdminActionStatus },
+    );
+    showToast(savedEnabled ? "Large routing turned on." : "Large routing turned off.");
+  } catch (error) {
+    const message = error.message || "Could not save payment routing.";
+    if (toggle) toggle.checked = !enabled;
+    renderSuperAdminRoutingToggle();
+    setAdminStatus(message, "error", { persist: true, statusElement: elements.superAdminActionStatus });
+    showToast(message);
+  } finally {
+    if (toggle) toggle.disabled = false;
+  }
+}
+
 async function loadAdminAnalytics(options = {}) {
   if (!isBackendConfigured() || !getAdminAccessToken()) return;
 
@@ -1578,14 +1663,14 @@ async function refreshSuperAdminPortalData() {
   setButtonBusy(elements.refreshSuperAdminButton, true, "Reloading...");
   if (elements.superAdminCalendarPrev) elements.superAdminCalendarPrev.disabled = true;
   if (elements.superAdminCalendarNext) elements.superAdminCalendarNext.disabled = true;
-  setAdminStatus("Reloading private large-donation calendar...", "loading", {
+  setAdminStatus("Reloading payment routing and private large-donation calendar...", "loading", {
     persist: true,
     statusElement: elements.superAdminActionStatus,
   });
 
   try {
-    await loadSuperAdminDonations();
-    setAdminStatus("Super admin large-donation calendar reloaded.", "success", {
+    await Promise.all([loadSuperAdminPaymentRouting(), loadSuperAdminDonations()]);
+    setAdminStatus("Super admin routing and large-donation calendar reloaded.", "success", {
       statusElement: elements.superAdminActionStatus,
     });
     showToast("Super admin data reloaded.");
@@ -2374,9 +2459,15 @@ function submitDonation(event) {
 }
 
 function getPaymentRouteForAmount(amount) {
+  if (paymentConfig.largeDonationRoutingEnabled === false) return "standard";
+
   const threshold = Number(paymentConfig.largeDonationThreshold || 99);
 
   return Number(amount) > threshold ? "large" : "standard";
+}
+
+function getLargeDonationRoutingEnabled() {
+  return paymentConfig.largeDonationRoutingEnabled !== false && state.settings.largeDonationRoutingEnabled !== false;
 }
 
 function getPayPalClientIdForRoute(route) {
@@ -2787,6 +2878,7 @@ function openAdminPanel() {
 }
 
 function openSuperAdminPanel() {
+  renderSuperAdminRoutingToggle();
   renderSuperAdminCalendar();
   setAdminStatus("Super admin ready. Large donations over $99 are shown here only.", "info", {
     persist: true,
@@ -3275,6 +3367,7 @@ function renderApp() {
   renderFollowState();
   renderAdminCalendar();
   renderSuperAdminCalendar();
+  renderSuperAdminRoutingToggle();
   renderAdminAnalytics();
   updateCheckoutLabel();
 }
@@ -3396,6 +3489,9 @@ elements.adminPublishPostButton.addEventListener("click", publishAdminPost);
 elements.adminExportCsvButton.addEventListener("click", exportAdminDonationCsv);
 elements.refreshAdminButton.addEventListener("click", refreshAdminPortalData);
 elements.refreshSuperAdminButton.addEventListener("click", refreshSuperAdminPortalData);
+elements.superAdminLargeRoutingToggle.addEventListener("change", (event) => {
+  saveSuperAdminPaymentRouting(event.currentTarget.checked);
+});
 elements.adminNewPostImage.addEventListener("change", previewAdminUpload);
 elements.adminForm.addEventListener("input", (event) => {
   if (event.target.closest(".admin-export-section")) {
@@ -3486,6 +3582,7 @@ elements.adminLoginForm.addEventListener("submit", async (event) => {
 
       if (profile?.role === "super_admin") {
         openSuperAdminPanel();
+        await loadSuperAdminPaymentRouting();
         await loadSuperAdminDonations({ announce: true });
       } else {
         openAdminPanel();
