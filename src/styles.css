@@ -32,6 +32,23 @@
   }
 }
 
+@keyframes live-plus-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 5px rgba(248, 50, 184, 0.08),
+      0 0 20px rgba(248, 50, 184, 0.42),
+      0 12px 26px rgba(248, 50, 184, 0.24);
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 10px rgba(248, 50, 184, 0.13),
+      0 0 34px rgba(248, 50, 184, 0.72),
+      0 16px 34px rgba(248, 50, 184, 0.34);
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -2331,8 +2348,25 @@ legend,
 }
 
 .quantity-button.plus {
-  color: #f832b8;
-  background: #ffd7ef;
+  color: #ffffff;
+  background:
+    radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.82), transparent 24%),
+    linear-gradient(135deg, #ff7ad8 0%, #f832b8 48%, #d91395 100%);
+  box-shadow:
+    0 0 0 6px rgba(248, 50, 184, 0.09),
+    0 0 24px rgba(248, 50, 184, 0.5),
+    0 12px 26px rgba(248, 50, 184, 0.24);
+  text-shadow: 0 1px 6px rgba(104, 0, 67, 0.34);
+  animation: live-plus-pulse 1500ms ease-in-out infinite;
+}
+
+.quantity-button.plus:hover,
+.quantity-button.plus:focus-visible {
+  box-shadow:
+    0 0 0 7px rgba(248, 50, 184, 0.12),
+    0 0 32px rgba(248, 50, 184, 0.62),
+    0 16px 32px rgba(248, 50, 184, 0.3);
+  transform: translateY(-1px);
 }
 
 .about-panel,

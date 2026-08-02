@@ -16,7 +16,7 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="src/styles.css?v=51" />
+    <link rel="stylesheet" href="src/styles.css?v=52" />
   </head>
   <body class="app-loading">
     <div class="app-loader" id="appLoader" role="status" aria-live="polite" aria-label="Loading Sow Your Seed">
@@ -239,6 +239,21 @@
                 <span>View sessions</span>
                 <strong id="adminPageViews24h">0</strong>
                 <small>hourly page views last 24 hours</small>
+              </article>
+              <article>
+                <span>Donation taps</span>
+                <strong id="adminCheckoutClicks24h">0</strong>
+                <small>Sow button taps last 24 hours</small>
+              </article>
+              <article>
+                <span>PayPal checkout</span>
+                <strong id="adminPaypalStarts24h">0</strong>
+                <small>PayPal/card starts last 24 hours</small>
+              </article>
+              <article>
+                <span>Payments completed</span>
+                <strong id="adminPaymentsCompleted24h">0</strong>
+                <small>verified payments last 24 hours</small>
               </article>
             </div>
             <p class="admin-analytics-updated" id="adminAnalyticsUpdated">Waiting for analytics...</p>
@@ -700,6 +715,6 @@
     </footer>
 
     <script src="src/config.js?v=1"></script>
-    <script src="src/app.js?v=52" defer></script>
+    <script src="src/app.js?v=53" defer></script>
   </body>
 </html>

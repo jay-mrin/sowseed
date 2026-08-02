@@ -18,8 +18,30 @@ Deno.serve(async (request) => {
 
     if (error) throw error;
 
+    const { data: checkoutEvents, error: checkoutEventsError } = await supabase
+      .from("checkout_events")
+      .select("event_name")
+      .eq("payment_route", "standard")
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(10000);
+
+    if (checkoutEventsError) throw checkoutEventsError;
+
+    const { count: completedPaymentCount, error: completedPaymentError } = await supabase
+      .from("donations")
+      .select("id", { count: "exact", head: true })
+      .eq("payment_route", "standard")
+      .eq("paypal_status", "COMPLETED")
+      .gte("created_at", since);
+
+    if (completedPaymentError) throw completedPaymentError;
+
     const rows = data || [];
+    const events = checkoutEvents || [];
     const uniqueVisitors = new Set(rows.map((row) => row.visitor_key_hash).filter(Boolean));
+    const checkoutButtonClicks = events.filter((event) => event.event_name === "checkout_button_clicked").length;
+    const paypalCheckoutStarts = events.filter((event) => event.event_name === "paypal_checkout_started").length;
     const topPaths = Array.from(
       rows.reduce((paths, row) => {
         const path = row.path || "/";
@@ -35,6 +57,9 @@ Deno.serve(async (request) => {
       generatedAt: new Date().toISOString(),
       pageViewsLast24h: rows.length,
       uniqueVisitorsLast24h: uniqueVisitors.size,
+      checkoutButtonClicksLast24h: checkoutButtonClicks,
+      paypalCheckoutStartsLast24h: paypalCheckoutStarts,
+      completedPaymentsLast24h: completedPaymentCount || 0,
       topPaths,
     });
   } catch (error) {

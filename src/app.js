@@ -231,6 +231,7 @@ const elements = {
   adminCalendarPrev: document.querySelector("#adminCalendarPrev"),
   adminCalendarSummary: document.querySelector("#adminCalendarSummary"),
   adminCalendarTitle: document.querySelector("#adminCalendarTitle"),
+  adminCheckoutClicks24h: document.querySelector("#adminCheckoutClicks24h"),
   adminEmailInput: document.querySelector("#adminEmailInput"),
   adminExportCsvButton: document.querySelector("#adminExportCsvButton"),
   adminExportEndDate: document.querySelector("#adminExportEndDate"),
@@ -246,6 +247,8 @@ const elements = {
   adminPageViews24h: document.querySelector("#adminPageViews24h"),
   adminPasswordError: document.querySelector("#adminPasswordError"),
   adminPasswordInput: document.querySelector("#adminPasswordInput"),
+  adminPaymentsCompleted24h: document.querySelector("#adminPaymentsCompleted24h"),
+  adminPaypalStarts24h: document.querySelector("#adminPaypalStarts24h"),
   adminPostList: document.querySelector("#adminPostList"),
   adminPublishPostButton: document.querySelector("#adminPublishPostButton"),
   adminUploadFileName: document.querySelector("#adminUploadFileName"),
@@ -512,8 +515,11 @@ function normalizePosts(posts) {
 
 function createEmptyAnalytics() {
   return {
+    checkoutButtonClicksLast24h: 0,
+    completedPaymentsLast24h: 0,
     generatedAt: null,
     pageViewsLast24h: 0,
+    paypalCheckoutStartsLast24h: 0,
     topPaths: [],
     uniqueVisitorsLast24h: 0,
   };
@@ -531,8 +537,11 @@ function normalizeAnalytics(analytics) {
     : [];
 
   return {
+    checkoutButtonClicksLast24h: Math.max(Number.parseInt(analytics?.checkoutButtonClicksLast24h, 10) || 0, 0),
+    completedPaymentsLast24h: Math.max(Number.parseInt(analytics?.completedPaymentsLast24h, 10) || 0, 0),
     generatedAt: analytics?.generatedAt || defaults.generatedAt,
     pageViewsLast24h: Math.max(Number.parseInt(analytics?.pageViewsLast24h, 10) || 0, 0),
+    paypalCheckoutStartsLast24h: Math.max(Number.parseInt(analytics?.paypalCheckoutStartsLast24h, 10) || 0, 0),
     topPaths,
     uniqueVisitorsLast24h: Math.max(Number.parseInt(analytics?.uniqueVisitorsLast24h, 10) || 0, 0),
   };
@@ -679,6 +688,24 @@ async function callEdge(functionName, options = {}) {
   return payload;
 }
 
+async function trackCheckoutEvent(eventName, donation = pendingDonation) {
+  if (!isBackendConfigured() || !donation) return null;
+
+  try {
+    return await callEdge("track-checkout-event", {
+      body: {
+        amount: donation.amount || getAmount(),
+        eventName,
+        path: window.location.pathname || "/",
+        visitorKey: getVisitorKey(),
+      },
+    });
+  } catch (error) {
+    console.warn("Checkout analytics event was not recorded.", error);
+    return null;
+  }
+}
+
 async function signInAdmin(email, password) {
   const response = await fetch(`${PUBLIC_CONFIG.supabaseUrl.replace(/\/$/, "")}/auth/v1/token?grant_type=password`, {
     method: "POST",
@@ -785,8 +812,7 @@ function finishInitialLoading() {
 }
 
 function getInitialDonationAmount() {
-  const preferredAmounts = [99, 111];
-  return preferredAmounts[Math.floor(Math.random() * preferredAmounts.length)];
+  return Math.max(Number(state.settings.seedPrice) || SEED_DOLLAR_VALUE, 1);
 }
 
 async function initializeApp() {
@@ -2028,6 +2054,15 @@ function renderAdminAnalytics() {
 
   elements.adminUniqueVisitors24h.textContent = formatCompactNumber(analytics.uniqueVisitorsLast24h);
   elements.adminPageViews24h.textContent = formatCompactNumber(analytics.pageViewsLast24h);
+  if (elements.adminCheckoutClicks24h) {
+    elements.adminCheckoutClicks24h.textContent = formatCompactNumber(analytics.checkoutButtonClicksLast24h);
+  }
+  if (elements.adminPaypalStarts24h) {
+    elements.adminPaypalStarts24h.textContent = formatCompactNumber(analytics.paypalCheckoutStartsLast24h);
+  }
+  if (elements.adminPaymentsCompleted24h) {
+    elements.adminPaymentsCompleted24h.textContent = formatCompactNumber(analytics.completedPaymentsLast24h);
+  }
   elements.adminAnalyticsUpdated.textContent = hasValidDate
     ? `Updated ${readableDate(generatedAt)} at ${readableTime(generatedAt)}${topPath ? ` · Top path: ${topPath.path}` : ""}`
     : "Open the admin portal to load page-view analytics.";
@@ -2455,6 +2490,7 @@ function submitDonation(event) {
     createdAt: new Date().toISOString(),
   };
 
+  trackCheckoutEvent("checkout_button_clicked", pendingDonation);
   openPaymentDialog();
 }
 
@@ -2594,6 +2630,7 @@ function buildPayPalButtonOptions(paypal, fundingSource, route) {
       const payload = await callEdge("create-paypal-order", {
         body: pendingDonation,
       });
+      await trackCheckoutEvent("paypal_checkout_started", pendingDonation);
       return payload.id;
     },
     onApprove: async (data) => {
@@ -2705,7 +2742,7 @@ async function finishVerifiedDonation(payload) {
   elements.supportForm.reset();
   quantity = 1;
   elements.quantityValue.textContent = quantity;
-  setAmount(state.settings.amountOptions[0] || state.settings.seedPrice);
+  setAmount(getInitialDonationAmount());
   setFrequency("once");
   pendingDonation = null;
   closePaymentDialog(() => openReceipt());
