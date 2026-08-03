@@ -16,7 +16,7 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="src/styles.css?v=53" />
+    <link rel="stylesheet" href="src/styles.css?v=54" />
   </head>
   <body class="app-loading">
     <div class="app-loader" id="appLoader" role="status" aria-live="polite" aria-label="Loading Sow Your Seed">
@@ -438,9 +438,7 @@
             <div class="donation-header">
               <div>
                 <p class="section-kicker">Tip or donate</p>
-                <h2 id="supportTitle">
-                  Buy a Seed to Sow for the Love You’ve Been Waiting For💕💕 for Sow Your Seed Here for Your Soulmate 💫
-                </h2>
+                <h2 id="supportTitle">Buy a Seed to Sow for the Love You’ve Been Waiting For in 💕Christ Pradise garden💫</h2>
               </div>
               <span class="secure-pill">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -462,7 +460,6 @@
                   <span class="seed-icon" aria-hidden="true">🌱</span>
                   <span>
                     <strong id="seedPriceLabel">1 Seed</strong>
-                    <small>You have this many seeds</small>
                   </span>
                 </div>
                 <div class="quantity-control">
@@ -476,35 +473,35 @@
                 <legend>Choose Your Donation - Sow a Seed of Faith</legend>
                 <div class="amount-grid" id="amountGrid">
                   <button class="amount-option active" type="button" data-amount="7">
-                    <span class="amount-option-value">7$</span>
+                    <span class="amount-option-value"><span class="amount-option-number">7</span><img class="amount-option-seed-mark" src="assets/seed-favicon.svg" alt="" /></span>
                     <span class="amount-option-title">Receive a Blessing</span>
                   </button>
                   <button class="amount-option" type="button" data-amount="11">
-                    <span class="amount-option-value">11$</span>
+                    <span class="amount-option-value"><span class="amount-option-number">11</span><img class="amount-option-seed-mark" src="assets/seed-favicon.svg" alt="" /></span>
                     <span class="amount-option-title">Heaven's Special Blessing</span>
                   </button>
                   <button class="amount-option" type="button" data-amount="33">
-                    <span class="amount-option-value">33$</span>
+                    <span class="amount-option-value"><span class="amount-option-number">33</span><img class="amount-option-seed-mark" src="assets/seed-favicon.svg" alt="" /></span>
                     <span class="amount-option-title">Prayer for Your Soulmate</span>
                   </button>
                   <button class="amount-option" type="button" data-amount="77">
-                    <span class="amount-option-value">77$</span>
+                    <span class="amount-option-value"><span class="amount-option-number">77</span><img class="amount-option-seed-mark" src="assets/seed-favicon.svg" alt="" /></span>
                     <span class="amount-option-title">Bless Your Soulmate &amp; Your Bond</span>
                   </button>
                   <button class="amount-option" type="button" data-amount="111">
-                    <span class="amount-option-value">111$</span>
+                    <span class="amount-option-value"><span class="amount-option-number">111</span><img class="amount-option-seed-mark" src="assets/seed-favicon.svg" alt="" /></span>
                     <span class="amount-option-title">Sacred Blessing for Soulmate &amp; Family</span>
                   </button>
                   <button class="amount-option" type="button" data-amount="333">
-                    <span class="amount-option-value">333$</span>
+                    <span class="amount-option-value"><span class="amount-option-number">333</span><img class="amount-option-seed-mark" src="assets/seed-favicon.svg" alt="" /></span>
                     <span class="amount-option-title">Soulmate Divine Guidance &amp; Protection</span>
                   </button>
                   <button class="amount-option" type="button" data-amount="777">
-                    <span class="amount-option-value">777$</span>
+                    <span class="amount-option-value"><span class="amount-option-number">777</span><img class="amount-option-seed-mark" src="assets/seed-favicon.svg" alt="" /></span>
                     <span class="amount-option-title">For You &amp; Everyone You Love</span>
                   </button>
                   <button class="amount-option" type="button" data-amount="999">
-                    <span class="amount-option-value">999$</span>
+                    <span class="amount-option-value"><span class="amount-option-number">999</span><img class="amount-option-seed-mark" src="assets/seed-favicon.svg" alt="" /></span>
                     <span class="amount-option-title">Ultimate Prayer Offering for Love, Family &amp; Protection</span>
                   </button>
                 </div>
@@ -581,6 +578,11 @@
       <div class="payment-card">
         <h2 id="paymentTitle">Complete your secure seed</h2>
         <p class="fortune-message">Your Fortune Message Awaits in Next Step</p>
+
+        <label class="payment-email-field" for="paymentEmailInput">
+          <span>Email for your order detail</span>
+          <input id="paymentEmailInput" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" />
+        </label>
 
         <h3>Pay with...</h3>
         <p class="payment-copy" id="paymentCopy">
@@ -666,6 +668,6 @@
     </footer>
 
     <script src="src/config.js?v=1"></script>
-    <script src="src/app.js?v=54" defer></script>
+    <script src="src/app.js?v=55" defer></script>
   </body>
 </html>

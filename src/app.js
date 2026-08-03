@@ -172,7 +172,7 @@ const DEFAULT_SETTINGS = {
     "🌱✨ Sow a Seed for the Soulmate You’ve Been Waiting For ✨🌱\n\nTired of waiting for that special someone to appear? Every seed you sow is a loving step toward calling in your soulmate. I channel warm, heartfelt soulmate messages, signs, and gentle guidance just for you.\n\nYour donation isn’t just support, it’s an act of faith, intention, and hope. Sow your seed and let love meet you where you are.",
   topicLabel: "Spirituality",
   supportTitle:
-    "Buy a Seed to Sow for the Love You’ve Been Waiting For💕💕 for Sow Your Seed Here for Your Soulmate 💫",
+    "Buy a Seed to Sow for the Love You’ve Been Waiting For in 💕Christ Pradise garden💫",
   postAuthorName: "Sow Your Seed Here for Your Soulmate 💫",
   postTitle: "༺💗༻ A Divine Invitation: Sow Your Seed Here for Your Soulmate 🌱💫🌹",
   postBody:
@@ -303,6 +303,7 @@ const elements = {
   nameInput: document.querySelector("#nameInput"),
   paymentCopy: document.querySelector("#paymentCopy"),
   paymentDialog: document.querySelector("#paymentDialog"),
+  paymentEmailInput: document.querySelector("#paymentEmailInput"),
   paymentNote: document.querySelector("#paymentNote"),
   paymentStatus: document.querySelector("#paymentStatus"),
   paypalButton: document.querySelector("#paypalButton"),
@@ -1140,11 +1141,19 @@ function getDigitalOrder(donation) {
   return {
     orderNumber: rawOrder.orderNumber,
     itemName: rawOrder.itemName,
+    customerName: rawOrder.customerName,
+    contactEmail: rawOrder.contactEmail,
+    payerEmail: rawOrder.payerEmail,
+    paypalOrderId: rawOrder.paypalOrderId,
+    paypalCaptureId: rawOrder.paypalCaptureId,
+    amount: rawOrder.amount,
+    currency: rawOrder.currency,
     personalizedRequest: donation?.message || "",
     blessingMessage: donation?.fortuneMessage || "",
     fulfillmentStatus: rawOrder.fulfillmentStatus,
     fulfillmentNote: rawOrder.fulfillmentNote,
     fulfilledAt: rawOrder.fulfilledAt,
+    createdAt: rawOrder.createdAt,
   };
 }
 
@@ -1219,6 +1228,7 @@ function buildProofPdfLines(donation) {
   const status = getDigitalOrderValue(donation, "fulfillmentStatus", "paid_awaiting_personalized_writing");
   const fulfilledAt = getDigitalOrderValue(donation, "fulfilledAt", "");
   const fulfillmentNote = getDigitalOrderValue(donation, "fulfillmentNote", "No fulfillment note has been added yet.");
+  const contactEmail = getDigitalOrderValue(donation, "contactEmail", "");
   const payerEmail = getDigitalOrderValue(donation, "payerEmail", donation.payerEmail || getDonationRawValue(donation, "BuyerEmail", ""));
   const paypalOrderId = getDigitalOrderValue(donation, "paypalOrderId", donation.orderId || getDonationRawValue(donation, "Reference", ""));
   const paypalCaptureId = getDigitalOrderValue(donation, "paypalCaptureId", donation.captureId || getDonationRawValue(donation, "TransactionId", ""));
@@ -1232,6 +1242,7 @@ function buildProofPdfLines(donation) {
     `Order ID: ${orderNumber || "Not available"}`,
     `Payment date: ${readableUtcDateTime(createdAt)}`,
     `Customer name: ${donation.name || order.customerName || "Supporter"}`,
+    `Contact email: ${contactEmail || "Not provided by supporter"}`,
     `Buyer email: ${payerEmail || "Not provided by PayPal"}`,
     `Item: ${itemName}`,
     `Amount received: ${formatCsvAmount(amount)} ${currency}`,
@@ -1580,7 +1591,10 @@ function renderAmountOptions(selectedAmount = getAmount()) {
       const description = AMOUNT_TIER_DESCRIPTIONS[amount] || "Sow a Seed of Faith";
       return `
         <button class="amount-option${activeClass}" type="button" data-amount="${amount}">
-          <span class="amount-option-value">${amount}$</span>
+          <span class="amount-option-value">
+            <span class="amount-option-number">${amount}</span>
+            <img class="amount-option-seed-mark" src="assets/seed-favicon.svg" alt="" />
+          </span>
           <span class="amount-option-title">${escapeHtml(description)}</span>
         </button>
       `;
@@ -1964,6 +1978,7 @@ function renderAdminCalendarDetails() {
             "paypalCaptureId",
             donation.captureId || getDonationRawValue(donation, "TransactionId", "Not available"),
           );
+          const contactEmail = getDigitalOrderValue(donation, "contactEmail", "");
           const request = getDigitalOrderValue(donation, "personalizedRequest", donation.message || "No request entered.");
           const status = getDigitalOrderValue(donation, "fulfillmentStatus", "paid_awaiting_personalized_writing");
           const note = getDigitalOrderValue(donation, "fulfillmentNote", "");
@@ -1981,6 +1996,7 @@ function renderAdminCalendarDetails() {
               <div class="admin-order-meta">
                 <span><strong>Order ID</strong>${escapeHtml(orderNumber)}</span>
                 <span><strong>Transaction ID</strong>${escapeHtml(captureId)}</span>
+                <span><strong>Contact email</strong>${escapeHtml(contactEmail || "Not provided")}</span>
                 <span><strong>Item</strong>${escapeHtml(order?.itemName || DIGITAL_ORDER_ITEM_NAME)}</span>
                 <span><strong>Status</strong>${escapeHtml(getFulfillmentStatusLabel(status))}</span>
               </div>
@@ -2097,6 +2113,26 @@ function updateCheckoutLabel() {
   elements.checkoutLabel.textContent = "Sow Your Seed";
   elements.checkoutButton.setAttribute("aria-label", `Sow Your Seed ${money(amount)}${cadence}`);
   elements.seedPriceLabel.textContent = formatSeedUnits(seedUnits);
+}
+
+function getPaymentEmail() {
+  return String(elements.paymentEmailInput?.value || "").trim();
+}
+
+function isValidEmailAddress(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+}
+
+function requirePaymentEmail() {
+  const email = getPaymentEmail();
+
+  if (isValidEmailAddress(email)) {
+    return email;
+  }
+
+  setPaymentStatus("Add a valid email before opening PayPal checkout.", true);
+  elements.paymentEmailInput?.focus();
+  throw new Error("A valid email is required for your order detail.");
 }
 
 function setAmount(amount) {
@@ -2266,6 +2302,8 @@ function buildPayPalButtonOptions(paypal, fundingSource) {
     },
     createOrder: async () => {
       if (!pendingDonation) throw new Error("Donation details are missing.");
+      const email = requirePaymentEmail();
+      pendingDonation = { ...pendingDonation, email };
       setPaymentStatus("Opening secure international PayPal checkout...");
       const payload = await callEdge("create-paypal-order", {
         body: pendingDonation,
@@ -2374,6 +2412,9 @@ async function finishVerifiedDonation(payload) {
   elements.receiptTitle.textContent = "Your fortune for today";
   elements.receiptSummary.textContent = fortuneMessage;
   elements.supportForm.reset();
+  if (elements.paymentEmailInput) {
+    elements.paymentEmailInput.value = "";
+  }
   quantity = 1;
   elements.quantityValue.textContent = quantity;
   setAmount(getInitialDonationAmount());
@@ -2387,6 +2428,9 @@ function openPaymentDialog() {
   document.body.classList.add("payment-open");
   setPaymentStatus("Loading secure international PayPal/card checkout...");
   elements.paymentDialog.classList.remove("is-closing");
+  if (elements.paymentEmailInput) {
+    elements.paymentEmailInput.value = pendingDonation?.email || "";
+  }
 
   if (typeof elements.paymentDialog.showModal === "function") {
     elements.paymentDialog.showModal();
@@ -3132,6 +3176,11 @@ elements.showMoreButtons.forEach((button) => {
 });
 
 elements.supportForm.addEventListener("submit", submitDonation);
+elements.paymentEmailInput?.addEventListener("input", () => {
+  if (!elements.paymentStatus.classList.contains("is-error")) return;
+  if (!isValidEmailAddress(getPaymentEmail())) return;
+  setPaymentStatus("International PayPal/card checkout is ready.");
+});
 
 elements.followButton.addEventListener("click", () => {
   state.followed = !state.followed;

@@ -17,8 +17,13 @@ type CaptureBody = {
     name?: string;
     frequency?: string;
     message?: string;
+    email?: string;
   };
 };
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
 
 function seedCountFromAmount(amount: number) {
   return Math.max(1, Math.round(amount / 7));
@@ -100,6 +105,13 @@ function mapDigitalOrder(order: Record<string, any> | null) {
     id: order.id,
     orderNumber: order.order_number,
     donationId: order.donation_id,
+    paypalOrderId: order.paypal_order_id,
+    paypalCaptureId: order.paypal_capture_id,
+    customerName: order.customer_name,
+    contactEmail: order.contact_email,
+    payerEmail: order.payer_email,
+    amount: order.amount,
+    currency: order.currency,
     itemName: order.item_name,
     personalizedRequest: order.personalized_request,
     blessingMessage: order.blessing_message,
@@ -132,6 +144,7 @@ async function ensureDigitalOrder(
     paypalOrderId?: string | null;
     paypalCaptureId?: string | null;
     customerName: string;
+    contactEmail?: string | null;
     payerEmail?: string | null;
     amount: number;
     currency: string;
@@ -142,13 +155,41 @@ async function ensureDigitalOrder(
   const { data: existing, error: existingError } = await supabase
     .from("digital_orders")
     .select(
-      "id, order_number, donation_id, item_name, personalized_request, blessing_message, fulfillment_status, fulfillment_note, fulfilled_at, created_at",
+      "id, order_number, donation_id, paypal_order_id, paypal_capture_id, customer_name, contact_email, payer_email, amount, currency, item_name, personalized_request, blessing_message, fulfillment_status, fulfillment_note, fulfilled_at, created_at",
     )
     .eq("donation_id", input.donationId)
     .maybeSingle();
 
   if (existingError) throw existingError;
-  if (existing) return existing;
+  if (existing) {
+    const contactEmail = input.contactEmail || existing.contact_email || null;
+    const payerEmail = input.payerEmail || existing.payer_email || null;
+    const shouldRefresh =
+      contactEmail !== existing.contact_email ||
+      payerEmail !== existing.payer_email ||
+      input.paypalOrderId !== existing.paypal_order_id ||
+      input.paypalCaptureId !== existing.paypal_capture_id;
+
+    if (!shouldRefresh) return existing;
+
+    const { data: refreshed, error: refreshError } = await supabase
+      .from("digital_orders")
+      .update({
+        paypal_order_id: input.paypalOrderId || existing.paypal_order_id || null,
+        paypal_capture_id: input.paypalCaptureId || existing.paypal_capture_id || null,
+        contact_email: contactEmail,
+        payer_email: payerEmail,
+      })
+      .eq("id", existing.id)
+      .select(
+        "id, order_number, donation_id, paypal_order_id, paypal_capture_id, customer_name, contact_email, payer_email, amount, currency, item_name, personalized_request, blessing_message, fulfillment_status, fulfillment_note, fulfilled_at, created_at",
+      )
+      .single();
+
+    if (refreshError) throw refreshError;
+
+    return refreshed;
+  }
 
   const { data: created, error: createError } = await supabase
     .from("digital_orders")
@@ -158,6 +199,7 @@ async function ensureDigitalOrder(
       paypal_order_id: input.paypalOrderId || null,
       paypal_capture_id: input.paypalCaptureId || null,
       customer_name: input.customerName,
+      contact_email: input.contactEmail || null,
       payer_email: input.payerEmail || null,
       amount: input.amount,
       currency: input.currency,
@@ -167,7 +209,7 @@ async function ensureDigitalOrder(
       fulfillment_status: "paid_awaiting_personalized_writing",
     })
     .select(
-      "id, order_number, donation_id, item_name, personalized_request, blessing_message, fulfillment_status, fulfillment_note, fulfilled_at, created_at",
+      "id, order_number, donation_id, paypal_order_id, paypal_capture_id, customer_name, contact_email, payer_email, amount, currency, item_name, personalized_request, blessing_message, fulfillment_status, fulfillment_note, fulfilled_at, created_at",
     )
     .single();
 
@@ -271,8 +313,10 @@ Deno.serve(async (request) => {
   try {
     const body = await readJson<CaptureBody>(request);
     const orderId = String(body.orderId || "").trim();
+    const contactEmail = String(body.donation?.email || "").trim().slice(0, 160);
 
     if (!orderId) return errorResponse("PayPal order id is required.", 422);
+    if (!isValidEmail(contactEmail)) return errorResponse("A valid email is required for the order detail.", 422);
 
     const supabase = getSupabaseAdmin();
     const { data: existing } = await supabase
@@ -297,6 +341,7 @@ Deno.serve(async (request) => {
         paypalOrderId: existing.paypal_order_id,
         paypalCaptureId: existing.paypal_capture_id,
         customerName: existing.display_name,
+        contactEmail: contactEmail || rawPayment.digitalOrder?.contactEmail || null,
         payerEmail: existing.paypal_payer_email,
         amount: Number(existing.amount) || 0,
         currency: rawRow.Currency || getPayPalCurrency(),
@@ -409,8 +454,16 @@ Deno.serve(async (request) => {
           order,
           digitalOrder: {
             orderNumber,
+            customerName: displayName,
+            contactEmail,
+            payerEmail: order.payer?.email_address || null,
+            paypalOrderId: order.id,
+            paypalCaptureId: capture.id,
+            amount: capturedAmount,
+            currency,
             itemName: DIGITAL_ORDER_ITEM_NAME,
             fulfillmentStatus: "paid_awaiting_personalized_writing",
+            createdAt: capture.create_time || order.create_time || new Date().toISOString(),
           },
         },
       })
@@ -424,6 +477,7 @@ Deno.serve(async (request) => {
       paypalOrderId: order.id,
       paypalCaptureId: capture.id,
       customerName: displayName,
+      contactEmail,
       payerEmail: order.payer?.email_address || null,
       amount: capturedAmount,
       currency,

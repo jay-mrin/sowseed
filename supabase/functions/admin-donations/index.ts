@@ -28,6 +28,7 @@ function mapDigitalOrder(value: any) {
     paypalOrderId: order.paypal_order_id,
     paypalCaptureId: order.paypal_capture_id,
     customerName: order.customer_name,
+    contactEmail: order.contact_email,
     payerEmail: order.payer_email,
     amount: Number(order.amount),
     currency: order.currency,
@@ -77,7 +78,7 @@ Deno.serve(async (request) => {
         })
         .eq("donation_id", donationId)
         .select(
-          "id, order_number, donation_id, paypal_order_id, paypal_capture_id, customer_name, payer_email, amount, currency, item_name, personalized_request, blessing_message, fulfillment_status, fulfillment_note, fulfilled_at, created_at, updated_at",
+          "id, order_number, donation_id, paypal_order_id, paypal_capture_id, customer_name, contact_email, payer_email, amount, currency, item_name, personalized_request, blessing_message, fulfillment_status, fulfillment_note, fulfilled_at, created_at, updated_at",
         )
         .maybeSingle();
 
@@ -111,7 +112,7 @@ Deno.serve(async (request) => {
           "fortune_message",
           "raw_payment",
           "created_at",
-          "digital_orders(id, order_number, donation_id, paypal_order_id, paypal_capture_id, customer_name, payer_email, amount, currency, item_name, personalized_request, blessing_message, fulfillment_status, fulfillment_note, fulfilled_at, created_at, updated_at)",
+          "digital_orders(id, order_number, donation_id, paypal_order_id, paypal_capture_id, customer_name, contact_email, payer_email, amount, currency, item_name, personalized_request, blessing_message, fulfillment_status, fulfillment_note, fulfilled_at, created_at, updated_at)",
         ].join(", "),
       )
       .order("created_at", { ascending: false });
