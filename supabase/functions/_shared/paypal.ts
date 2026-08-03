@@ -4,13 +4,6 @@ const PAYPAL_API_BASE = {
 };
 
 export const DIGITAL_ORDER_ITEM_NAME = "Personalised Digital Blessing and Sowing Seed";
-export type PaymentRoute = "standard" | "large";
-
-export type PayPalRouting = {
-  route: PaymentRoute;
-  thresholdCents: number;
-  receiverIdentifier: string | null;
-};
 
 function padDatePart(value: number) {
   return String(value).padStart(2, "0");
@@ -58,90 +51,33 @@ export function formatMoneyFromCents(cents: number) {
   return centsToMoney(cents).toFixed(2);
 }
 
-export function getLargeDonationThresholdCents() {
-  const configuredThreshold = Deno.env.get("PAYPAL_LARGE_DONATION_THRESHOLD") || "99";
-  const thresholdCents = parseMoneyToCents(configuredThreshold);
-
-  return thresholdCents > 0 ? thresholdCents : 9900;
-}
-
 export function getReceiverIdentifierFromPayPalOrder(order: Record<string, any>) {
   const payee = order.purchase_units?.[0]?.payee || {};
 
   return String(payee.merchant_id || payee.email_address || "").trim() || null;
 }
 
-export function resolvePayPalRouting(
-  amountCents: number,
-  options: {
-    largeDonationRoutingEnabled?: boolean;
-  } = {},
-): PayPalRouting {
-  const thresholdCents = getLargeDonationThresholdCents();
-
-  if (options.largeDonationRoutingEnabled === false || amountCents <= thresholdCents) {
-    return {
-      route: "standard",
-      thresholdCents,
-      receiverIdentifier: null,
-    };
-  }
-
-  const merchantId = String(Deno.env.get("PAYPAL_LARGE_PAYEE_MERCHANT_ID") || "").trim();
-  const emailAddress = String(Deno.env.get("PAYPAL_LARGE_PAYEE_EMAIL") || "").trim();
-  const receiverIdentifier = merchantId || emailAddress || null;
-
-  return {
-    route: "large",
-    thresholdCents,
-    receiverIdentifier,
-  };
-}
-
-export function getPayPalClientId(route: PaymentRoute = "standard") {
-  if (route === "large") {
-    return (
-      Deno.env.get("PAYPAL_LARGE_CLIENT_ID") ||
-      Deno.env.get("SUPER_ADMIN_PAYPAL_CLIENT_ID") ||
-      ""
-    );
-  }
-
+export function getPayPalClientId() {
   return Deno.env.get("PAYPAL_CLIENT_ID") || "";
 }
 
-function getPayPalClientSecret(route: PaymentRoute = "standard") {
-  if (route === "large") {
-    return Deno.env.get("PAYPAL_LARGE_CLIENT_SECRET") || Deno.env.get("SUPER_ADMIN_PAYPAL_CLIENT_SECRET") || "";
-  }
-
+function getPayPalClientSecret() {
   return Deno.env.get("PAYPAL_CLIENT_SECRET") || "";
 }
 
-function assertPayPalCredentials(route: PaymentRoute) {
-  const clientId = getPayPalClientId(route);
-  const clientSecret = getPayPalClientSecret(route);
+function assertPayPalCredentials() {
+  const clientId = getPayPalClientId();
+  const clientSecret = getPayPalClientSecret();
 
   if (!clientId || !clientSecret) {
-    throw new Error(route === "large" ? "Missing large PayPal gateway credentials." : "Missing PayPal credentials.");
+    throw new Error("Missing PayPal credentials.");
   }
 
   return { clientId, clientSecret };
 }
 
-export function assertLargeGatewayReady() {
-  const { receiverIdentifier } = resolvePayPalRouting(getLargeDonationThresholdCents() + 1, {
-    largeDonationRoutingEnabled: true,
-  });
-  assertPayPalCredentials("large");
-
-  if (!receiverIdentifier) {
-    throw new Error("Large donation receiver is not configured.");
-  }
-}
-
-export async function getPayPalAccessToken(route: PaymentRoute = "standard") {
-  const { clientId, clientSecret } = assertPayPalCredentials(route);
+export async function getPayPalAccessToken() {
+  const { clientId, clientSecret } = assertPayPalCredentials();
   const credentials = btoa(`${clientId}:${clientSecret}`);
   const response = await fetch(`${getPayPalBaseUrl()}/v1/oauth2/token`, {
     method: "POST",
@@ -165,18 +101,9 @@ export async function createPayPalOrder(input: {
   amountCents: number;
   displayName: string;
   frequency: string;
-  largeDonationRoutingEnabled?: boolean;
   supporterMessage?: string;
 }) {
-  const routing = resolvePayPalRouting(input.amountCents, {
-    largeDonationRoutingEnabled: input.largeDonationRoutingEnabled,
-  });
-
-  if (routing.route === "large") {
-    assertLargeGatewayReady();
-  }
-
-  const accessToken = await getPayPalAccessToken(routing.route);
+  const accessToken = await getPayPalAccessToken();
   const currency = getPayPalCurrency();
   const amount = formatMoneyFromCents(input.amountCents);
   const orderNumber = createDigitalOrderNumber();
@@ -208,11 +135,11 @@ export async function createPayPalOrder(input: {
     throw new Error(`PayPal order creation failed: ${JSON.stringify(payload)}`);
   }
 
-  return { ...payload, routing };
+  return payload;
 }
 
-export async function capturePayPalOrder(orderId: string, route: PaymentRoute = "standard") {
-  const accessToken = await getPayPalAccessToken(route);
+export async function capturePayPalOrder(orderId: string) {
+  const accessToken = await getPayPalAccessToken();
   const response = await fetch(`${getPayPalBaseUrl()}/v2/checkout/orders/${orderId}/capture`, {
     method: "POST",
     headers: {
@@ -231,22 +158,18 @@ export async function capturePayPalOrder(orderId: string, route: PaymentRoute = 
   return payload;
 }
 
-function getWebhookId(route: PaymentRoute = "standard") {
-  if (route === "large") {
-    return Deno.env.get("PAYPAL_LARGE_WEBHOOK_ID") || Deno.env.get("SUPER_ADMIN_PAYPAL_WEBHOOK_ID") || "";
-  }
-
+function getWebhookId() {
   return Deno.env.get("PAYPAL_WEBHOOK_ID") || "";
 }
 
-async function verifyPayPalWebhookForRoute(headers: Headers, body: string, route: PaymentRoute) {
-  const webhookId = getWebhookId(route);
+export async function verifyPayPalWebhook(headers: Headers, body: string) {
+  const webhookId = getWebhookId();
 
   if (!webhookId) {
-    throw new Error(route === "large" ? "Missing PAYPAL_LARGE_WEBHOOK_ID." : "Missing PAYPAL_WEBHOOK_ID.");
+    throw new Error("Missing PAYPAL_WEBHOOK_ID.");
   }
 
-  const accessToken = await getPayPalAccessToken(route);
+  const accessToken = await getPayPalAccessToken();
   const response = await fetch(`${getPayPalBaseUrl()}/v1/notifications/verify-webhook-signature`, {
     method: "POST",
     headers: {
@@ -267,25 +190,11 @@ async function verifyPayPalWebhookForRoute(headers: Headers, body: string, route
   const payload = await response.json();
 
   if (!response.ok || payload.verification_status !== "SUCCESS") {
-    throw new Error(`PayPal ${route} webhook verification failed: ${JSON.stringify(payload)}`);
+    throw new Error(`PayPal webhook verification failed: ${JSON.stringify(payload)}`);
   }
 
   return {
     ...payload,
-    paymentRoute: route,
+    paymentRoute: "standard",
   };
-}
-
-export async function verifyPayPalWebhook(headers: Headers, body: string) {
-  const errors: string[] = [];
-
-  for (const route of ["standard", "large"] as PaymentRoute[]) {
-    try {
-      return await verifyPayPalWebhookForRoute(headers, body, route);
-    } catch (error) {
-      errors.push(String(error));
-    }
-  }
-
-  throw new Error(`PayPal webhook verification failed for every configured gateway: ${errors.join(" | ")}`);
 }

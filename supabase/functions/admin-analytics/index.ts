@@ -1,13 +1,61 @@
 import { errorResponse, handleOptions, jsonResponse } from "../_shared/http.ts";
 import { requireAdmin } from "../_shared/supabase.ts";
 
+function createEmptyAnalytics(generatedAt: string, resetAt: string) {
+  return {
+    generatedAt,
+    resetAt,
+    pageViewsLast24h: 0,
+    uniqueVisitorsLast24h: 0,
+    checkoutButtonClicksLast24h: 0,
+    paypalCheckoutStartsLast24h: 0,
+    completedPaymentsLast24h: 0,
+    topPaths: [],
+  };
+}
+
+async function getAnalyticsSince(supabase: any) {
+  const dayWindow = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const { data, error } = await supabase
+    .from("analytics_state")
+    .select("reset_at")
+    .eq("id", true)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  const resetAt = data?.reset_at ? new Date(data.reset_at) : new Date(0);
+  const since = resetAt > dayWindow ? resetAt : dayWindow;
+
+  return {
+    since: since.toISOString(),
+    resetAt: resetAt.toISOString(),
+  };
+}
+
 Deno.serve(async (request) => {
   const options = handleOptions(request);
   if (options) return options;
 
   try {
     const { supabase } = await requireAdmin(request, { allowedRoles: ["admin"] });
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    if (request.method === "DELETE") {
+      const resetAt = new Date().toISOString();
+      const { error } = await supabase
+        .from("analytics_state")
+        .upsert({ id: true, reset_at: resetAt, updated_at: resetAt }, { onConflict: "id" });
+
+      if (error) throw error;
+
+      return jsonResponse(createEmptyAnalytics(resetAt, resetAt));
+    }
+
+    if (request.method !== "GET") {
+      return errorResponse("Method not allowed.", 405);
+    }
+
+    const { since, resetAt } = await getAnalyticsSince(supabase);
 
     const { data, error } = await supabase
       .from("page_views")
@@ -21,7 +69,6 @@ Deno.serve(async (request) => {
     const { data: checkoutEvents, error: checkoutEventsError } = await supabase
       .from("checkout_events")
       .select("event_name")
-      .eq("payment_route", "standard")
       .gte("created_at", since)
       .order("created_at", { ascending: false })
       .limit(10000);
@@ -31,7 +78,6 @@ Deno.serve(async (request) => {
     const { count: completedPaymentCount, error: completedPaymentError } = await supabase
       .from("donations")
       .select("id", { count: "exact", head: true })
-      .eq("payment_route", "standard")
       .eq("paypal_status", "COMPLETED")
       .gte("created_at", since);
 
@@ -55,6 +101,7 @@ Deno.serve(async (request) => {
 
     return jsonResponse({
       generatedAt: new Date().toISOString(),
+      resetAt,
       pageViewsLast24h: rows.length,
       uniqueVisitorsLast24h: uniqueVisitors.size,
       checkoutButtonClicksLast24h: checkoutButtonClicks,

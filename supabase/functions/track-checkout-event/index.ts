@@ -1,6 +1,5 @@
 import { errorResponse, handleOptions, jsonResponse, readJson } from "../_shared/http.ts";
-import { centsToMoney, parseMoneyToCents, resolvePayPalRouting } from "../_shared/paypal.ts";
-import { isLargeDonationRoutingEnabled } from "../_shared/site-settings.ts";
+import { centsToMoney, parseMoneyToCents } from "../_shared/paypal.ts";
 import { getSupabaseAdmin, hashText } from "../_shared/supabase.ts";
 
 type CheckoutEventBody = {
@@ -35,13 +34,11 @@ Deno.serve(async (request) => {
     if (amountCents < 100) return errorResponse("Amount must be at least $1.", 422);
 
     const supabase = getSupabaseAdmin();
-    const largeDonationRoutingEnabled = await isLargeDonationRoutingEnabled(supabase);
-    const routing = resolvePayPalRouting(amountCents, { largeDonationRoutingEnabled });
 
     const { error } = await supabase.from("checkout_events").insert({
       event_name: eventName,
       visitor_key_hash: await hashText(visitorKey),
-      payment_route: routing.route,
+      payment_route: "standard",
       amount: centsToMoney(amountCents),
       path: sanitizePath(body.path),
       user_agent: (request.headers.get("user-agent") || "").slice(0, 220),
@@ -49,7 +46,7 @@ Deno.serve(async (request) => {
 
     if (error) throw error;
 
-    return jsonResponse({ recorded: true, paymentRoute: routing.route });
+    return jsonResponse({ recorded: true, paymentRoute: "standard" });
   } catch (error) {
     return errorResponse("Could not record checkout event.", 500, String(error));
   }

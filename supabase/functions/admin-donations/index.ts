@@ -42,26 +42,12 @@ function mapDigitalOrder(value: any) {
   };
 }
 
-function getRequestedRoute(url: URL) {
-  return url.searchParams.get("route") === "large" ? "large" : "standard";
-}
-
-function canAccessDonationRoute(role: string, route: string) {
-  return route === "large" ? role === "super_admin" : role === "admin";
-}
-
-function accessDeniedForRoute(route: string) {
-  return route === "large"
-    ? "Only the super admin can access large donations."
-    : "Super admin accounts can only access the large-donation portal.";
-}
-
 Deno.serve(async (request) => {
   const options = handleOptions(request);
   if (options) return options;
 
   try {
-    const { supabase, adminProfile } = await requireAdmin(request);
+    const { supabase } = await requireAdmin(request, { allowedRoles: ["admin"] });
     const url = new URL(request.url);
 
     if (request.method === "PUT") {
@@ -75,17 +61,12 @@ Deno.serve(async (request) => {
 
       const { data: donation, error: donationError } = await supabase
         .from("donations")
-        .select("id, payment_route")
+        .select("id")
         .eq("id", donationId)
         .maybeSingle();
 
       if (donationError) throw donationError;
       if (!donation) return errorResponse("Donation not found.", 404);
-
-      const donationRoute = donation.payment_route === "large" ? "large" : "standard";
-      if (!canAccessDonationRoute(adminProfile.role, donationRoute)) {
-        return errorResponse(accessDeniedForRoute(donationRoute), 403);
-      }
 
       const { data, error } = await supabase
         .from("digital_orders")
@@ -104,11 +85,6 @@ Deno.serve(async (request) => {
       if (!data) return errorResponse("Digital order not found for this donation.", 404);
 
       return jsonResponse({ order: mapDigitalOrder(data) });
-    }
-
-    const requestedRoute = getRequestedRoute(url);
-    if (!canAccessDonationRoute(adminProfile.role, requestedRoute)) {
-      return errorResponse(accessDeniedForRoute(requestedRoute), 403);
     }
 
     const month = url.searchParams.get("month");
@@ -138,7 +114,6 @@ Deno.serve(async (request) => {
           "digital_orders(id, order_number, donation_id, paypal_order_id, paypal_capture_id, customer_name, payer_email, amount, currency, item_name, personalized_request, blessing_message, fulfillment_status, fulfillment_note, fulfilled_at, created_at, updated_at)",
         ].join(", "),
       )
-      .eq("payment_route", requestedRoute)
       .order("created_at", { ascending: false });
 
     if (exportRows && isDateOnly(startDate)) {
@@ -174,7 +149,7 @@ Deno.serve(async (request) => {
         orderId: donation.paypal_order_id,
         captureId: donation.paypal_capture_id,
         payerEmail: donation.paypal_payer_email,
-        paymentRoute: donation.payment_route === "large" ? "large" : "standard",
+        paymentRoute: "standard",
         receiverIdentifier: donation.receiver_identifier,
         fortuneMessage: donation.fortune_message,
         rawPayment: donation.raw_payment,

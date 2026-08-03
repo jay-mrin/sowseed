@@ -7,9 +7,7 @@ import {
   getPayPalCurrency,
   getReceiverIdentifierFromPayPalOrder,
   parseMoneyToCents,
-  resolvePayPalRouting,
 } from "../_shared/paypal.ts";
-import { isLargeDonationRoutingEnabled } from "../_shared/site-settings.ts";
 import { createRandomToken, getSupabaseAdmin, hashText } from "../_shared/supabase.ts";
 
 type CaptureBody = {
@@ -23,7 +21,7 @@ type CaptureBody = {
 };
 
 function seedCountFromAmount(amount: number) {
-  return Math.max(1, Math.round(amount / 6));
+  return Math.max(1, Math.round(amount / 7));
 }
 
 function padDatePart(value: number) {
@@ -286,7 +284,7 @@ Deno.serve(async (request) => {
       .maybeSingle();
 
     if (existing) {
-      const paymentRoute = existing.payment_route === "large" ? "large" : "standard";
+      const paymentRoute = "standard";
       const rawPayment =
         existing.raw_payment && typeof existing.raw_payment === "object" && !Array.isArray(existing.raw_payment)
           ? existing.raw_payment
@@ -305,17 +303,14 @@ Deno.serve(async (request) => {
         personalizedRequest: existing.supporter_message,
         blessingMessage: existing.fortune_message,
       });
-      const seedComment =
-        paymentRoute === "standard"
-          ? await ensureSeedComment(supabase, {
-              donationId: existing.id,
-              displayName: existing.display_name,
-              body: existing.supporter_message,
-              amount: Number(existing.amount) || 0,
-              seedCount: Number(existing.seed_count) || seedCountFromAmount(Number(existing.amount) || 0),
-              createdAt: existing.created_at,
-            })
-          : null;
+      const seedComment = await ensureSeedComment(supabase, {
+        donationId: existing.id,
+        displayName: existing.display_name,
+        body: existing.supporter_message,
+        amount: Number(existing.amount) || 0,
+        seedCount: Number(existing.seed_count) || seedCountFromAmount(Number(existing.amount) || 0),
+        createdAt: existing.created_at,
+      });
 
       return jsonResponse({
         donation: {
@@ -332,13 +327,7 @@ Deno.serve(async (request) => {
       });
     }
 
-    const largeDonationRoutingEnabled = await isLargeDonationRoutingEnabled(supabase);
-    const requestedAmountCents = parseMoneyToCents(body.donation?.amount);
-    const requestedRoute =
-      requestedAmountCents > 0
-        ? resolvePayPalRouting(requestedAmountCents, { largeDonationRoutingEnabled }).route
-        : "standard";
-    const order = await capturePayPalOrder(orderId, requestedRoute);
+    const order = await capturePayPalOrder(orderId);
     const capture = captureFromOrder(order);
 
     if (!capture || capture.status !== "COMPLETED") {
@@ -353,9 +342,8 @@ Deno.serve(async (request) => {
       return errorResponse("PayPal captured amount or currency is invalid.", 422, order);
     }
 
-    const routing = resolvePayPalRouting(capturedAmountCents, { largeDonationRoutingEnabled });
-    const paymentRoute = routing.route;
-    const receiverIdentifier = getReceiverIdentifierFromPayPalOrder(order) || routing.receiverIdentifier;
+    const paymentRoute = "standard";
+    const receiverIdentifier = getReceiverIdentifierFromPayPalOrder(order);
 
     const { data: fortunes, error: fortuneError } = await supabase
       .from("fortunes")
@@ -415,7 +403,6 @@ Deno.serve(async (request) => {
           provider: "PayPal",
           routing: {
             route: paymentRoute,
-            thresholdCents: routing.thresholdCents,
             receiverIdentifier,
           },
           row: exportRow,
@@ -443,20 +430,17 @@ Deno.serve(async (request) => {
       personalizedRequest: supporterMessage,
       blessingMessage: fortune.message,
     });
-    const seedComment =
-      paymentRoute === "standard"
-        ? await ensureSeedComment(supabase, {
-            donationId: donation.id,
-            displayName,
-            body: supporterMessage,
-            amount: capturedAmount,
-            seedCount: seedCountFromAmount(capturedAmount),
-            createdAt: donation.created_at,
-          })
-        : null;
+    const seedComment = await ensureSeedComment(supabase, {
+      donationId: donation.id,
+      displayName,
+      body: supporterMessage,
+      amount: capturedAmount,
+      seedCount: seedCountFromAmount(capturedAmount),
+      createdAt: donation.created_at,
+    });
 
     await supabase.from("donor_tokens").update({ donation_id: donation.id }).eq("id", donorToken.id);
-    const meterCurrentAmount = paymentRoute === "standard" ? await advanceMeterCycle(supabase, capturedAmount) : null;
+    const meterCurrentAmount = await advanceMeterCycle(supabase, capturedAmount);
 
     return jsonResponse({
       donation: {

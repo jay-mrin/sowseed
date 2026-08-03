@@ -7,7 +7,7 @@
       name="description"
       content="Sow Your Seed is a creator support page for tips, donations, and monthly encouragement."
     />
-    <title>Sow Your Seed | Creator Support</title>
+    <title>Christ Paradise Garden💫✨🌱 | Creator Support</title>
     <link rel="icon" type="image/svg+xml" href="assets/seed-favicon.svg?v=1" />
     <link rel="shortcut icon" type="image/svg+xml" href="assets/seed-favicon.svg?v=1" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -16,19 +16,19 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="src/styles.css?v=52" />
+    <link rel="stylesheet" href="src/styles.css?v=53" />
   </head>
   <body class="app-loading">
     <div class="app-loader" id="appLoader" role="status" aria-live="polite" aria-label="Loading Sow Your Seed">
       <div class="app-loader-card">
         <div class="app-loader-seed" aria-hidden="true">🌱</div>
-        <p>Loading Sow Your Seed</p>
+        <p>Welcome To Christ Garden✨<br />Sow Your Seed For Blessings💫</p>
       </div>
     </div>
     <header class="topbar">
-      <a class="brand" href="#home" aria-label="Sow Your Seed home">
+      <a class="brand" href="#home" aria-label="Christ Paradise Garden home">
         <img class="brand-avatar" src="assets/jesus-profile.png" alt="" />
-        <span class="brand-title" id="brandTitle">Sow Your Seed Here for Your Soulmate 💫</span>
+        <span class="brand-title" id="brandTitle">Christ Paradise Garden💫✨🌱</span>
       </a>
       <button class="menu-button" id="adminMenuButton" type="button" aria-label="Open admin portal" aria-controls="adminPanel" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -226,8 +226,13 @@
 
           <section class="admin-section admin-analytics-section">
             <div class="admin-analytics-heading">
-              <h3>4. Page views</h3>
-              <p>Real visitor activity recorded from the last 24 hours.</p>
+              <div>
+                <h3>4. Page views</h3>
+                <p>Real visitor activity recorded from the last 24 hours.</p>
+              </div>
+              <button class="button button-secondary admin-analytics-reset-button" id="resetAdminAnalyticsButton" type="button">
+                Reset views
+              </button>
             </div>
             <div class="admin-analytics-grid">
               <article>
@@ -310,91 +315,6 @@
       </form>
     </section>
 
-    <section class="admin-panel super-admin-panel" id="superAdminPanel" aria-labelledby="superAdminTitle" aria-hidden="true">
-      <div class="admin-panel-header">
-        <div>
-          <p class="section-kicker">Super admin portal</p>
-          <h2 id="superAdminTitle">Large donation calendar</h2>
-        </div>
-        <div class="admin-header-actions">
-          <button class="button button-secondary admin-refresh-button" id="refreshSuperAdminButton" type="button">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M21 12a9 9 0 0 1-15.3 6.4L3 16" />
-              <path d="M3 21v-5h5" />
-              <path d="M3 12a9 9 0 0 1 15.3-6.4L21 8" />
-              <path d="M21 3v5h-5" />
-            </svg>
-            <span>Reload data</span>
-          </button>
-          <button class="icon-button admin-close-button" id="closeSuperAdminButton" type="button" aria-label="Close super admin portal">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="m6 6 12 12M18 6 6 18" />
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <div class="admin-status" id="superAdminActionStatus" role="status" aria-live="polite" hidden></div>
-
-      <section class="admin-section super-admin-routing-section" aria-labelledby="superAdminRoutingTitle">
-        <div class="super-admin-routing-copy">
-          <h3 id="superAdminRoutingTitle">Large payment gateway</h3>
-          <p id="superAdminRoutingState">$0-$99 stays normal. $100+ routes to the Super Admin PayPal account.</p>
-        </div>
-        <label class="admin-toggle super-admin-routing-toggle">
-          <input id="superAdminLargeRoutingToggle" type="checkbox" checked />
-          <span>
-            <strong>Route $100+ to Super Admin</strong>
-            <small>Turn off to send every payment through the normal admin PayPal gateway.</small>
-          </span>
-        </label>
-      </section>
-
-      <section class="admin-section admin-donations super-admin-donations">
-        <div class="admin-donation-heading">
-          <h3>$100+ payment calendar</h3>
-          <p>Private Super Admin records only. $0-$99 stays in the normal admin portal.</p>
-        </div>
-        <section class="admin-calendar" aria-labelledby="superAdminCalendarTitle">
-          <div class="admin-calendar-header">
-            <button
-              class="admin-calendar-nav"
-              id="superAdminCalendarPrev"
-              type="button"
-              aria-label="Previous large donation month"
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="m15 18-6-6 6-6" />
-              </svg>
-            </button>
-            <h4 id="superAdminCalendarTitle">Large donation calendar</h4>
-            <button
-              class="admin-calendar-nav"
-              id="superAdminCalendarNext"
-              type="button"
-              aria-label="Next large donation month"
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="m9 18 6-6-6-6" />
-              </svg>
-            </button>
-          </div>
-          <div class="admin-calendar-weekdays" aria-hidden="true">
-            <span>Sun</span>
-            <span>Mon</span>
-            <span>Tue</span>
-            <span>Wed</span>
-            <span>Thu</span>
-            <span>Fri</span>
-            <span>Sat</span>
-          </div>
-          <div class="admin-calendar-grid" id="superAdminCalendarGrid" role="grid" aria-label="Large donation records"></div>
-          <div class="admin-calendar-details" id="superAdminCalendarDetails" aria-live="polite"></div>
-          <div class="admin-calendar-summary" id="superAdminCalendarSummary" aria-live="polite"></div>
-        </section>
-      </section>
-    </section>
-
     <main id="home">
       <section class="creator-shell">
         <div class="cover-frame">
@@ -464,9 +384,9 @@
                 the soulmate your heart whispers for.
                 </p>
                 <p>
-                Every seed you sow is a seed of intention. 🌱 1 seed ($6) – I'm ready. 🌱🌱🌱 3 ($18) –
-                Mind, body, soulmate aligned. 🌱🌱🌱🌱🌱🌱🌱 7 ($42) – Protection over reunion.
-                🌱🌱🌱🌱🌱🌱🌱🌱🌱🌱🌱 11 ($66) – Eternal love. ༺💗༻ Click Donate to sow your seed now.
+                Every seed you sow is a seed of intention. 🌱 1 seed ($7) – I'm ready. 🌱🌱🌱 3 seeds ($21) –
+                Mind, body, soulmate aligned. 🌱🌱🌱🌱🌱🌱🌱 7 seeds ($49) – Protection over reunion.
+                🌱🌱🌱🌱🌱🌱🌱🌱🌱🌱🌱 11 seeds ($77) – Eternal love. ༺💗༻ Click Donate to sow your seed now.
                 Whisper to the universe: “Bring my soulmate to me.” The field is open. 🌱💫🌹
                 </p>
               </div>
@@ -540,7 +460,10 @@
               <div class="seed-quantity-row" aria-label="Seed quantity">
                 <div class="seed-price">
                   <span class="seed-icon" aria-hidden="true">🌱</span>
-                  <span id="seedPriceLabel">1 Seed</span>
+                  <span>
+                    <strong id="seedPriceLabel">1 Seed</strong>
+                    <small>You have this many seeds</small>
+                  </span>
                 </div>
                 <div class="quantity-control">
                   <button class="quantity-button" id="decreaseQuantityButton" type="button" aria-label="Decrease quantity">-</button>
@@ -550,40 +473,68 @@
               </div>
 
               <fieldset>
-                <legend>Choose amount</legend>
+                <legend>Choose Your Donation - Sow a Seed of Faith</legend>
                 <div class="amount-grid" id="amountGrid">
-                  <button class="amount-option active" type="button" data-amount="6">$6</button>
-                  <button class="amount-option" type="button" data-amount="11">$11</button>
-                  <button class="amount-option" type="button" data-amount="33">$33</button>
-                  <button class="amount-option" type="button" data-amount="99">$99</button>
-                  <button class="amount-option" type="button" data-amount="111">$111</button>
-                  <button class="amount-option" type="button" data-amount="333">$333</button>
-                  <button class="amount-option" type="button" data-amount="666">$666</button>
-                  <button class="amount-option" type="button" data-amount="999">$999</button>
+                  <button class="amount-option active" type="button" data-amount="7">
+                    <span class="amount-option-value">7$</span>
+                    <span class="amount-option-title">Receive a Blessing</span>
+                  </button>
+                  <button class="amount-option" type="button" data-amount="11">
+                    <span class="amount-option-value">11$</span>
+                    <span class="amount-option-title">Heaven's Special Blessing</span>
+                  </button>
+                  <button class="amount-option" type="button" data-amount="33">
+                    <span class="amount-option-value">33$</span>
+                    <span class="amount-option-title">Prayer for Your Soulmate</span>
+                  </button>
+                  <button class="amount-option" type="button" data-amount="77">
+                    <span class="amount-option-value">77$</span>
+                    <span class="amount-option-title">Bless Your Soulmate &amp; Your Bond</span>
+                  </button>
+                  <button class="amount-option" type="button" data-amount="111">
+                    <span class="amount-option-value">111$</span>
+                    <span class="amount-option-title">Sacred Blessing for Soulmate &amp; Family</span>
+                  </button>
+                  <button class="amount-option" type="button" data-amount="333">
+                    <span class="amount-option-value">333$</span>
+                    <span class="amount-option-title">Soulmate Divine Guidance &amp; Protection</span>
+                  </button>
+                  <button class="amount-option" type="button" data-amount="777">
+                    <span class="amount-option-value">777$</span>
+                    <span class="amount-option-title">For You &amp; Everyone You Love</span>
+                  </button>
+                  <button class="amount-option" type="button" data-amount="999">
+                    <span class="amount-option-value">999$</span>
+                    <span class="amount-option-title">Ultimate Prayer Offering for Love, Family &amp; Protection</span>
+                  </button>
                 </div>
               </fieldset>
 
               <label class="field">
                 <span class="money-input">
                   <span>$</span>
-                  <input id="amountInput" type="number" min="1" step="0.01" value="6" inputmode="decimal" />
+                  <input id="amountInput" type="number" min="1" step="0.01" value="7" inputmode="decimal" placeholder="Enter custom amount" />
                 </span>
                 <small id="amountError" class="error-message"></small>
               </label>
 
-              <label class="field">
-                <input id="nameInput" type="text" placeholder="Name" maxlength="48" />
+              <label class="field icon-field">
+                <span aria-hidden="true">👤</span>
+                <input id="nameInput" type="text" placeholder="Your Name" maxlength="48" />
                 <small id="nameError" class="error-message"></small>
               </label>
 
-              <label class="field">
-                <textarea id="messageInput" maxlength="180" placeholder="Write to Jesus For Belssing"></textarea>
+              <label class="field icon-field textarea-field">
+                <span aria-hidden="true">🙏</span>
+                <textarea id="messageInput" maxlength="180" placeholder="Write to Jesus For a Blessing (Your Prayer / Intention)"></textarea>
               </label>
 
               <button class="button button-primary checkout-button" id="checkoutButton" type="submit">
-                <span id="checkoutLabel">Sow Your Seed 🌱</span>
+                <span aria-hidden="true">🌱</span>
+                <span id="checkoutLabel">Sow Your Seed</span>
+                <span aria-hidden="true">✝</span>
               </button>
-              <p class="donate-fortune-note">Get Your Fortune Message Today</p>
+              <p class="donate-fortune-note">✨ Get Your Fortune Message Today ✨</p>
             </form>
           </section>
 
@@ -715,6 +666,6 @@
     </footer>
 
     <script src="src/config.js?v=1"></script>
-    <script src="src/app.js?v=53" defer></script>
+    <script src="src/app.js?v=54" defer></script>
   </body>
 </html>

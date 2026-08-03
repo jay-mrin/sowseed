@@ -9,8 +9,9 @@ const DONOR_TOKEN_KEY = "sow-your-seed:donor-token";
 const VISITOR_KEY_KEY = "sow-your-seed:visitor-key";
 const ADMIN_PASSWORD = "sowseed";
 const PAYMENT_ANIMATION_MS = 220;
-const SEED_DOLLAR_VALUE = 6;
-const GOLDEN_SEED_AMOUNTS = new Set([111, 333, 666, 999]);
+const SEED_DOLLAR_VALUE = 7;
+const TOP_BRAND_TITLE = "Christ Paradise Garden💫✨🌱";
+const GOLDEN_SEED_AMOUNTS = new Set([111, 333, 777, 999]);
 const MAX_LOCAL_POST_IMAGE_BYTES = 2 * 1024 * 1024;
 const MAX_REMOTE_POST_IMAGE_BYTES = 5 * 1024 * 1024;
 const FORTUNE_NUMBER_SPECIAL_CHANCE = 0.01;
@@ -37,6 +38,16 @@ const DONATION_EXPORT_HEADERS = [
   "PaymentProvider",
 ];
 const DONATION_EXPORT_HEADER_LINE = `DateTime (UTC),${DONATION_EXPORT_HEADERS.slice(1).map(csvQuotedCell).join(",")}`;
+const AMOUNT_TIER_DESCRIPTIONS = {
+  7: "Receive a Blessing",
+  11: "Heaven's Special Blessing",
+  33: "Prayer for Your Soulmate",
+  77: "Bless Your Soulmate & Your Bond",
+  111: "Sacred Blessing for Soulmate & Family",
+  333: "Soulmate Divine Guidance & Protection",
+  777: "For You & Everyone You Love",
+  999: "Ultimate Prayer Offering for Love, Family & Protection",
+};
 const FORTUNE_MESSAGES = [
   "In Jesus' name, may the love between you and your soulmate grow softer, deeper, and more patient with every day.",
   "May your soulmate feel cherished by you, and may your family feel surrounded by peace, warmth, and protection.",
@@ -143,17 +154,17 @@ const FORTUNE_MESSAGES = [
 const DEFAULT_SETTINGS = {
   profileTitle: "Sow Your Seed Here for Your Soulmate 💫",
   followersText: "167 Followers",
-  seedGoal: 600,
+  seedGoal: 700,
   startingSeeds: 0,
   meterCurrentAmount: 0,
-  seedPrice: 6,
-  amountOptions: [6, 11, 33, 99, 111, 333, 666, 999],
+  seedPrice: 7,
+  amountOptions: [7, 11, 33, 77, 111, 333, 777, 999],
   meterHeadline:
     "༺💗༻ Click the Donate button to sow your seed now. With every seed you sow, you whisper to the universe: “Bring my soulmate to me.” 🌱💫🌹",
   meterCollapsed:
     "Welcome, beloved seeker of love. 💗 You didn’t arrive by accident. This is your sacred step toward the soulmate your heart whispers for....",
   meterExpanded:
-    "Welcome, beloved seeker of love. 💗 You didn’t arrive by accident. This is your sacred step toward the soulmate your heart whispers for.\n\nEvery seed you sow is a seed of intention. 🌱 1 seed ($6) – I'm ready. 🌱🌱🌱 3 ($18) – Mind, body, soulmate aligned. 🌱🌱🌱🌱🌱🌱🌱 7 ($42) – Protection over reunion. 🌱🌱🌱🌱🌱🌱🌱🌱🌱🌱🌱 11 ($66) – Eternal love. ༺💗༻ Click Donate to sow your seed now. Whisper to the universe: “Bring my soulmate to me.” The field is open. 🌱💫🌹",
+    "Welcome, beloved seeker of love. 💗 You didn’t arrive by accident. This is your sacred step toward the soulmate your heart whispers for.\n\nEvery seed you sow is a seed of intention. 🌱 1 seed ($7) – I'm ready. 🌱🌱🌱 3 seeds ($21) – Mind, body, soulmate aligned. 🌱🌱🌱🌱🌱🌱🌱 7 seeds ($49) – Protection over reunion. 🌱🌱🌱🌱🌱🌱🌱🌱🌱🌱🌱 11 seeds ($77) – Eternal love. ༺💗༻ Click Donate to sow your seed now. Whisper to the universe: “Bring my soulmate to me.” The field is open. 🌱💫🌹",
   aboutTitle: "About",
   aboutCollapsed:
     "🌱✨ Sow a Seed for the Soulmate You’ve Been Waiting For ✨🌱\nTired of waiting for that special someone to...",
@@ -172,7 +183,6 @@ const DEFAULT_SETTINGS = {
     "By proceeding with your payment, you acknowledge that you are paying Sow Your Seed Here for Your Soulmate 💫 directly. Tips are voluntary support and are not tied to any guaranteed result.",
   footerText: DEFAULT_FOOTER_TEXT,
   fortuneNumberEnabled: false,
-  largeDonationRoutingEnabled: true,
 };
 
 const seedFeed = [
@@ -251,6 +261,7 @@ const elements = {
   adminPaypalStarts24h: document.querySelector("#adminPaypalStarts24h"),
   adminPostList: document.querySelector("#adminPostList"),
   adminPublishPostButton: document.querySelector("#adminPublishPostButton"),
+  resetAdminAnalyticsButton: document.querySelector("#resetAdminAnalyticsButton"),
   adminUploadFileName: document.querySelector("#adminUploadFileName"),
   adminUploadPreview: document.querySelector("#adminUploadPreview"),
   adminUploadPreviewImage: document.querySelector("#adminUploadPreviewImage"),
@@ -304,7 +315,6 @@ const elements = {
   progressPercent: document.querySelector("#progressPercent"),
   recentDonationList: document.querySelector("#recentDonationList"),
   refreshAdminButton: document.querySelector("#refreshAdminButton"),
-  refreshSuperAdminButton: document.querySelector("#refreshSuperAdminButton"),
   quantityValue: document.querySelector("#quantityValue"),
   receiptDialog: document.querySelector("#receiptDialog"),
   receiptSummary: document.querySelector("#receiptSummary"),
@@ -318,17 +328,6 @@ const elements = {
   sidebarPostList: document.querySelector("#sidebarPostList"),
   supportForm: document.querySelector("#supportForm"),
   supportTitle: document.querySelector("#supportTitle"),
-  closeSuperAdminButton: document.querySelector("#closeSuperAdminButton"),
-  superAdminActionStatus: document.querySelector("#superAdminActionStatus"),
-  superAdminCalendarDetails: document.querySelector("#superAdminCalendarDetails"),
-  superAdminCalendarGrid: document.querySelector("#superAdminCalendarGrid"),
-  superAdminCalendarNext: document.querySelector("#superAdminCalendarNext"),
-  superAdminCalendarPrev: document.querySelector("#superAdminCalendarPrev"),
-  superAdminCalendarSummary: document.querySelector("#superAdminCalendarSummary"),
-  superAdminCalendarTitle: document.querySelector("#superAdminCalendarTitle"),
-  superAdminLargeRoutingToggle: document.querySelector("#superAdminLargeRoutingToggle"),
-  superAdminPanel: document.querySelector("#superAdminPanel"),
-  superAdminRoutingState: document.querySelector("#superAdminRoutingState"),
   toast: document.querySelector("#toast"),
   topSupporters: document.querySelector("#topSupporters"),
   topicPill: document.querySelector("#topicPill"),
@@ -359,12 +358,9 @@ let currentFrequency = "once";
 let currentReceiptText = "";
 let backendReady = false;
 const paypalSdkPromises = new Map();
-const paypalSdkKeysByRoute = new Map();
+let paypalSdkKey = "";
 let paymentConfig = {
   paypalClientId: PUBLIC_CONFIG.paypalClientId || "",
-  largePaypalClientId: PUBLIC_CONFIG.largePaypalClientId || "",
-  largeDonationRoutingEnabled: true,
-  largeDonationThreshold: 99,
   currency: PUBLIC_CONFIG.paypalCurrency || CONFIG.currency,
   env: "sandbox",
 };
@@ -374,9 +370,6 @@ let quantity = 1;
 const initialAdminCalendarDate = getLatestDonationDateKey();
 let adminCalendarCursor = fromDateKey(initialAdminCalendarDate);
 let selectedAdminCalendarDate = initialAdminCalendarDate;
-let superAdminDonations = [];
-let superAdminCalendarCursor = new Date();
-let selectedSuperAdminCalendarDate = toDateKey(new Date());
 function cloneDefaultSettings() {
   return {
     ...DEFAULT_SETTINGS,
@@ -415,8 +408,6 @@ function normalizeSettings(settings) {
   next.seedPrice = Math.max(Number.parseInt(next.seedPrice, 10) || defaults.seedPrice, 1);
   next.amountOptions = parseAmountOptions(next.amountOptions);
   next.fortuneNumberEnabled = next.fortuneNumberEnabled === true || next.fortuneNumberEnabled === "true";
-  next.largeDonationRoutingEnabled =
-    next.largeDonationRoutingEnabled !== false && next.largeDonationRoutingEnabled !== "false";
 
   Object.keys(defaults).forEach((key) => {
     if (key === "amountOptions" || typeof defaults[key] !== "string") return;
@@ -520,6 +511,7 @@ function createEmptyAnalytics() {
     generatedAt: null,
     pageViewsLast24h: 0,
     paypalCheckoutStartsLast24h: 0,
+    resetAt: null,
     topPaths: [],
     uniqueVisitorsLast24h: 0,
   };
@@ -542,6 +534,7 @@ function normalizeAnalytics(analytics) {
     generatedAt: analytics?.generatedAt || defaults.generatedAt,
     pageViewsLast24h: Math.max(Number.parseInt(analytics?.pageViewsLast24h, 10) || 0, 0),
     paypalCheckoutStartsLast24h: Math.max(Number.parseInt(analytics?.paypalCheckoutStartsLast24h, 10) || 0, 0),
+    resetAt: analytics?.resetAt || defaults.resetAt,
     topPaths,
     uniqueVisitorsLast24h: Math.max(Number.parseInt(analytics?.uniqueVisitorsLast24h, 10) || 0, 0),
   };
@@ -742,19 +735,11 @@ function applyBootstrap(payload) {
   state.seedComments = normalizeSeedComments(payload.seedComments);
   state.posts = normalizePosts(payload.posts);
   state.totals = normalizeTotals(payload.totals);
-  const largeDonationRoutingEnabled =
-    payload.payment?.largeDonationRoutingEnabled !== undefined
-      ? payload.payment.largeDonationRoutingEnabled !== false && payload.payment.largeDonationRoutingEnabled !== "false"
-      : state.settings.largeDonationRoutingEnabled !== false;
   paymentConfig = {
     paypalClientId: payload.payment?.paypalClientId || PUBLIC_CONFIG.paypalClientId || "",
-    largePaypalClientId: payload.payment?.largePaypalClientId || PUBLIC_CONFIG.largePaypalClientId || "",
-    largeDonationRoutingEnabled,
-    largeDonationThreshold: Number(payload.payment?.largeDonationThreshold || 99),
     currency: payload.payment?.currency || PUBLIC_CONFIG.paypalCurrency || CONFIG.currency,
     env: payload.payment?.env || "sandbox",
   };
-  state.settings.largeDonationRoutingEnabled = largeDonationRoutingEnabled;
   backendReady = true;
 }
 
@@ -1240,8 +1225,6 @@ function buildProofPdfLines(donation) {
   const createdAt = donation.createdAt || order.createdAt || rawOrder["DateTime (UTC)"] || new Date().toISOString();
   const amount = Number(donation.amount || order.amount || 0);
   const currency = order.currency || getDonationRawValue(donation, "Currency", CONFIG.currency);
-  const route = donation.paymentRoute === "large" ? "Large donation route" : "Standard donation route";
-  const receiverIdentifier = donation.receiverIdentifier || "Default PayPal receiver";
   const lines = [
     "Sow Your Seed - Digital Service Order Proof",
     "",
@@ -1253,8 +1236,6 @@ function buildProofPdfLines(donation) {
     `Item: ${itemName}`,
     `Amount received: ${formatCsvAmount(amount)} ${currency}`,
     `Payment provider: ${getPaymentProviderLabel(donation.paymentMethod)}`,
-    `Payment route: ${route}`,
-    `Receiver: ${receiverIdentifier}`,
     `PayPal order ID: ${paypalOrderId || "Not available"}`,
     `PayPal transaction/capture ID: ${paypalCaptureId || "Not available"}`,
     `Payment status: ${donation.status || "COMPLETED"}`,
@@ -1313,11 +1294,7 @@ function buildSimplePdf(lines) {
 }
 
 function getDonationById(donationId) {
-  return (
-    state.donations.find((donation) => String(donation.id) === String(donationId)) ||
-    superAdminDonations.find((donation) => String(donation.id) === String(donationId)) ||
-    null
-  );
+  return state.donations.find((donation) => String(donation.id) === String(donationId)) || null;
 }
 
 function getOrderProofFilename(donation) {
@@ -1329,8 +1306,7 @@ function getOrderProofFilename(donation) {
 
 function downloadOrderProofPdf(donationId) {
   const donation = getDonationById(donationId);
-  const route = donation?.paymentRoute === "large" ? "large" : "standard";
-  const statusElement = route === "large" ? elements.superAdminActionStatus : elements.adminActionStatus;
+  const statusElement = elements.adminActionStatus;
 
   if (!donation) {
     setAdminStatus("Could not find that payment in the current calendar data.", "error", { persist: true, statusElement });
@@ -1352,14 +1328,6 @@ function updateDonationDigitalOrder(donationId, order) {
         }
       : donation,
   );
-  superAdminDonations = superAdminDonations.map((donation) =>
-    String(donation.id) === String(donationId)
-      ? {
-          ...donation,
-          digitalOrder: order,
-        }
-      : donation,
-  );
 }
 
 function cssAttributeValue(value) {
@@ -1369,10 +1337,9 @@ function cssAttributeValue(value) {
 
 async function saveDigitalOrderFulfillment(donationId, button) {
   const donation = getDonationById(donationId);
-  const route = donation?.paymentRoute === "large" ? "large" : "standard";
-  const statusElement = route === "large" ? elements.superAdminActionStatus : elements.adminActionStatus;
-  const panel = route === "large" ? elements.superAdminPanel : elements.adminPanel;
-  const detailRoot = route === "large" ? elements.superAdminCalendarDetails : elements.adminCalendarDetails;
+  const statusElement = elements.adminActionStatus;
+  const panel = elements.adminPanel;
+  const detailRoot = elements.adminCalendarDetails;
   const noteField = detailRoot.querySelector(`[data-fulfillment-note="${cssAttributeValue(donationId)}"]`);
   const note = noteField?.value || "";
   const order = getDigitalOrder(donation);
@@ -1392,7 +1359,7 @@ async function saveDigitalOrderFulfillment(donationId, button) {
       errorMessage: "Could not update digital order fulfillment.",
     },
     async () => {
-      const payload = await callEdge(`admin-donations?route=${route}`, {
+      const payload = await callEdge("admin-donations", {
         admin: true,
         method: "PUT",
         body: {
@@ -1403,11 +1370,7 @@ async function saveDigitalOrderFulfillment(donationId, button) {
       });
 
       updateDonationDigitalOrder(donationId, payload.order);
-      if (route === "large") {
-        renderSuperAdminCalendar();
-      } else {
-        renderAdminCalendar();
-      }
+      renderAdminCalendar();
       return payload;
     },
   );
@@ -1506,118 +1469,6 @@ async function loadAdminDonations(options = {}) {
   }
 }
 
-async function loadSuperAdminDonations(options = {}) {
-  if (!isBackendConfigured() || !getAdminAccessToken()) return;
-
-  const announce = Boolean(options.announce);
-
-  if (announce) {
-    setAdminBusy(true, elements.superAdminPanel);
-    elements.superAdminCalendarPrev.disabled = true;
-    elements.superAdminCalendarNext.disabled = true;
-    setAdminStatus(`Loading large donations for ${formatMonthTitle(superAdminCalendarCursor)}...`, "loading", {
-      persist: true,
-      statusElement: elements.superAdminActionStatus,
-    });
-  }
-
-  try {
-    const payload = await callEdge(`admin-donations?month=${getMonthKey(superAdminCalendarCursor)}&route=large`, {
-      admin: true,
-      method: "GET",
-    });
-
-    if (Array.isArray(payload.donations)) {
-      superAdminDonations = payload.donations;
-      renderSuperAdminCalendar();
-    }
-
-    if (announce) {
-      setAdminStatus(`Large donation calendar loaded for ${formatMonthTitle(superAdminCalendarCursor)}.`, "success", {
-        statusElement: elements.superAdminActionStatus,
-      });
-    }
-  } catch (error) {
-    const message = error.message || "Could not load large donation calendar.";
-    setAdminStatus(message, "error", { persist: true, statusElement: elements.superAdminActionStatus });
-    showToast(message);
-  } finally {
-    if (announce) {
-      elements.superAdminCalendarPrev.disabled = false;
-      elements.superAdminCalendarNext.disabled = false;
-      setAdminBusy(false, elements.superAdminPanel);
-    }
-  }
-}
-
-function renderSuperAdminRoutingToggle() {
-  if (!elements.superAdminLargeRoutingToggle || !elements.superAdminRoutingState) return;
-
-  const enabled = getLargeDonationRoutingEnabled();
-  const threshold = money(Number(paymentConfig.largeDonationThreshold || 99));
-
-  elements.superAdminLargeRoutingToggle.checked = enabled;
-  elements.superAdminRoutingState.textContent = enabled
-    ? `ON: $0-${threshold} stays normal. $100+ routes to the Super Admin PayPal account.`
-    : "OFF: every payment routes through the normal admin PayPal account.";
-}
-
-async function loadSuperAdminPaymentRouting() {
-  if (!isBackendConfigured() || !getAdminAccessToken()) return;
-
-  const payload = await callEdge("admin-payment-routing", {
-    admin: true,
-    method: "GET",
-  });
-  const enabled = payload.largeDonationRoutingEnabled !== false;
-
-  state.settings.largeDonationRoutingEnabled = enabled;
-  paymentConfig.largeDonationRoutingEnabled = enabled;
-  renderSuperAdminRoutingToggle();
-}
-
-async function saveSuperAdminPaymentRouting(enabled) {
-  if (!isBackendConfigured() || !getAdminAccessToken()) return;
-
-  const toggle = elements.superAdminLargeRoutingToggle;
-
-  if (toggle) toggle.disabled = true;
-  setAdminStatus("Saving payment routing switch...", "loading", {
-    persist: true,
-    statusElement: elements.superAdminActionStatus,
-  });
-
-  try {
-    const payload = await callEdge("admin-payment-routing", {
-      admin: true,
-      body: { largeDonationRoutingEnabled: Boolean(enabled) },
-      method: "PUT",
-    });
-    const savedEnabled = payload.largeDonationRoutingEnabled !== false;
-
-    state.settings.largeDonationRoutingEnabled = savedEnabled;
-    paymentConfig.largeDonationRoutingEnabled = savedEnabled;
-    resetPayPalSdk();
-    renderSuperAdminRoutingToggle();
-    setAdminStatus(
-      savedEnabled
-        ? "Large routing is ON. $0-$99 stays normal; $100+ uses Super Admin PayPal."
-        : "Large routing is OFF. All payments will use normal admin PayPal.",
-      "success",
-      { statusElement: elements.superAdminActionStatus },
-    );
-    showToast(savedEnabled ? "Large routing turned on." : "Large routing turned off.");
-  } catch (error) {
-    const message = error.message || "Could not save payment routing.";
-    if (toggle) toggle.checked = !enabled;
-    renderSuperAdminRoutingToggle();
-    setAdminStatus(message, "error", { persist: true, statusElement: elements.superAdminActionStatus });
-    showToast(message);
-  } finally {
-    if (toggle) toggle.disabled = false;
-  }
-}
-
 async function loadAdminAnalytics(options = {}) {
   if (!isBackendConfigured() || !getAdminAccessToken()) return;
 
@@ -1644,6 +1495,35 @@ async function loadAdminAnalytics(options = {}) {
     setAdminStatus(message, "error", { persist: true });
     showToast(message);
   }
+}
+
+async function resetAdminAnalytics() {
+  if (!isBackendConfigured() || !getAdminAccessToken()) {
+    state.analytics = createEmptyAnalytics();
+    renderAdminAnalytics();
+    showToast("Page view analytics reset locally.");
+    return;
+  }
+
+  await runAdminAction(
+    {
+      button: elements.resetAdminAnalyticsButton,
+      busyText: "Resetting...",
+      loadingMessage: "Resetting page view analytics...",
+      successMessage: "Page view analytics reset. New activity will count from now.",
+      errorMessage: "Could not reset page view analytics.",
+    },
+    async () => {
+      const payload = await callEdge("admin-analytics", {
+        admin: true,
+        method: "DELETE",
+      });
+
+      state.analytics = normalizeAnalytics(payload);
+      renderAdminAnalytics();
+      return payload;
+    },
+  );
 }
 
 async function refreshAdminPortalData() {
@@ -1676,42 +1556,6 @@ async function refreshAdminPortalData() {
   }
 }
 
-async function refreshSuperAdminPortalData() {
-  if (!isBackendConfigured() || !getAdminAccessToken()) {
-    setAdminStatus("Sign in as super admin before reloading large donations.", "error", {
-      persist: true,
-      statusElement: elements.superAdminActionStatus,
-    });
-    return;
-  }
-
-  setAdminBusy(true, elements.superAdminPanel);
-  setButtonBusy(elements.refreshSuperAdminButton, true, "Reloading...");
-  if (elements.superAdminCalendarPrev) elements.superAdminCalendarPrev.disabled = true;
-  if (elements.superAdminCalendarNext) elements.superAdminCalendarNext.disabled = true;
-  setAdminStatus("Reloading payment routing and private large-donation calendar...", "loading", {
-    persist: true,
-    statusElement: elements.superAdminActionStatus,
-  });
-
-  try {
-    await Promise.all([loadSuperAdminPaymentRouting(), loadSuperAdminDonations()]);
-    setAdminStatus("Super admin routing and large-donation calendar reloaded.", "success", {
-      statusElement: elements.superAdminActionStatus,
-    });
-    showToast("Super admin data reloaded.");
-  } catch (error) {
-    const message = error.message || "Could not reload super admin data.";
-    setAdminStatus(message, "error", { persist: true, statusElement: elements.superAdminActionStatus });
-    showToast(message);
-  } finally {
-    if (elements.superAdminCalendarPrev) elements.superAdminCalendarPrev.disabled = false;
-    if (elements.superAdminCalendarNext) elements.superAdminCalendarNext.disabled = false;
-    setButtonBusy(elements.refreshSuperAdminButton, false, "Reloading...");
-    setAdminBusy(false, elements.superAdminPanel);
-  }
-}
-
 function renderTextWithBreaks(element, value) {
   if (!element) return;
   element.innerHTML = escapeHtml(value).replace(/\n/g, "<br />");
@@ -1733,7 +1577,13 @@ function renderAmountOptions(selectedAmount = getAmount()) {
   elements.amountGrid.innerHTML = state.settings.amountOptions
     .map((amount) => {
       const activeClass = amount === selectedAmount ? " active" : "";
-      return `<button class="amount-option${activeClass}" type="button" data-amount="${amount}">${money(amount)}</button>`;
+      const description = AMOUNT_TIER_DESCRIPTIONS[amount] || "Sow a Seed of Faith";
+      return `
+        <button class="amount-option${activeClass}" type="button" data-amount="${amount}">
+          <span class="amount-option-value">${amount}$</span>
+          <span class="amount-option-title">${escapeHtml(description)}</span>
+        </button>
+      `;
     })
     .join("");
 }
@@ -1741,8 +1591,8 @@ function renderAmountOptions(selectedAmount = getAmount()) {
 function renderSettings() {
   const settings = state.settings;
 
-  document.title = `${settings.profileTitle} | Creator Support`;
-  elements.brandTitle.textContent = settings.profileTitle;
+  document.title = `${TOP_BRAND_TITLE} | Creator Support`;
+  elements.brandTitle.textContent = TOP_BRAND_TITLE;
   elements.profileTitle.textContent = settings.profileTitle;
   elements.followersText.textContent = settings.followersText;
   elements.meterHeadline.textContent = settings.meterHeadline;
@@ -2239,185 +2089,12 @@ function renderAdminCalendar() {
   renderAdminCalendarSummary();
 }
 
-function getSuperAdminMonthDonations() {
-  const year = superAdminCalendarCursor.getFullYear();
-  const month = superAdminCalendarCursor.getMonth();
-
-  return superAdminDonations.filter((donation) => {
-    const date = new Date(donation.createdAt || Date.now());
-    return date.getFullYear() === year && date.getMonth() === month;
-  });
-}
-
-function renderSuperAdminCalendarDetails() {
-  if (!elements.superAdminCalendarDetails) return;
-
-  const donationsByDate = getDonationsByDate(superAdminDonations);
-  const donations = (donationsByDate[selectedSuperAdminCalendarDate] || [])
-    .slice()
-    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-  const selectedDate = fromDateKey(selectedSuperAdminCalendarDate);
-  const total = donations.reduce((sum, donation) => sum + (Number.parseFloat(donation.amount) || 0), 0);
-
-  if (!donations.length) {
-    elements.superAdminCalendarDetails.innerHTML = `
-      <div class="admin-calendar-empty">
-        <strong>${readableDate(selectedDate)}</strong>
-        <span>No large donations recorded on this day.</span>
-      </div>
-    `;
-    return;
-  }
-
-  elements.superAdminCalendarDetails.innerHTML = `
-    <div class="admin-calendar-detail-heading">
-      <div>
-        <span>Selected day</span>
-        <strong>${readableDate(selectedDate)}</strong>
-      </div>
-      <b>${donations.length} large donation${donations.length === 1 ? "" : "s"} · ${money(total)}</b>
-    </div>
-    <div class="admin-calendar-list">
-      ${donations
-        .map((donation) => {
-          const name = donation.anonymous ? "Private supporter" : donation.name || "Unknown supporter";
-          const amount = Number.parseFloat(donation.amount) || 0;
-          const frequency = donation.frequency === "monthly" ? "Monthly" : "One time";
-          const createdAt = donation.createdAt || new Date().toISOString();
-          const order = getDigitalOrder(donation);
-          const orderNumber = getDigitalOrderValue(
-            donation,
-            "orderNumber",
-            getDonationRawValue(donation, "Reference", donation.orderId || donation.id || "Pending"),
-          );
-          const captureId = getDigitalOrderValue(
-            donation,
-            "paypalCaptureId",
-            donation.captureId || getDonationRawValue(donation, "TransactionId", "Not available"),
-          );
-          const request = getDigitalOrderValue(donation, "personalizedRequest", donation.message || "No request entered.");
-          const status = getDigitalOrderValue(donation, "fulfillmentStatus", "paid_awaiting_personalized_writing");
-          const note = getDigitalOrderValue(donation, "fulfillmentNote", "");
-          const isFulfilled = status === "fulfilled";
-          const receiver = donation.receiverIdentifier || "Large PayPal receiver";
-
-          return `
-            <article class="admin-calendar-donation large-calendar-donation">
-              <div class="admin-calendar-donation-main">
-                <div>
-                  <strong>${escapeHtml(name)}</strong>
-                  <span>${frequency} · ${readableTime(createdAt)}</span>
-                </div>
-                <b>${money(amount)}</b>
-              </div>
-              <div class="admin-order-meta">
-                <span><strong>Order ID</strong>${escapeHtml(orderNumber)}</span>
-                <span><strong>Transaction ID</strong>${escapeHtml(captureId)}</span>
-                <span><strong>Receiver</strong>${escapeHtml(receiver)}</span>
-                <span><strong>Status</strong>${escapeHtml(getFulfillmentStatusLabel(status))}</span>
-              </div>
-              <p class="admin-order-request"><strong>Request:</strong> ${escapeHtml(request)}</p>
-              <label class="admin-fulfillment-field">
-                <span>Fulfillment note</span>
-                <textarea data-fulfillment-note="${escapeHtml(donation.id)}" placeholder="Write proof notes, delivery details, or custom writing summary.">${escapeHtml(note)}</textarea>
-              </label>
-              <div class="admin-order-actions">
-                <button class="button button-secondary" type="button" data-download-order-proof="${escapeHtml(donation.id)}">Download PDF</button>
-                <button class="button button-primary" type="button" data-save-fulfillment="${escapeHtml(donation.id)}">
-                  ${isFulfilled ? "Reopen order" : "Mark fulfilled"}
-                </button>
-              </div>
-            </article>
-          `;
-        })
-        .join("")}
-    </div>
-  `;
-}
-
-function renderSuperAdminCalendarSummary() {
-  if (!elements.superAdminCalendarSummary) return;
-
-  const donationsByDate = getDonationsByDate(superAdminDonations);
-  const dayDonations = donationsByDate[selectedSuperAdminCalendarDate] || [];
-  const monthDonations = getSuperAdminMonthDonations();
-  const dayTotal = dayDonations.reduce((sum, donation) => sum + (Number.parseFloat(donation.amount) || 0), 0);
-  const monthTotal = monthDonations.reduce((sum, donation) => sum + (Number.parseFloat(donation.amount) || 0), 0);
-
-  elements.superAdminCalendarSummary.innerHTML = `
-    <article>
-      <span>${readableDate(fromDateKey(selectedSuperAdminCalendarDate))}</span>
-      <strong>${money(dayTotal)}</strong>
-      <small>${dayDonations.length} large donation${dayDonations.length === 1 ? "" : "s"} selected day</small>
-    </article>
-    <article>
-      <span>${formatMonthTitle(superAdminCalendarCursor)}</span>
-      <strong>${money(monthTotal)}</strong>
-      <small>${monthDonations.length} large donation${monthDonations.length === 1 ? "" : "s"} this month</small>
-    </article>
-  `;
-}
-
-function renderSuperAdminCalendar() {
-  if (!elements.superAdminCalendarGrid || !elements.superAdminCalendarTitle) return;
-
-  const donationsByDate = getDonationsByDate(superAdminDonations);
-  const year = superAdminCalendarCursor.getFullYear();
-  const month = superAdminCalendarCursor.getMonth();
-  const firstDay = new Date(year, month, 1);
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const todayKey = toDateKey(new Date());
-  const cells = [];
-
-  for (let offset = 0; offset < firstDay.getDay(); offset += 1) {
-    cells.push(`<span class="admin-calendar-day is-empty" role="presentation"></span>`);
-  }
-
-  for (let day = 1; day <= daysInMonth; day += 1) {
-    const date = new Date(year, month, day);
-    const dateKey = toDateKey(date);
-    const donations = donationsByDate[dateKey] || [];
-    const total = donations.reduce((sum, donation) => sum + (Number.parseFloat(donation.amount) || 0), 0);
-    const classes = [
-      "admin-calendar-day",
-      "large-calendar-day",
-      donations.length ? "has-donations" : "",
-      dateKey === selectedSuperAdminCalendarDate ? "is-selected" : "",
-      dateKey === todayKey ? "is-today" : "",
-    ]
-      .filter(Boolean)
-      .join(" ");
-    const donationLabel = donations.length
-      ? `${donations.length} large donation${donations.length === 1 ? "" : "s"}, ${money(total)}`
-      : "no large donations";
-
-    cells.push(`
-      <button
-        class="${classes}"
-        type="button"
-        role="gridcell"
-        aria-selected="${dateKey === selectedSuperAdminCalendarDate}"
-        aria-label="${readableDate(date)}, ${donationLabel}"
-        data-super-admin-calendar-date="${dateKey}"
-      >
-        <span>${day}</span>
-        ${donations.length ? `<small>${money(total)}</small>` : ""}
-      </button>
-    `);
-  }
-
-  elements.superAdminCalendarTitle.textContent = formatMonthTitle(superAdminCalendarCursor);
-  elements.superAdminCalendarGrid.innerHTML = cells.join("");
-  renderSuperAdminCalendarDetails();
-  renderSuperAdminCalendarSummary();
-}
-
 function updateCheckoutLabel() {
   const amount = Math.max(getAmount(), 0);
   const cadence = currentFrequency === "monthly" ? "/mo" : "";
   const seedUnits = getSeedUnitsFromAmount(amount, state.settings.seedPrice);
 
-  elements.checkoutLabel.textContent = "Sow Your Seed 🌱";
+  elements.checkoutLabel.textContent = "Sow Your Seed";
   elements.checkoutButton.setAttribute("aria-label", `Sow Your Seed ${money(amount)}${cadence}`);
   elements.seedPriceLabel.textContent = formatSeedUnits(seedUnits);
 }
@@ -2494,63 +2171,32 @@ function submitDonation(event) {
   openPaymentDialog();
 }
 
-function getPaymentRouteForAmount(amount) {
-  if (paymentConfig.largeDonationRoutingEnabled === false) return "standard";
-
-  const threshold = Number(paymentConfig.largeDonationThreshold || 99);
-
-  return Number(amount) > threshold ? "large" : "standard";
-}
-
-function getLargeDonationRoutingEnabled() {
-  return paymentConfig.largeDonationRoutingEnabled !== false && state.settings.largeDonationRoutingEnabled !== false;
-}
-
-function getPayPalClientIdForRoute(route) {
-  return route === "large" ? paymentConfig.largePaypalClientId : paymentConfig.paypalClientId;
-}
-
-function getPayPalNamespaceForRoute(route) {
-  return route === "large" ? "paypalSysLarge" : "paypalSysStandard";
-}
-
 function isValidPayPalSdk(paypal) {
   return Boolean(paypal && typeof paypal.Buttons === "function" && paypal.FUNDING);
 }
 
-function resetPayPalSdk(route) {
-  const routes = route ? [route] : ["standard", "large"];
+function resetPayPalSdk() {
+  document.querySelectorAll("script[data-sys-paypal-sdk]").forEach((script) => script.remove());
 
-  routes.forEach((currentRoute) => {
-    const namespace = getPayPalNamespaceForRoute(currentRoute);
-    const sdkKey = paypalSdkKeysByRoute.get(currentRoute);
+  if (paypalSdkKey) {
+    paypalSdkPromises.delete(paypalSdkKey);
+    paypalSdkKey = "";
+  }
 
-    document
-      .querySelectorAll(`script[data-sys-paypal-route="${currentRoute}"]`)
-      .forEach((script) => script.remove());
-
-    if (sdkKey) {
-      paypalSdkPromises.delete(sdkKey);
-      paypalSdkKeysByRoute.delete(currentRoute);
-    }
-
-    try {
-      delete window[namespace];
-    } catch {
-      window[namespace] = undefined;
-    }
-  });
+  try {
+    delete window.paypalSys;
+  } catch {
+    window.paypalSys = undefined;
+  }
 }
 
-function loadPayPalSdk(route = "standard") {
-  const clientId = getPayPalClientIdForRoute(route);
-  const sdkKey = `${route}:${clientId}:${paymentConfig.currency || CONFIG.currency}`;
-  const namespace = getPayPalNamespaceForRoute(route);
+function loadPayPalSdk() {
+  const clientId = paymentConfig.paypalClientId;
+  const sdkKey = `standard:${clientId}:${paymentConfig.currency || CONFIG.currency}`;
+  const namespace = "paypalSys";
 
   if (!clientId) {
-    return Promise.reject(
-      new Error(route === "large" ? "Missing super admin PayPal client id." : "Missing PayPal client id."),
-    );
+    return Promise.reject(new Error("Missing PayPal client id."));
   }
 
   if (isValidPayPalSdk(window[namespace])) {
@@ -2558,12 +2204,11 @@ function loadPayPalSdk(route = "standard") {
   }
 
   if (window[namespace]) {
-    resetPayPalSdk(route);
+    resetPayPalSdk();
   }
 
-  const existingRouteKey = paypalSdkKeysByRoute.get(route);
-  if (existingRouteKey && existingRouteKey !== sdkKey) {
-    resetPayPalSdk(route);
+  if (paypalSdkKey && paypalSdkKey !== sdkKey) {
+    resetPayPalSdk();
   }
 
   if (paypalSdkPromises.has(sdkKey)) return paypalSdkPromises.get(sdkKey);
@@ -2579,7 +2224,6 @@ function loadPayPalSdk(route = "standard") {
     });
 
     script.dataset.sysPaypalSdk = "true";
-    script.dataset.sysPaypalRoute = route;
     script.setAttribute("data-namespace", namespace);
     script.src = `https://www.paypal.com/sdk/js?${params.toString()}`;
     script.onload = () => {
@@ -2590,17 +2234,17 @@ function loadPayPalSdk(route = "standard") {
         return;
       }
 
-      resetPayPalSdk(route);
+      resetPayPalSdk();
       reject(new Error("PayPal checkout loaded without buttons. Please refresh and try again."));
     };
     script.onerror = () => {
-      resetPayPalSdk(route);
+      resetPayPalSdk();
       reject(new Error("PayPal checkout could not load."));
     };
     document.head.append(script);
   });
 
-  paypalSdkKeysByRoute.set(route, sdkKey);
+  paypalSdkKey = sdkKey;
   paypalSdkPromises.set(sdkKey, sdkPromise);
 
   return sdkPromise;
@@ -2611,7 +2255,7 @@ function clearPayPalButtons() {
   if (elements.cardButtonContainer) elements.cardButtonContainer.innerHTML = "";
 }
 
-function buildPayPalButtonOptions(paypal, fundingSource, route) {
+function buildPayPalButtonOptions(paypal, fundingSource) {
   return {
     fundingSource,
     style: {
@@ -2622,11 +2266,7 @@ function buildPayPalButtonOptions(paypal, fundingSource, route) {
     },
     createOrder: async () => {
       if (!pendingDonation) throw new Error("Donation details are missing.");
-      setPaymentStatus(
-        route === "large"
-          ? "Opening secure super admin PayPal checkout..."
-          : "Opening secure international PayPal checkout...",
-      );
+      setPaymentStatus("Opening secure international PayPal checkout...");
       const payload = await callEdge("create-paypal-order", {
         body: pendingDonation,
       });
@@ -2661,27 +2301,22 @@ async function renderPayPalButtons() {
   }
 
   try {
-    const route = getPaymentRouteForAmount(pendingDonation?.amount || getAmount());
-    const paypal = await loadPayPalSdk(route);
-    const paypalButtons = paypal.Buttons(buildPayPalButtonOptions(paypal, paypal.FUNDING.PAYPAL, route));
+    const paypal = await loadPayPalSdk();
+    const paypalButtons = paypal.Buttons(buildPayPalButtonOptions(paypal, paypal.FUNDING.PAYPAL));
     if (paypalButtons.isEligible()) {
       await paypalButtons.render(elements.paypalButtonContainer);
     } else {
       elements.paypalButtonContainer.innerHTML = `<small>PayPal checkout is unavailable for this session.</small>`;
     }
 
-    const cardButtons = paypal.Buttons(buildPayPalButtonOptions(paypal, paypal.FUNDING.CARD, route));
+    const cardButtons = paypal.Buttons(buildPayPalButtonOptions(paypal, paypal.FUNDING.CARD));
     if (cardButtons.isEligible()) {
       await cardButtons.render(elements.cardButtonContainer);
     } else {
       elements.cardButtonContainer.innerHTML = `<small>Card checkout is currently unavailable. Please use PayPal.</small>`;
     }
 
-    setPaymentStatus(
-      route === "large"
-        ? "Super admin PayPal/card checkout is ready."
-        : "International PayPal/card checkout is ready.",
-    );
+    setPaymentStatus("International PayPal/card checkout is ready.");
   } catch (error) {
     setPaymentStatus(error.message || "Payment buttons could not load.", true);
   }
@@ -2690,13 +2325,12 @@ async function renderPayPalButtons() {
 async function finishVerifiedDonation(payload) {
   const donation = payload.donation;
   const fortuneMessage = payload.fortune || donation?.fortune_message || getRandomFortuneMessage();
-  const paymentRoute = payload.paymentRoute || donation?.paymentRoute || donation?.payment_route || "standard";
 
   if (payload.donorAccessToken) {
     setDonorToken(payload.donorAccessToken);
   }
 
-  if (donation && paymentRoute !== "large") {
+  if (donation) {
     state.donations.unshift({
       id: donation.id,
       name: donation.display_name || donation.name || pendingDonation?.name || "Supporter",
@@ -2705,7 +2339,7 @@ async function finishVerifiedDonation(payload) {
       message: donation.supporter_message || pendingDonation?.message || "",
       fortuneMessage: donation.fortune_message || fortuneMessage,
       digitalOrder: payload.digitalOrder || null,
-      paymentRoute,
+      paymentRoute: "standard",
       createdAt: donation.created_at || new Date().toISOString(),
     });
     selectedAdminCalendarDate = getDonationDateKey(state.donations[0]);
@@ -2914,41 +2548,19 @@ function openAdminPanel() {
   });
 }
 
-function openSuperAdminPanel() {
-  renderSuperAdminRoutingToggle();
-  renderSuperAdminCalendar();
-  setAdminStatus("Super admin ready. Large donations over $99 are shown here only.", "info", {
-    persist: true,
-    statusElement: elements.superAdminActionStatus,
-  });
-  document.body.classList.add("admin-open");
-  elements.adminBackdrop.hidden = false;
-  elements.superAdminPanel.setAttribute("aria-hidden", "false");
-  elements.adminMenuButton.setAttribute("aria-expanded", "true");
-  window.requestAnimationFrame(() => {
-    elements.adminBackdrop.classList.add("is-open");
-    elements.superAdminPanel.classList.add("is-open");
-  });
-}
-
 function closeAdminPanel() {
   clearAdminSession();
   window.clearTimeout(setAdminStatus.timeout);
   if (elements.adminActionStatus) {
     elements.adminActionStatus.hidden = true;
   }
-  if (elements.superAdminActionStatus) {
-    elements.superAdminActionStatus.hidden = true;
-  }
   document.body.classList.remove("admin-open");
   elements.adminBackdrop.classList.remove("is-open");
   elements.adminPanel.classList.remove("is-open");
-  elements.superAdminPanel.classList.remove("is-open");
   elements.adminPanel.setAttribute("aria-hidden", "true");
-  elements.superAdminPanel.setAttribute("aria-hidden", "true");
   elements.adminMenuButton.setAttribute("aria-expanded", "false");
   window.setTimeout(() => {
-    if (!elements.adminPanel.classList.contains("is-open") && !elements.superAdminPanel.classList.contains("is-open")) {
+    if (!elements.adminPanel.classList.contains("is-open")) {
       elements.adminBackdrop.hidden = true;
     }
   }, 180);
@@ -3403,8 +3015,6 @@ function renderApp() {
   renderTopSupporters();
   renderFollowState();
   renderAdminCalendar();
-  renderSuperAdminCalendar();
-  renderSuperAdminRoutingToggle();
   renderAdminAnalytics();
   updateCheckoutLabel();
 }
@@ -3471,50 +3081,6 @@ elements.adminCalendarDetails.addEventListener("click", (event) => {
   }
 });
 
-elements.superAdminCalendarPrev.addEventListener("click", () => {
-  superAdminCalendarCursor = new Date(
-    superAdminCalendarCursor.getFullYear(),
-    superAdminCalendarCursor.getMonth() - 1,
-    1,
-  );
-  selectedSuperAdminCalendarDate = toDateKey(superAdminCalendarCursor);
-  renderSuperAdminCalendar();
-  loadSuperAdminDonations({ announce: true });
-});
-
-elements.superAdminCalendarNext.addEventListener("click", () => {
-  superAdminCalendarCursor = new Date(
-    superAdminCalendarCursor.getFullYear(),
-    superAdminCalendarCursor.getMonth() + 1,
-    1,
-  );
-  selectedSuperAdminCalendarDate = toDateKey(superAdminCalendarCursor);
-  renderSuperAdminCalendar();
-  loadSuperAdminDonations({ announce: true });
-});
-
-elements.superAdminCalendarGrid.addEventListener("click", (event) => {
-  const dateButton = event.target.closest("[data-super-admin-calendar-date]");
-  if (!dateButton) return;
-
-  selectedSuperAdminCalendarDate = dateButton.dataset.superAdminCalendarDate;
-  superAdminCalendarCursor = fromDateKey(selectedSuperAdminCalendarDate);
-  renderSuperAdminCalendar();
-});
-
-elements.superAdminCalendarDetails.addEventListener("click", (event) => {
-  const proofButton = event.target.closest("[data-download-order-proof]");
-  if (proofButton) {
-    downloadOrderProofPdf(proofButton.dataset.downloadOrderProof);
-    return;
-  }
-
-  const fulfillmentButton = event.target.closest("[data-save-fulfillment]");
-  if (fulfillmentButton) {
-    saveDigitalOrderFulfillment(fulfillmentButton.dataset.saveFulfillment, fulfillmentButton);
-  }
-});
-
 elements.profileTabs.forEach((tab) => {
   tab.addEventListener("click", (event) => {
     event.preventDefault();
@@ -3525,10 +3091,7 @@ elements.profileTabs.forEach((tab) => {
 elements.adminPublishPostButton.addEventListener("click", publishAdminPost);
 elements.adminExportCsvButton.addEventListener("click", exportAdminDonationCsv);
 elements.refreshAdminButton.addEventListener("click", refreshAdminPortalData);
-elements.refreshSuperAdminButton.addEventListener("click", refreshSuperAdminPortalData);
-elements.superAdminLargeRoutingToggle.addEventListener("change", (event) => {
-  saveSuperAdminPaymentRouting(event.currentTarget.checked);
-});
+elements.resetAdminAnalyticsButton.addEventListener("click", resetAdminAnalytics);
 elements.adminNewPostImage.addEventListener("change", previewAdminUpload);
 elements.adminForm.addEventListener("input", (event) => {
   if (event.target.closest(".admin-export-section")) {
@@ -3614,18 +3177,11 @@ elements.adminLoginForm.addEventListener("submit", async (event) => {
 
     try {
       await signInAdmin(email, password);
-      const profile = await loadAdminProfile();
+      await loadAdminProfile();
       closeAdminLogin();
-
-      if (profile?.role === "super_admin") {
-        openSuperAdminPanel();
-        await loadSuperAdminPaymentRouting();
-        await loadSuperAdminDonations({ announce: true });
-      } else {
-        openAdminPanel();
-        await loadAdminDonations({ announce: true });
-        await loadAdminAnalytics({ announce: true });
-      }
+      openAdminPanel();
+      await loadAdminDonations({ announce: true });
+      await loadAdminAnalytics({ announce: true });
     } catch (error) {
       elements.adminPasswordError.textContent = error.message || "Could not sign in.";
       elements.adminPasswordInput.select();
@@ -3649,7 +3205,6 @@ elements.adminLoginDialog.addEventListener("close", () => {
   elements.adminPasswordError.textContent = "";
 });
 elements.closeAdminButton.addEventListener("click", closeAdminPanel);
-elements.closeSuperAdminButton.addEventListener("click", closeAdminPanel);
 elements.adminBackdrop.addEventListener("click", closeAdminPanel);
 elements.adminForm.addEventListener("submit", async (event) => {
   event.preventDefault();
