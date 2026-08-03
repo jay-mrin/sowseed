@@ -29,17 +29,21 @@ Deno.serve(async (request) => {
     if (!displayName) return errorResponse("Display name is required.", 422);
     if (!isValidEmail(contactEmail)) return errorResponse("A valid email is required for the order detail.", 422);
 
+    const superAdminAmounts = [1100, 7700, 33300, 77700];
+    const paymentRoute = superAdminAmounts.includes(amountCents) ? "superadmin" : "standard";
+
     const order = await createPayPalOrder({
       amountCents,
       displayName,
       frequency,
       supporterMessage,
+      paymentRoute,
     });
 
     return jsonResponse({
       id: order.id,
       status: order.status,
-      paymentRoute: "standard",
+      paymentRoute,
     });
   } catch (error) {
     return errorResponse("Could not create PayPal order.", 500, String(error));

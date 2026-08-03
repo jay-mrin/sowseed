@@ -1437,6 +1437,30 @@ function getMonthKey(date) {
   return `${safeDate.getFullYear()}-${String(safeDate.getMonth() + 1).padStart(2, "0")}`;
 }
 
+async function approveSuperAdminDonation(donationId, button) {
+  if (!donationId) return;
+
+  const prevText = button.textContent;
+  button.disabled = true;
+  button.textContent = "Approving...";
+
+  try {
+    await callEdge("admin-donations", {
+      admin: true,
+      method: "PATCH",
+      body: { donationId, superApproved: true },
+    });
+    const donation = state.donations.find((d) => d.id === donationId);
+    if (donation) donation.superApproved = true;
+    renderAdminCalendarDetails();
+    showToast("Superadmin donation approved.");
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = prevText;
+    showToast(error.message || "Could not approve donation.");
+  }
+}
+
 async function loadAdminDonations(options = {}) {
   if (!isBackendConfigured() || !getAdminAccessToken()) return;
 
@@ -2006,6 +2030,11 @@ function renderAdminCalendarDetails() {
                 <textarea data-fulfillment-note="${escapeHtml(donation.id)}" placeholder="Write proof notes, delivery details, or custom writing summary.">${escapeHtml(note)}</textarea>
               </label>
               <div class="admin-order-actions">
+                ${donation.paymentRoute === "superadmin" && !donation.superApproved ? `
+                  <button class="button button-primary button-approve" type="button" data-approve-superadmin="${escapeHtml(donation.id)}">
+                    Approve (Yes)
+                  </button>
+                ` : ""}
                 <button class="button button-secondary" type="button" data-download-order-proof="${escapeHtml(donation.id)}">Download PDF</button>
                 <button class="button button-primary" type="button" data-save-fulfillment="${escapeHtml(donation.id)}">
                   ${isFulfilled ? "Reopen order" : "Mark fulfilled"}
@@ -2308,6 +2337,7 @@ function buildPayPalButtonOptions(paypal, fundingSource) {
       const payload = await callEdge("create-paypal-order", {
         body: pendingDonation,
       });
+      pendingDonation.paymentRoute = payload.paymentRoute;
       await trackCheckoutEvent("paypal_checkout_started", pendingDonation);
       return payload.id;
     },
@@ -3116,6 +3146,12 @@ elements.adminCalendarDetails.addEventListener("click", (event) => {
   const proofButton = event.target.closest("[data-download-order-proof]");
   if (proofButton) {
     downloadOrderProofPdf(proofButton.dataset.downloadOrderProof);
+    return;
+  }
+
+  const approveButton = event.target.closest("[data-approve-superadmin]");
+  if (approveButton) {
+    approveSuperAdminDonation(approveButton.dataset.approveSuperadmin, approveButton);
     return;
   }
 

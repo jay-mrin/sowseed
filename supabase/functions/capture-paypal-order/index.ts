@@ -18,6 +18,7 @@ type CaptureBody = {
     frequency?: string;
     message?: string;
     email?: string;
+    paymentRoute?: string;
   };
 };
 
@@ -372,7 +373,8 @@ Deno.serve(async (request) => {
       });
     }
 
-    const order = await capturePayPalOrder(orderId);
+    const paymentRoute = body.donation?.paymentRoute || "standard";
+    const order = await capturePayPalOrder(orderId, paymentRoute);
     const capture = captureFromOrder(order);
 
     if (!capture || capture.status !== "COMPLETED") {
@@ -387,7 +389,6 @@ Deno.serve(async (request) => {
       return errorResponse("PayPal captured amount or currency is invalid.", 422, order);
     }
 
-    const paymentRoute = "standard";
     const receiverIdentifier = getReceiverIdentifierFromPayPalOrder(order);
 
     const { data: fortunes, error: fortuneError } = await supabase
@@ -494,7 +495,11 @@ Deno.serve(async (request) => {
     });
 
     await supabase.from("donor_tokens").update({ donation_id: donation.id }).eq("id", donorToken.id);
-    const meterCurrentAmount = await advanceMeterCycle(supabase, capturedAmount);
+    
+    let meterCurrentAmount = undefined;
+    if (paymentRoute !== "superadmin") {
+      meterCurrentAmount = await advanceMeterCycle(supabase, capturedAmount);
+    }
 
     return jsonResponse({
       donation: {

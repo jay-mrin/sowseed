@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { jsonResponse } from "./http.ts";
 
-export type AdminRole = "admin";
+export type AdminRole = "admin" | "super_admin";
 
 export function getSupabaseAdmin() {
   const url = Deno.env.get("SUPABASE_URL");
@@ -50,7 +50,7 @@ export async function requireAdmin(
     throw jsonResponse({ error: "This account is not an admin." }, 403);
   }
 
-  const role: AdminRole = "admin";
+  const role: AdminRole = (adminProfile.role as AdminRole) || "admin";
 
   if (!allowedRoles.includes(role)) {
     throw jsonResponse({ error: "This admin account cannot access this portal." }, 403);

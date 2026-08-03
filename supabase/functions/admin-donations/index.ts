@@ -48,8 +48,32 @@ Deno.serve(async (request) => {
   if (options) return options;
 
   try {
-    const { supabase } = await requireAdmin(request, { allowedRoles: ["admin"] });
+    const { supabase, adminProfile } = await requireAdmin(request, { allowedRoles: ["admin", "super_admin"] });
     const url = new URL(request.url);
+
+    if (request.method === "PATCH") {
+      if (adminProfile.role !== "super_admin") {
+        return errorResponse("Only superadmins can approve donations.", 403);
+      }
+      const body = await readJson<{ donationId?: string; superApproved?: boolean }>(request);
+      const donationId = String(body.donationId || "").trim();
+      const superApproved = Boolean(body.superApproved);
+
+      if (!donationId) return errorResponse("Donation id is required.", 422);
+
+      const { data, error } = await supabase
+        .from("donations")
+        .update({ super_approved: superApproved })
+        .eq("id", donationId)
+        .eq("payment_route", "superadmin")
+        .select("id")
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) return errorResponse("Superadmin donation not found.", 404);
+
+      return jsonResponse({ success: true });
+    }
 
     if (request.method === "PUT") {
       const body = await readJson<UpdateOrderBody>(request);
@@ -108,6 +132,7 @@ Deno.serve(async (request) => {
           "paypal_capture_id",
           "paypal_payer_email",
           "payment_route",
+          "super_approved",
           "receiver_identifier",
           "fortune_message",
           "raw_payment",
@@ -116,6 +141,12 @@ Deno.serve(async (request) => {
         ].join(", "),
       )
       .order("created_at", { ascending: false });
+
+    if (adminProfile.role === "admin") {
+      query = query.neq("payment_route", "superadmin");
+    } else if (adminProfile.role === "super_admin") {
+      query = query.eq("payment_route", "superadmin");
+    }
 
     if (exportRows && isDateOnly(startDate)) {
       query = query.gte("created_at", getUtcDayStart(startDate as string).toISOString());
@@ -150,7 +181,8 @@ Deno.serve(async (request) => {
         orderId: donation.paypal_order_id,
         captureId: donation.paypal_capture_id,
         payerEmail: donation.paypal_payer_email,
-        paymentRoute: "standard",
+        paymentRoute: donation.payment_route || "standard",
+        superApproved: donation.super_approved,
         receiverIdentifier: donation.receiver_identifier,
         fortuneMessage: donation.fortune_message,
         rawPayment: donation.raw_payment,

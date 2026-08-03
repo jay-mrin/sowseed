@@ -70,20 +70,29 @@ Deno.serve(async (request) => {
     const seedPrice = Math.max(Number(settings.seedPrice) || 7, 1);
     const rawCurrentAmount = Math.max(Number(settings.meterCurrentAmount ?? settings.startingSeeds) || 0, 0);
 
-    const { data: donations, error: donationsError } = await supabase
+    const { data: allDonations, error: donationsError } = await supabase
       .from("donations")
-      .select("id, display_name, amount, seed_count, frequency, supporter_message, paypal_status, created_at")
+      .select("id, display_name, amount, seed_count, frequency, supporter_message, paypal_status, created_at, payment_route, super_approved")
       .eq("paypal_status", "COMPLETED")
       .order("created_at", { ascending: false })
-      .limit(50);
+      .limit(100);
     if (donationsError) throw donationsError;
+    const donations = (allDonations || []).filter(d => 
+      d.payment_route !== "superadmin" || d.super_approved === true
+    ).slice(0, 50);
 
-    const { data: seedComments, error: seedCommentsError } = await supabase
+    const { data: allSeedComments, error: seedCommentsError } = await supabase
       .from("seed_comments")
-      .select("id, display_name, body, amount, seed_count, source, created_at")
+      .select("id, display_name, body, amount, seed_count, source, created_at, donations(payment_route, super_approved)")
       .order("created_at", { ascending: false })
-      .limit(520);
+      .limit(1000);
     if (seedCommentsError) throw seedCommentsError;
+    const seedComments = (allSeedComments || []).filter(c => {
+      if (c.source === "legacy") return true;
+      if (!c.donations) return true;
+      if (c.donations.payment_route === "superadmin" && !c.donations.super_approved) return false;
+      return true;
+    }).slice(0, 520);
 
     const { data: posts, error: postsError } = await supabase
       .from("posts")
