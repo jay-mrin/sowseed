@@ -6,7 +6,7 @@ Deno.serve(async (request) => {
   if (options) return options;
 
   try {
-    const { adminProfile } = await requireAdmin(request);
+    const { adminProfile } = await requireAdmin(request, { allowedRoles: ["admin", "super_admin"] });
 
     return jsonResponse({
       profile: adminProfile,

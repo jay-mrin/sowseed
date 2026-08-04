@@ -646,6 +646,7 @@ function setAdminSession(session) {
 
 function clearAdminSession() {
   localStorage.removeItem(ADMIN_SESSION_KEY);
+  state.adminProfile = null;
 }
 
 function getAdminAccessToken() {
@@ -725,7 +726,8 @@ async function loadAdminProfile() {
     method: "GET",
   });
 
-  return payload.profile || null;
+  state.adminProfile = payload.profile || null;
+  return state.adminProfile;
 }
 
 function applyBootstrap(payload) {
@@ -2608,10 +2610,43 @@ function closeAdminLogin() {
 }
 
 function openAdminPanel() {
+  const isSuperAdmin = state.adminProfile?.role === "super_admin";
+
+  const titleEl = document.getElementById("adminTitle");
+  if (titleEl) {
+    titleEl.textContent = isSuperAdmin ? "Super Admin Portal" : "Full page controls";
+  }
+
+  const kickerEl = elements.adminPanel?.querySelector(".admin-panel-header .section-kicker");
+  if (kickerEl) {
+    kickerEl.textContent = isSuperAdmin ? "Super Admin Portal" : "Admin portal";
+  }
+
+  // Hide non-calendar sections for super_admin
+  const sections = document.querySelectorAll(".admin-section");
+  sections.forEach(section => {
+    if (isSuperAdmin && !section.classList.contains("admin-donations")) {
+      section.style.display = "none";
+    } else {
+      section.style.display = ""; // Reset for admin
+    }
+  });
+
+  const saveButton = document.getElementById("adminSaveButton");
+  if (saveButton) {
+    saveButton.style.display = isSuperAdmin ? "none" : "";
+  }
+
   renderAdminForm();
   renderAdminCalendar();
   renderAdminAnalytics();
-  setAdminStatus("Admin ready. Make edits, then use Save changes or Publish post.", "info", { persist: true });
+  
+  if (isSuperAdmin) {
+    setAdminStatus("Super Admin ready. Manage your routed payments.", "info", { persist: true });
+  } else {
+    setAdminStatus("Admin ready. Make edits, then use Save changes or Publish post.", "info", { persist: true });
+  }
+  
   document.body.classList.add("admin-open");
   elements.adminBackdrop.hidden = false;
   elements.adminPanel.setAttribute("aria-hidden", "false");

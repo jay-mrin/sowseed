@@ -38,7 +38,7 @@ Deno.serve(async (request) => {
   if (options) return options;
 
   try {
-    const { supabase } = await requireAdmin(request, { allowedRoles: ["admin"] });
+    const { supabase } = await requireAdmin(request, { allowedRoles: ["admin", "super_admin"] });
 
     if (request.method === "DELETE") {
       const resetAt = new Date().toISOString();

@@ -6,7 +6,7 @@ Deno.serve(async (request) => {
   if (options) return options;
 
   try {
-    const { supabase } = await requireAdmin(request, { allowedRoles: ["admin"] });
+    const { supabase } = await requireAdmin(request, { allowedRoles: ["admin", "super_admin"] });
 
     if (request.method === "GET") {
       const { data, error } = await supabase.from("site_settings").select("settings").eq("id", true).single();
