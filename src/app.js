@@ -1616,7 +1616,7 @@ function renderAmountOptions(selectedAmount = getAmount()) {
         <button class="amount-option${activeClass}" type="button" data-amount="${amount}">
           <span class="amount-option-value">
             <span class="amount-option-number">${amount}</span>
-            <img class="amount-option-seed-mark" src="assets/seed-favicon.svg" alt="" />
+            <span class="amount-option-seed-mark" aria-hidden="true">🌱</span>
           </span>
           <span class="amount-option-title">${escapeHtml(description)}</span>
         </button>
