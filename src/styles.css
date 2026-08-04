@@ -1984,6 +1984,17 @@ legend::after {
   filter: drop-shadow(0 8px 14px var(--amount-glow, rgba(248, 50, 184, 0.18)));
 }
 
+.amount-option-seed-image {
+  display: block;
+  width: 34px;
+  height: 34px;
+  flex-basis: 34px;
+  margin-left: -2px;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 999px;
+}
+
 .amount-option-title {
   padding-left: 24px;
   color: #0e1522;

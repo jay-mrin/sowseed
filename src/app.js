@@ -1612,17 +1612,36 @@ function renderAmountOptions(selectedAmount = getAmount()) {
     .map((amount) => {
       const activeClass = amount === selectedAmount ? " active" : "";
       const description = AMOUNT_TIER_DESCRIPTIONS[amount] || "Sow a Seed of Faith";
+      const seedMarkup = getAmountSeedMarkup(amount);
       return `
         <button class="amount-option${activeClass}" type="button" data-amount="${amount}">
           <span class="amount-option-value">
             <span class="amount-option-number">${amount}</span>
-            <span class="amount-option-seed-mark" aria-hidden="true">🌱</span>
+            ${seedMarkup}
           </span>
           <span class="amount-option-title">${escapeHtml(description)}</span>
         </button>
       `;
     })
     .join("");
+}
+
+function getAmountSeedMarkup(amount) {
+  const seedImageByAmount = {
+    33: "blue-seed.png",
+    77: "blue-seed.png",
+    111: "purple-seed.png",
+    333: "purple-seed.png",
+    777: "golden-seed.png",
+    999: "golden-seed.png",
+  };
+  const seedImage = seedImageByAmount[amount];
+
+  if (seedImage) {
+    return `<img class="amount-option-seed-mark amount-option-seed-image" src="assets/${seedImage}" alt="" />`;
+  }
+
+  return `<span class="amount-option-seed-mark" aria-hidden="true">🌱</span>`;
 }
 
 function renderSettings() {
