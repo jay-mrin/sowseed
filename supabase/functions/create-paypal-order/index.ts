@@ -1,5 +1,6 @@
 import { errorResponse, handleOptions, jsonResponse, readJson } from "../_shared/http.ts";
 import { createPayPalOrder, parseMoneyToCents } from "../_shared/paypal.ts";
+import { getSupabaseAdmin } from "../_shared/supabase.ts";
 
 type CreateOrderBody = {
   amount?: number;
@@ -7,10 +8,25 @@ type CreateOrderBody = {
   frequency?: string;
   message?: string;
   email?: string;
+  paymentRoute?: string;
 };
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function normalizePaymentRoute(value: unknown) {
+  return value === "superadmin" ? "superadmin" : "standard";
+}
+
+async function getCheckoutRoute() {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase.from("site_settings").select("settings").eq("id", true).maybeSingle();
+
+  if (error) throw error;
+
+  const settings = data?.settings && typeof data.settings === "object" ? data.settings : {};
+  return normalizePaymentRoute((settings as Record<string, unknown>).checkoutRoute);
 }
 
 Deno.serve(async (request) => {
@@ -29,8 +45,7 @@ Deno.serve(async (request) => {
     if (!displayName) return errorResponse("Display name is required.", 422);
     if (!isValidEmail(contactEmail)) return errorResponse("A valid email is required for the order detail.", 422);
 
-    const superAdminAmounts = [1100, 7700, 33300, 77700];
-    const paymentRoute = superAdminAmounts.includes(amountCents) ? "superadmin" : "standard";
+    const paymentRoute = await getCheckoutRoute();
 
     const order = await createPayPalOrder({
       amountCents,

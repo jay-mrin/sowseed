@@ -542,6 +542,74 @@ a {
   font-size: 17px;
 }
 
+.admin-super-checkout-section {
+  grid-column: 3;
+  background:
+    radial-gradient(circle at 16% 0%, rgba(255, 49, 172, 0.12), transparent 34%),
+    radial-gradient(circle at 100% 0%, rgba(255, 205, 71, 0.16), transparent 36%),
+    #fffdfb;
+}
+
+.admin-super-checkout-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.admin-super-checkout-heading p {
+  margin: 6px 0 0;
+  color: #706a75;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.checkout-route-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.checkout-route-option {
+  display: grid;
+  gap: 7px;
+  min-height: 112px;
+  padding: 18px;
+  border: 1px solid rgba(217, 215, 207, 0.9);
+  border-radius: 20px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 14px 34px rgba(29, 35, 44, 0.05);
+  text-align: left;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.checkout-route-option:hover {
+  transform: translateY(-1px);
+}
+
+.checkout-route-option.is-selected {
+  border-color: rgba(255, 49, 172, 0.68);
+  box-shadow:
+    0 16px 42px rgba(255, 49, 172, 0.16),
+    inset 0 0 0 2px rgba(255, 49, 172, 0.16);
+}
+
+.checkout-route-option span {
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.checkout-route-option small {
+  color: #756f79;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
 .admin-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3402,12 +3470,26 @@ legend::after {
     grid-column: auto;
   }
 
+  .admin-super-checkout-section {
+    grid-column: auto;
+  }
+
   .admin-editor-section,
   .admin-donations,
   .admin-settings-section,
+  .admin-super-checkout-section,
   .admin-analytics-section,
   .admin-export-section {
     max-height: none;
+  }
+
+  .admin-super-checkout-heading,
+  .checkout-route-options {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-super-checkout-heading {
+    display: grid;
   }
 
   .admin-actions {

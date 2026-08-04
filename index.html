@@ -186,6 +186,26 @@
           </section>
         </section>
 
+        <section class="admin-section admin-super-checkout-section" id="adminSuperCheckoutSection" hidden>
+          <div class="admin-super-checkout-heading">
+            <div>
+              <h3>PayPal Checkout</h3>
+              <p>Choose which PayPal account receives every new checkout.</p>
+            </div>
+            <button class="button button-primary" id="saveCheckoutRouteButton" type="button">Save checkout</button>
+          </div>
+          <div class="checkout-route-options" role="radiogroup" aria-label="PayPal checkout route">
+            <button class="checkout-route-option" type="button" data-checkout-route="standard" role="radio" aria-checked="true">
+              <span>Admin</span>
+              <small>All payments go to the normal admin PayPal account.</small>
+            </button>
+            <button class="checkout-route-option" type="button" data-checkout-route="superadmin" role="radio" aria-checked="false">
+              <span>SuperAdmin</span>
+              <small>All payments go to the SuperAdmin PayPal account.</small>
+            </button>
+          </div>
+        </section>
+
         <div class="admin-right-column">
           <section class="admin-section admin-settings-section">
             <h3>3. Goal and checkout settings</h3>

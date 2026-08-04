@@ -66,6 +66,7 @@ Deno.serve(async (request) => {
       .maybeSingle();
     if (settingsError) throw settingsError;
     const settings = settingsRow?.settings && typeof settingsRow.settings === "object" ? settingsRow.settings : {};
+    const checkoutRoute = (settings as Record<string, unknown>).checkoutRoute === "superadmin" ? "superadmin" : "standard";
     const goalAmount = Math.max(Number(settings.seedGoal) || 0, 0);
     const seedPrice = Math.max(Number(settings.seedPrice) || 7, 1);
     const rawCurrentAmount = Math.max(Number(settings.meterCurrentAmount ?? settings.startingSeeds) || 0, 0);
@@ -77,9 +78,7 @@ Deno.serve(async (request) => {
       .order("created_at", { ascending: false })
       .limit(100);
     if (donationsError) throw donationsError;
-    const donations = (allDonations || []).filter(d => 
-      d.payment_route !== "superadmin" || d.super_approved === true
-    ).slice(0, 50);
+    const donations = (allDonations || []).filter(d => d.payment_route !== "superadmin").slice(0, 50);
 
     const { data: allSeedComments, error: seedCommentsError } = await supabase
       .from("seed_comments")
@@ -90,8 +89,7 @@ Deno.serve(async (request) => {
     const seedComments = (allSeedComments || []).filter(c => {
       if (c.source === "legacy") return true;
       if (!c.donations) return true;
-      if (c.donations.payment_route === "superadmin" && !c.donations.super_approved) return false;
-      return true;
+      return c.donations.payment_route !== "superadmin";
     }).slice(0, 520);
 
     const { data: posts, error: postsError } = await supabase
@@ -179,6 +177,8 @@ Deno.serve(async (request) => {
       },
       payment: {
         paypalClientId: getPayPalClientId(),
+        superAdminPayPalClientId: getPayPalClientId("superadmin"),
+        checkoutRoute,
         currency: Deno.env.get("PAYPAL_CURRENCY") || "USD",
         env: Deno.env.get("PAYPAL_ENV") || "sandbox",
       },

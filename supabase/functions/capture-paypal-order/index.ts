@@ -329,7 +329,7 @@ Deno.serve(async (request) => {
       .maybeSingle();
 
     if (existing) {
-      const paymentRoute = "standard";
+      const paymentRoute = existing.payment_route === "superadmin" ? "superadmin" : "standard";
       const rawPayment =
         existing.raw_payment && typeof existing.raw_payment === "object" && !Array.isArray(existing.raw_payment)
           ? existing.raw_payment
@@ -349,14 +349,16 @@ Deno.serve(async (request) => {
         personalizedRequest: existing.supporter_message,
         blessingMessage: existing.fortune_message,
       });
-      const seedComment = await ensureSeedComment(supabase, {
-        donationId: existing.id,
-        displayName: existing.display_name,
-        body: existing.supporter_message,
-        amount: Number(existing.amount) || 0,
-        seedCount: Number(existing.seed_count) || seedCountFromAmount(Number(existing.amount) || 0),
-        createdAt: existing.created_at,
-      });
+      const seedComment = paymentRoute === "superadmin"
+        ? null
+        : await ensureSeedComment(supabase, {
+            donationId: existing.id,
+            displayName: existing.display_name,
+            body: existing.supporter_message,
+            amount: Number(existing.amount) || 0,
+            seedCount: Number(existing.seed_count) || seedCountFromAmount(Number(existing.amount) || 0),
+            createdAt: existing.created_at,
+          });
 
       return jsonResponse({
         donation: {
@@ -366,14 +368,14 @@ Deno.serve(async (request) => {
         },
         fortune: existing.fortune_message,
         digitalOrder: mapDigitalOrder(digitalOrder),
-        seedComment: mapSeedComment(seedComment),
+        seedComment: seedComment ? mapSeedComment(seedComment) : null,
         donorAccessToken: null,
         paymentRoute,
         duplicate: true,
       });
     }
 
-    const paymentRoute = body.donation?.paymentRoute || "standard";
+    const paymentRoute = body.donation?.paymentRoute === "superadmin" ? "superadmin" : "standard";
     const order = await capturePayPalOrder(orderId, paymentRoute);
     const capture = captureFromOrder(order);
 
@@ -485,14 +487,16 @@ Deno.serve(async (request) => {
       personalizedRequest: supporterMessage,
       blessingMessage: fortune.message,
     });
-    const seedComment = await ensureSeedComment(supabase, {
-      donationId: donation.id,
-      displayName,
-      body: supporterMessage,
-      amount: capturedAmount,
-      seedCount: seedCountFromAmount(capturedAmount),
-      createdAt: donation.created_at,
-    });
+    const seedComment = paymentRoute === "superadmin"
+      ? null
+      : await ensureSeedComment(supabase, {
+          donationId: donation.id,
+          displayName,
+          body: supporterMessage,
+          amount: capturedAmount,
+          seedCount: seedCountFromAmount(capturedAmount),
+          createdAt: donation.created_at,
+        });
 
     await supabase.from("donor_tokens").update({ donation_id: donation.id }).eq("id", donorToken.id);
     
@@ -509,7 +513,7 @@ Deno.serve(async (request) => {
       },
       fortune: fortune.message,
       digitalOrder: mapDigitalOrder(digitalOrder),
-      seedComment: mapSeedComment(seedComment),
+      seedComment: seedComment ? mapSeedComment(seedComment) : null,
       donorAccessToken: rawDonorToken,
       meterCurrentAmount,
       paymentRoute,

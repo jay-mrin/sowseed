@@ -6,7 +6,7 @@ Deno.serve(async (request) => {
   if (options) return options;
 
   try {
-    const { supabase } = await requireAdmin(request, { allowedRoles: ["admin", "super_admin"] });
+    const { supabase, adminProfile } = await requireAdmin(request, { allowedRoles: ["admin", "super_admin"] });
 
     if (request.method === "GET") {
       const { data, error } = await supabase.from("site_settings").select("settings").eq("id", true).single();
@@ -23,9 +23,26 @@ Deno.serve(async (request) => {
       return errorResponse("Settings payload is required.", 422);
     }
 
+    let settingsToSave = body.settings;
+
+    if (adminProfile.role === "super_admin") {
+      const { data: current, error: currentError } = await supabase
+        .from("site_settings")
+        .select("settings")
+        .eq("id", true)
+        .maybeSingle();
+      if (currentError) throw currentError;
+
+      const checkoutRoute = body.settings.checkoutRoute === "superadmin" ? "superadmin" : "standard";
+      settingsToSave = {
+        ...((current?.settings && typeof current.settings === "object" ? current.settings : {}) as Record<string, unknown>),
+        checkoutRoute,
+      };
+    }
+
     const { data, error } = await supabase
       .from("site_settings")
-      .upsert({ id: true, settings: body.settings }, { onConflict: "id" })
+      .upsert({ id: true, settings: settingsToSave }, { onConflict: "id" })
       .select("settings")
       .single();
 

@@ -68,8 +68,9 @@ Deno.serve(async (request) => {
 
     const { data: checkoutEvents, error: checkoutEventsError } = await supabase
       .from("checkout_events")
-      .select("event_name")
+      .select("event_name, payment_route")
       .gte("created_at", since)
+      .eq("payment_route", "standard")
       .order("created_at", { ascending: false })
       .limit(10000);
 
@@ -79,6 +80,7 @@ Deno.serve(async (request) => {
       .from("donations")
       .select("id", { count: "exact", head: true })
       .eq("paypal_status", "COMPLETED")
+      .neq("payment_route", "superadmin")
       .gte("created_at", since);
 
     if (completedPaymentError) throw completedPaymentError;

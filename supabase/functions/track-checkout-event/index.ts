@@ -6,6 +6,7 @@ type CheckoutEventBody = {
   amount?: number;
   eventName?: string;
   path?: string;
+  paymentRoute?: string;
   visitorKey?: string;
 };
 
@@ -32,13 +33,14 @@ Deno.serve(async (request) => {
     if (!ALLOWED_EVENTS.has(eventName)) return errorResponse("Checkout event is invalid.", 422);
     if (!visitorKey) return errorResponse("Visitor key is required.", 422);
     if (amountCents < 100) return errorResponse("Amount must be at least $1.", 422);
+    const paymentRoute = body.paymentRoute === "superadmin" ? "superadmin" : "standard";
 
     const supabase = getSupabaseAdmin();
 
     const { error } = await supabase.from("checkout_events").insert({
       event_name: eventName,
       visitor_key_hash: await hashText(visitorKey),
-      payment_route: "standard",
+      payment_route: paymentRoute,
       amount: centsToMoney(amountCents),
       path: sanitizePath(body.path),
       user_agent: (request.headers.get("user-agent") || "").slice(0, 220),
@@ -46,7 +48,7 @@ Deno.serve(async (request) => {
 
     if (error) throw error;
 
-    return jsonResponse({ recorded: true, paymentRoute: "standard" });
+    return jsonResponse({ recorded: true, paymentRoute });
   } catch (error) {
     return errorResponse("Could not record checkout event.", 500, String(error));
   }
