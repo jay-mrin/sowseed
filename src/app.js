@@ -279,7 +279,6 @@ const elements = {
   closeAdminButton: document.querySelector("#closeAdminButton"),
   closeReceiptButton: document.querySelector("#closeReceiptButton"),
   copyReceiptButton: document.querySelector("#copyReceiptButton"),
-  decreaseQuantityButton: document.querySelector("#decreaseQuantityButton"),
   doneButton: document.querySelector("#doneButton"),
   feedList: document.querySelector("#feedList"),
   followButton: document.querySelector("#followButton"),
@@ -293,7 +292,6 @@ const elements = {
   fortuneNumberTitle: document.querySelector("#fortuneNumberTitle"),
   fortuneSeedButton: document.querySelector("#fortuneSeedButton"),
   galleryGrid: document.querySelector("#galleryGrid"),
-  increaseQuantityButton: document.querySelector("#increaseQuantityButton"),
   messageInput: document.querySelector("#messageInput"),
   meterCollapsed: document.querySelector("#meterCollapsed"),
   meterExpanded: document.querySelector("#meterExpanded"),
@@ -316,7 +314,6 @@ const elements = {
   progressPercent: document.querySelector("#progressPercent"),
   recentDonationList: document.querySelector("#recentDonationList"),
   refreshAdminButton: document.querySelector("#refreshAdminButton"),
-  quantityValue: document.querySelector("#quantityValue"),
   receiptDialog: document.querySelector("#receiptDialog"),
   receiptSummary: document.querySelector("#receiptSummary"),
   receiptTitle: document.querySelector("#receiptTitle"),
@@ -2173,20 +2170,6 @@ function setAmount(amount) {
   updateCheckoutLabel();
 }
 
-function setQuantity(nextQuantity) {
-  quantity = Math.max(1, Math.min(nextQuantity, 99));
-  elements.quantityValue.textContent = quantity;
-  setAmount(state.settings.seedPrice * quantity);
-}
-
-function setFrequency(frequency) {
-  currentFrequency = frequency;
-  document.querySelectorAll(".segment").forEach((button) => {
-    button.classList.toggle("active", button.dataset.frequency === frequency);
-  });
-  updateCheckoutLabel();
-}
-
 function validateForm() {
   const amount = getAmount();
   const name = elements.nameInput.value.trim();
@@ -2447,10 +2430,9 @@ async function finishVerifiedDonation(payload) {
   if (elements.paymentEmailInput) {
     elements.paymentEmailInput.value = "";
   }
-  quantity = 1;
-  elements.quantityValue.textContent = quantity;
   setAmount(getInitialDonationAmount());
-  setFrequency("once");
+  currentFrequency = "once";
+  updateCheckoutLabel();
   pendingDonation = null;
   closePaymentDialog(() => openReceipt());
 }
@@ -3132,8 +3114,6 @@ elements.amountGrid.addEventListener("click", (event) => {
   const button = event.target.closest(".amount-option");
   if (!button) return;
   const amount = Number(button.dataset.amount);
-  quantity = 1;
-  elements.quantityValue.textContent = quantity;
   setAmount(amount);
 
   if (GOLDEN_SEED_AMOUNTS.has(amount)) {
@@ -3146,13 +3126,6 @@ elements.amountInput.addEventListener("input", () => {
   elements.amountError.textContent = "";
   updateCheckoutLabel();
 });
-
-document.querySelectorAll(".segment").forEach((button) => {
-  button.addEventListener("click", () => setFrequency(button.dataset.frequency));
-});
-
-elements.decreaseQuantityButton.addEventListener("click", () => setQuantity(quantity - 1));
-elements.increaseQuantityButton.addEventListener("click", () => setQuantity(quantity + 1));
 
 elements.adminCalendarPrev.addEventListener("click", () => {
   adminCalendarCursor = new Date(adminCalendarCursor.getFullYear(), adminCalendarCursor.getMonth() - 1, 1);

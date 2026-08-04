@@ -32,23 +32,6 @@
   }
 }
 
-@keyframes live-plus-pulse {
-  0%,
-  100% {
-    box-shadow:
-      0 0 0 5px rgba(248, 50, 184, 0.08),
-      0 0 20px rgba(248, 50, 184, 0.42),
-      0 12px 26px rgba(248, 50, 184, 0.24);
-  }
-
-  50% {
-    box-shadow:
-      0 0 0 10px rgba(248, 50, 184, 0.13),
-      0 0 34px rgba(248, 50, 184, 0.72),
-      0 16px 34px rgba(248, 50, 184, 0.34);
-  }
-}
-
 * {
   box-sizing: border-box;
 }
@@ -1885,27 +1868,10 @@ main {
   background: var(--cream);
 }
 
-.segmented,
 .amount-grid {
   display: grid;
   gap: 10px;
 }
-
-.segmented {
-  grid-template-columns: repeat(2, 1fr);
-  min-height: 66px;
-  padding: 3px;
-  border: 1px solid transparent;
-  border-radius: var(--button-radius);
-  background:
-    linear-gradient(#ffffff, #ffffff) padding-box,
-    linear-gradient(135deg, rgba(248, 50, 184, 0.72), rgba(30, 147, 171, 0.18), rgba(217, 215, 207, 0.7)) border-box;
-  box-shadow:
-    0 14px 32px rgba(248, 50, 184, 0.08),
-    inset 0 -12px 28px rgba(245, 242, 238, 0.8);
-}
-
-.segment,
 .amount-option {
   min-height: 44px;
   border: 1px solid transparent;
@@ -1922,32 +1888,6 @@ main {
     box-shadow 160ms ease,
     color 160ms ease,
     background 160ms ease;
-}
-
-.segment {
-  min-height: 56px;
-  color: #68676c;
-  background: transparent;
-  font-size: 20px;
-  letter-spacing: 0;
-}
-
-.segment:hover,
-.amount-option:hover {
-  transform: translateY(-1px);
-  color: var(--ink);
-  box-shadow: var(--button-shadow-soft);
-}
-
-.segment.active,
-.amount-option.active {
-  color: #f832b8;
-  background:
-    linear-gradient(var(--white), var(--white)) padding-box,
-    linear-gradient(135deg, rgba(248, 50, 184, 0.8), rgba(248, 50, 184, 0.45)) border-box;
-  box-shadow:
-    0 12px 26px rgba(248, 50, 184, 0.12),
-    inset 0 0 22px rgba(248, 50, 184, 0.04);
 }
 
 fieldset {
@@ -2033,10 +1973,14 @@ legend::after {
 }
 
 .amount-option-seed-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 22px;
   height: 22px;
   flex: 0 0 22px;
-  object-fit: contain;
+  font-size: 18px;
+  line-height: 1;
   filter: drop-shadow(0 8px 14px var(--amount-glow, rgba(248, 50, 184, 0.18)));
 }
 
@@ -2319,13 +2263,12 @@ legend::after {
 .seed-quantity-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 16px;
   margin: 26px 0 0;
 }
 
-.seed-price,
-.quantity-control {
+.seed-price {
   display: flex;
   align-items: center;
 }
@@ -2334,11 +2277,8 @@ legend::after {
   gap: 12px;
   font-size: 17px;
   font-weight: 600;
-}
-
-.seed-price > span:last-child {
-  display: grid;
-  gap: 2px;
+  justify-content: center;
+  text-align: center;
 }
 
 .seed-price strong {
@@ -2346,13 +2286,6 @@ legend::after {
   font-size: 20px;
   font-weight: 900;
   line-height: 1;
-}
-
-.seed-price small {
-  color: #424650;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1.1;
 }
 
 .seed-icon {
@@ -2369,59 +2302,6 @@ legend::after {
     0 10px 24px rgba(96, 177, 113, 0.15),
     0 0 18px rgba(96, 177, 113, 0.24);
   font-size: 28px;
-}
-
-.quantity-control {
-  gap: 10px;
-}
-
-.quantity-button,
-.quantity-value {
-  display: grid;
-  min-width: 46px;
-  height: 46px;
-  place-items: center;
-  border: 1px solid transparent;
-  border-radius: 50%;
-  background: #f0efef;
-  color: #a09b9b;
-  font-size: 20px;
-  font-weight: 800;
-}
-
-.quantity-button {
-  cursor: pointer;
-}
-
-.quantity-value {
-  min-width: 70px;
-  border-color: #d4cecc;
-  border-radius: 999px;
-  color: var(--ink);
-  background: #e7e3e2;
-  font-weight: 500;
-}
-
-.quantity-button.plus {
-  color: #ffffff;
-  background:
-    radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.82), transparent 24%),
-    linear-gradient(135deg, #ff7ad8 0%, #f832b8 48%, #d91395 100%);
-  box-shadow:
-    0 0 0 6px rgba(248, 50, 184, 0.09),
-    0 0 24px rgba(248, 50, 184, 0.5),
-    0 12px 26px rgba(248, 50, 184, 0.24);
-  text-shadow: 0 1px 6px rgba(104, 0, 67, 0.34);
-  animation: live-plus-pulse 1500ms ease-in-out infinite;
-}
-
-.quantity-button.plus:hover,
-.quantity-button.plus:focus-visible {
-  box-shadow:
-    0 0 0 7px rgba(248, 50, 184, 0.12),
-    0 0 32px rgba(248, 50, 184, 0.62),
-    0 16px 32px rgba(248, 50, 184, 0.3);
-  transform: translateY(-1px);
 }
 
 .about-panel,
@@ -3721,20 +3601,6 @@ legend::after {
 
   .seed-quantity-row {
     align-items: center;
-    flex-wrap: wrap;
-  }
-
-  .quantity-control {
-    margin-left: auto;
-  }
-
-  .segmented {
-    min-height: 58px;
-  }
-
-  .segment {
-    min-height: 48px;
-    font-size: 16px;
   }
 
   .amount-option {
