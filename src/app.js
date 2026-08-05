@@ -281,6 +281,7 @@ const elements = {
   closeReceiptButton: document.querySelector("#closeReceiptButton"),
   copyReceiptButton: document.querySelector("#copyReceiptButton"),
   doneButton: document.querySelector("#doneButton"),
+  decreaseSeedButton: document.querySelector("#decreaseSeedButton"),
   feedList: document.querySelector("#feedList"),
   followButton: document.querySelector("#followButton"),
   followersText: document.querySelector("#followersText"),
@@ -308,6 +309,7 @@ const elements = {
   paypalButton: document.querySelector("#paypalButton"),
   paypalButtonContainer: document.querySelector("#paypalButtonContainer"),
   postAuthorName: document.querySelector("#postAuthorName"),
+  increaseSeedButton: document.querySelector("#increaseSeedButton"),
   postsPageList: document.querySelector("#postsPageList"),
   profileTitle: document.querySelector("#profileTitle"),
   profileTabs: document.querySelectorAll("[data-section-tab]"),
@@ -2206,6 +2208,13 @@ function requirePaymentEmail() {
   throw new Error("A valid email is required for your order detail.");
 }
 
+function stepSeedAmount(direction) {
+  const seedPrice = Math.max(Number.parseFloat(state.settings.seedPrice) || CONFIG.seedPrice || 7, 1);
+  const currentSeeds = Math.max(Math.round(getAmount() / seedPrice) || 1, 1);
+  const nextSeeds = Math.max(currentSeeds + direction, 1);
+  setAmount(nextSeeds * seedPrice);
+}
+
 function setAmount(amount) {
   elements.amountInput.value = amount;
   renderAmountOptions(amount);
@@ -3198,6 +3207,12 @@ elements.amountInput.addEventListener("input", () => {
   document.querySelectorAll(".amount-option").forEach((button) => button.classList.remove("active"));
   elements.amountError.textContent = "";
   updateCheckoutLabel();
+});
+elements.decreaseSeedButton?.addEventListener("click", () => {
+  stepSeedAmount(-1);
+});
+elements.increaseSeedButton?.addEventListener("click", () => {
+  stepSeedAmount(1);
 });
 
 elements.adminCalendarPrev.addEventListener("click", () => {

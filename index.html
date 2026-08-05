@@ -470,13 +470,6 @@
             </div>
 
             <form id="supportForm" novalidate>
-              <div class="seed-quantity-row" aria-label="Seed quantity">
-                <div class="seed-price">
-                  <span class="seed-icon" aria-hidden="true">🌱</span>
-                  <strong id="seedPriceLabel">1 Seed</strong>
-                </div>
-              </div>
-
               <fieldset>
                 <legend>Choose Your Seed Offering for Your Soulmate &amp; Loved Ones🌱💗</legend>
                 <div class="amount-grid" id="amountGrid">
@@ -514,6 +507,15 @@
                   </button>
                 </div>
               </fieldset>
+
+              <div class="seed-quantity-row" aria-label="Seed quantity">
+                <button class="seed-stepper-button" id="decreaseSeedButton" type="button" aria-label="Decrease seed amount">−</button>
+                <div class="seed-price">
+                  <span class="seed-icon" aria-hidden="true">🌱</span>
+                  <strong id="seedPriceLabel">1 Seed</strong>
+                </div>
+                <button class="seed-stepper-button seed-stepper-button-plus" id="increaseSeedButton" type="button" aria-label="Increase seed amount">+</button>
+              </div>
 
               <label class="field">
                 <span class="money-input">
