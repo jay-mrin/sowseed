@@ -2666,6 +2666,12 @@ function openAdminPanel() {
   // Hide non-calendar and checkout sections for super_admin.
   const sections = document.querySelectorAll(".admin-section");
   sections.forEach(section => {
+    if (!isSuperAdmin && section.classList.contains("admin-super-checkout-section")) {
+      section.hidden = true;
+      section.style.display = "none";
+      return;
+    }
+
     if (
       isSuperAdmin &&
       !section.classList.contains("admin-donations") &&
@@ -2673,6 +2679,9 @@ function openAdminPanel() {
     ) {
       section.style.display = "none";
     } else {
+      if (section.classList.contains("admin-super-checkout-section")) {
+        section.hidden = false;
+      }
       section.style.display = ""; // Reset for admin
     }
   });

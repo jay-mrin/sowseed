@@ -51,6 +51,10 @@ body {
   overflow-x: hidden;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body.app-loading {
   overflow: hidden;
 }
