@@ -67,6 +67,12 @@ Deno.serve(async (request) => {
     if (settingsError) throw settingsError;
     const settings = settingsRow?.settings && typeof settingsRow.settings === "object" ? settingsRow.settings : {};
     const checkoutRoute = (settings as Record<string, unknown>).checkoutRoute === "superadmin" ? "superadmin" : "standard";
+    const razorpayEnabled =
+      (settings as Record<string, unknown>).razorpayEnabled !== false &&
+      (settings as Record<string, unknown>).razorpayEnabled !== "false";
+    const paypalEnabled =
+      (settings as Record<string, unknown>).paypalEnabled !== false &&
+      (settings as Record<string, unknown>).paypalEnabled !== "false";
     const goalAmount = Math.max(Number(settings.seedGoal) || 0, 0);
     const seedPrice = Math.max(Number(settings.seedPrice) || 7, 1);
     const rawCurrentAmount = Math.max(Number(settings.meterCurrentAmount ?? settings.startingSeeds) || 0, 0);
@@ -190,6 +196,8 @@ Deno.serve(async (request) => {
         razorpayCurrency: Deno.env.get("RAZORPAY_CURRENCY") || "USD",
         razorpayMode: Deno.env.get("RAZORPAY_MODE") || "test",
         checkoutRoute,
+        razorpayEnabled,
+        paypalEnabled,
         currency: Deno.env.get("PAYPAL_CURRENCY") || "USD",
         env: Deno.env.get("PAYPAL_ENV") || "sandbox",
       },

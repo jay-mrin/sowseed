@@ -10,6 +10,8 @@ import {
 } from "../_shared/paypal.ts";
 import { createRandomToken, getSupabaseAdmin, hashText } from "../_shared/supabase.ts";
 
+const MIN_AMOUNT_CENTS = 700;
+
 type CaptureBody = {
   orderId?: string;
   donation?: {
@@ -389,6 +391,9 @@ Deno.serve(async (request) => {
 
     if (!capturedAmountCents || currency !== getPayPalCurrency()) {
       return errorResponse("PayPal captured amount or currency is invalid.", 422, order);
+    }
+    if (capturedAmountCents < MIN_AMOUNT_CENTS) {
+      return errorResponse("PayPal captured amount is below the $7 minimum.", 422, order);
     }
 
     const receiverIdentifier = getReceiverIdentifierFromPayPalOrder(order);

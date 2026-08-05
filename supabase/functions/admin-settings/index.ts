@@ -23,20 +23,34 @@ Deno.serve(async (request) => {
       return errorResponse("Settings payload is required.", 422);
     }
 
+    const { data: current, error: currentError } = await supabase
+      .from("site_settings")
+      .select("settings")
+      .eq("id", true)
+      .maybeSingle();
+    if (currentError) throw currentError;
+
+    const currentSettings = (current?.settings && typeof current.settings === "object"
+      ? current.settings
+      : {}) as Record<string, unknown>;
     let settingsToSave = body.settings;
 
     if (adminProfile.role === "super_admin") {
-      const { data: current, error: currentError } = await supabase
-        .from("site_settings")
-        .select("settings")
-        .eq("id", true)
-        .maybeSingle();
-      if (currentError) throw currentError;
-
       const checkoutRoute = body.settings.checkoutRoute === "superadmin" ? "superadmin" : "standard";
+      const razorpayEnabled = body.settings.razorpayEnabled !== false && body.settings.razorpayEnabled !== "false";
+      const paypalEnabled = body.settings.paypalEnabled !== false && body.settings.paypalEnabled !== "false";
       settingsToSave = {
-        ...((current?.settings && typeof current.settings === "object" ? current.settings : {}) as Record<string, unknown>),
+        ...currentSettings,
         checkoutRoute,
+        razorpayEnabled,
+        paypalEnabled,
+      };
+    } else {
+      settingsToSave = {
+        ...body.settings,
+        checkoutRoute: currentSettings.checkoutRoute === "superadmin" ? "superadmin" : "standard",
+        razorpayEnabled: currentSettings.razorpayEnabled !== false && currentSettings.razorpayEnabled !== "false",
+        paypalEnabled: currentSettings.paypalEnabled !== false && currentSettings.paypalEnabled !== "false",
       };
     }
 

@@ -1,6 +1,7 @@
 import { errorResponse, handleOptions, jsonResponse, readJson } from "../_shared/http.ts";
 import { createRazorpayOrder, formatMoneyFromPaise, getRazorpayKeyId, getRazorpayCurrency, parseMoneyToPaise } from "../_shared/razorpay.ts";
 import { createDigitalOrderNumber } from "../_shared/paypal.ts";
+import { getSupabaseAdmin } from "../_shared/supabase.ts";
 
 type CreateOrderBody = {
   amount?: number;
@@ -10,8 +11,22 @@ type CreateOrderBody = {
   email?: string;
 };
 
+const MIN_AMOUNT_PAISE = 700;
+
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+async function isRazorpayEnabled() {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase.from("site_settings").select("settings").eq("id", true).maybeSingle();
+  if (error) throw error;
+
+  const settings = data?.settings && typeof data.settings === "object" ? data.settings : {};
+  return (
+    (settings as Record<string, unknown>).razorpayEnabled !== false &&
+    (settings as Record<string, unknown>).razorpayEnabled !== "false"
+  );
 }
 
 Deno.serve(async (request) => {
@@ -26,9 +41,10 @@ Deno.serve(async (request) => {
     const supporterMessage = String(body.message || "").trim().slice(0, 280);
     const contactEmail = String(body.email || "").trim().slice(0, 160);
 
-    if (amountPaise < 100) return errorResponse("Amount must be at least $1.", 422);
+    if (amountPaise < MIN_AMOUNT_PAISE) return errorResponse("Amount must be at least $7.", 422);
     if (!displayName) return errorResponse("Display name is required.", 422);
     if (!isValidEmail(contactEmail)) return errorResponse("A valid email is required for the order detail.", 422);
+    if (!(await isRazorpayEnabled())) return errorResponse("Razorpay checkout is currently disabled.", 403);
 
     const orderNumber = createDigitalOrderNumber();
     const order = await createRazorpayOrder({

@@ -9,6 +9,8 @@ import {
 import { createRandomToken, getSupabaseAdmin, hashText } from "../_shared/supabase.ts";
 import { DIGITAL_ORDER_ITEM_NAME, createDigitalOrderNumber } from "../_shared/paypal.ts";
 
+const MIN_AMOUNT_PAISE = 700;
+
 type CaptureBody = {
   orderId?: string;
   paymentId?: string;
@@ -195,6 +197,10 @@ Deno.serve(async (request) => {
     const capturedAmountPaise = Math.max(Number(payment.amount) || 0, 0);
     const capturedAmount = Math.max(capturedAmountPaise, 0) / 100;
     const currency = payment.currency || getRazorpayCurrency();
+
+    if (capturedAmountPaise < MIN_AMOUNT_PAISE) {
+      return errorResponse("Razorpay captured amount is below the $7 minimum.", 422, payment);
+    }
 
     const { data: fortunes, error: fortuneError } = await supabase
       .from("fortunes")

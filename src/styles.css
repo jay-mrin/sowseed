@@ -575,6 +575,15 @@ a {
   gap: 12px;
 }
 
+.checkout-method-toggles {
+  display: grid;
+  gap: 10px;
+}
+
+.checkout-method-toggle {
+  display: grid;
+}
+
 .checkout-route-option {
   display: grid;
   gap: 7px;
@@ -2998,25 +3007,24 @@ legend::after {
 }
 
 .payment-choice-razorpay {
+  position: relative;
   display: grid;
-  gap: 10px;
+  gap: 8px;
   margin: 0 0 14px;
-  padding: 16px;
-  border: 1px solid rgba(248, 50, 184, 0.18);
-  border-radius: calc(var(--card-radius) + 6px);
-  background:
-    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.95), transparent 34%),
-    linear-gradient(135deg, rgba(255, 217, 241, 0.94), rgba(232, 244, 255, 0.92));
-  box-shadow:
-    0 20px 40px rgba(248, 50, 184, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  padding: 12px 0 0;
+  border: 0;
+  background: transparent;
 }
 
 .payment-choice-head {
+  position: absolute;
+  inset: 0 20px auto;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  pointer-events: none;
 }
 
 .payment-choice-recommended,
@@ -3033,7 +3041,10 @@ legend::after {
 
 .payment-choice-recommended {
   color: #b21d7a;
-  background: rgba(255, 255, 255, 0.74);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 8px 18px rgba(248, 50, 184, 0.12),
+    0 0 18px rgba(248, 50, 184, 0.16);
 }
 
 .payment-choice-mode {
@@ -3042,22 +3053,18 @@ legend::after {
 }
 
 .razorpay-launch-button {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  position: relative;
+  display: block;
   width: 100%;
   min-height: 58px;
-  padding: 14px 18px;
-  border: 1px solid rgba(248, 50, 184, 0.28);
-  border-radius: var(--button-radius);
-  background:
-    radial-gradient(circle at 22% 24%, rgba(255, 255, 255, 0.92), transparent 18%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(255, 236, 247, 0.92));
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(206, 173, 255, 0.82);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
   box-shadow:
-    0 14px 28px rgba(248, 50, 184, 0.16),
-    0 0 24px rgba(248, 50, 184, 0.12);
-  color: #111a33;
+    0 16px 34px rgba(168, 123, 255, 0.16),
+    0 0 28px rgba(248, 50, 184, 0.16);
   transition:
     transform 160ms ease,
     box-shadow 160ms ease,
@@ -3066,46 +3073,22 @@ legend::after {
 
 .razorpay-launch-button:hover {
   transform: translateY(-1px);
-  border-color: rgba(248, 50, 184, 0.46);
+  border-color: rgba(174, 124, 255, 0.96);
   box-shadow:
-    0 18px 32px rgba(248, 50, 184, 0.2),
-    0 0 30px rgba(248, 50, 184, 0.18);
+    0 18px 36px rgba(168, 123, 255, 0.22),
+    0 0 34px rgba(248, 50, 184, 0.2);
 }
 
 .razorpay-launch-button:active {
   transform: translateY(0) scale(0.99);
 }
 
-.razorpay-label {
-  display: grid;
-  gap: 4px;
-  text-align: left;
-}
-
-.razorpay-label strong {
-  font-size: 21px;
-  font-weight: 950;
-  line-height: 1;
-}
-
-.razorpay-label small {
-  color: #6f7280;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.razorpay-cta {
-  display: inline-flex;
-  align-items: center;
-  min-height: 36px;
-  padding: 0 14px;
-  border-radius: 999px;
-  color: #fff;
-  background: linear-gradient(135deg, #f832b8, #d91e7e);
-  box-shadow: 0 10px 22px rgba(248, 50, 184, 0.24);
-  font-size: 13px;
-  font-weight: 900;
-  white-space: nowrap;
+.razorpay-launch-button img {
+  display: block;
+  width: 100%;
+  min-height: 58px;
+  object-fit: cover;
+  object-position: center;
 }
 
 .payment-status {

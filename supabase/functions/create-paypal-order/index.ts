@@ -15,18 +15,25 @@ function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+const MIN_AMOUNT_CENTS = 700;
+
 function normalizePaymentRoute(value: unknown) {
   return value === "superadmin" ? "superadmin" : "standard";
 }
 
-async function getCheckoutRoute() {
+async function getCheckoutSettings() {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase.from("site_settings").select("settings").eq("id", true).maybeSingle();
 
   if (error) throw error;
 
   const settings = data?.settings && typeof data.settings === "object" ? data.settings : {};
-  return normalizePaymentRoute((settings as Record<string, unknown>).checkoutRoute);
+  return {
+    checkoutRoute: normalizePaymentRoute((settings as Record<string, unknown>).checkoutRoute),
+    paypalEnabled:
+      (settings as Record<string, unknown>).paypalEnabled !== false &&
+      (settings as Record<string, unknown>).paypalEnabled !== "false",
+  };
 }
 
 Deno.serve(async (request) => {
@@ -41,11 +48,12 @@ Deno.serve(async (request) => {
     const supporterMessage = String(body.message || "").trim().slice(0, 280);
     const contactEmail = String(body.email || "").trim().slice(0, 160);
 
-    if (amountCents < 100) return errorResponse("Amount must be at least $1.", 422);
+    if (amountCents < MIN_AMOUNT_CENTS) return errorResponse("Amount must be at least $7.", 422);
     if (!displayName) return errorResponse("Display name is required.", 422);
     if (!isValidEmail(contactEmail)) return errorResponse("A valid email is required for the order detail.", 422);
 
-    const paymentRoute = await getCheckoutRoute();
+    const { checkoutRoute: paymentRoute, paypalEnabled } = await getCheckoutSettings();
+    if (!paypalEnabled) return errorResponse("PayPal/card checkout is currently disabled.", 403);
 
     const order = await createPayPalOrder({
       amountCents,

@@ -16,7 +16,7 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="src/styles.css?v=54" />
+    <link rel="stylesheet" href="src/styles.css?v=55" />
   </head>
   <body class="app-loading">
     <div class="app-loader" id="appLoader" role="status" aria-live="polite" aria-label="Loading Sow Your Seed">
@@ -247,6 +247,22 @@
               <span>SuperAdmin</span>
               <small>All payments go to the SuperAdmin PayPal account.</small>
             </button>
+          </div>
+          <div class="checkout-method-toggles" aria-label="Payment methods shown during checkout">
+            <label class="admin-toggle checkout-method-toggle">
+              <input id="superAdminRazorpayEnabled" type="checkbox" checked />
+              <span>
+                <strong>Razorpay</strong>
+                Show Razorpay as the recommended checkout option.
+              </span>
+            </label>
+            <label class="admin-toggle checkout-method-toggle">
+              <input id="superAdminPaypalEnabled" type="checkbox" checked />
+              <span>
+                <strong>PayPal / Card</strong>
+                Show PayPal wallet and eligible card checkout.
+              </span>
+            </label>
           </div>
         </section>
 
@@ -564,7 +580,7 @@
               <label class="field">
                 <span class="money-input">
                   <span>$</span>
-                  <input id="amountInput" type="number" min="1" step="0.01" value="7" inputmode="decimal" placeholder="Enter custom amount" />
+                  <input id="amountInput" type="number" min="7" step="0.01" value="7" inputmode="decimal" placeholder="Enter custom amount" />
                 </span>
                 <small id="amountError" class="error-message"></small>
               </label>
@@ -650,15 +666,11 @@
             <span class="payment-choice-mode">Test mode</span>
           </div>
           <button class="razorpay-launch-button" id="razorpayCheckoutButton" type="button">
-            <span class="razorpay-label">
-              <strong>Razorpay</strong>
-              <small>Primary test checkout</small>
-            </span>
-            <span class="razorpay-cta">Open checkout</span>
+            <img src="assets/razorpay-button.png" alt="Pay with Razorpay" />
           </button>
         </div>
 
-        <div class="payment-choice-stack" aria-label="Choose payment method">
+        <div class="payment-choice-stack" id="paymentChoiceStack" aria-label="Choose payment method">
           <div class="payment-choice paypal-choice" id="paypalButton">
             <span>PayPal</span>
             <div class="paypal-button-slot" id="paypalButtonContainer"></div>
@@ -673,7 +685,7 @@
           </div>
         </div>
 
-        <p class="powered-by">Powered by <strong>PayPal</strong></p>
+        <p class="powered-by" id="paypalPoweredBy">Powered by <strong>PayPal</strong></p>
 
         <button class="payment-back-button" id="backPaymentButton" type="button">Go back</button>
 
@@ -736,6 +748,6 @@
     </footer>
 
     <script src="src/config.js?v=1"></script>
-    <script src="src/app.js?v=55" defer></script>
+    <script src="src/app.js?v=56" defer></script>
   </body>
 </html>

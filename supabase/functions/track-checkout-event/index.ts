@@ -11,6 +11,7 @@ type CheckoutEventBody = {
 };
 
 const ALLOWED_EVENTS = new Set(["checkout_button_clicked", "paypal_checkout_started", "razorpay_checkout_started"]);
+const MIN_AMOUNT_CENTS = 700;
 
 function sanitizePath(value: unknown) {
   const path = String(value || "/").trim();
@@ -32,7 +33,7 @@ Deno.serve(async (request) => {
 
     if (!ALLOWED_EVENTS.has(eventName)) return errorResponse("Checkout event is invalid.", 422);
     if (!visitorKey) return errorResponse("Visitor key is required.", 422);
-    if (amountCents < 100) return errorResponse("Amount must be at least $1.", 422);
+    if (amountCents < MIN_AMOUNT_CENTS) return errorResponse("Amount must be at least $7.", 422);
     const paymentRoute = body.paymentRoute === "superadmin" ? "superadmin" : "standard";
 
     const supabase = getSupabaseAdmin();

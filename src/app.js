@@ -10,6 +10,7 @@ const VISITOR_KEY_KEY = "sow-your-seed:visitor-key";
 const ADMIN_PASSWORD = "sowseed";
 const PAYMENT_ANIMATION_MS = 220;
 const SEED_DOLLAR_VALUE = 7;
+const MIN_DONATION_AMOUNT = 7;
 const TOP_BRAND_TITLE = "Christ Paradise Garden💫✨🌱";
 const GOLDEN_SEED_AMOUNTS = new Set([111, 333, 777, 999]);
 const MAX_LOCAL_POST_IMAGE_BYTES = 2 * 1024 * 1024;
@@ -184,6 +185,8 @@ const DEFAULT_SETTINGS = {
   footerText: DEFAULT_FOOTER_TEXT,
   fortuneNumberEnabled: false,
   checkoutRoute: "standard",
+  razorpayEnabled: true,
+  paypalEnabled: true,
 };
 
 const seedFeed = [
@@ -313,10 +316,12 @@ const elements = {
   paymentEmailInput: document.querySelector("#paymentEmailInput"),
   paymentNote: document.querySelector("#paymentNote"),
   paymentStatus: document.querySelector("#paymentStatus"),
+  paypalPoweredBy: document.querySelector("#paypalPoweredBy"),
   razorpayChoice: document.querySelector("#razorpayChoice"),
   razorpayCheckoutButton: document.querySelector("#razorpayCheckoutButton"),
   paypalButton: document.querySelector("#paypalButton"),
   paypalButtonContainer: document.querySelector("#paypalButtonContainer"),
+  paymentChoiceStack: document.querySelector("#paymentChoiceStack"),
   postAuthorName: document.querySelector("#postAuthorName"),
   increaseSeedButton: document.querySelector("#increaseSeedButton"),
   postsPageList: document.querySelector("#postsPageList"),
@@ -343,6 +348,8 @@ const elements = {
   topSupporters: document.querySelector("#topSupporters"),
   topicPill: document.querySelector("#topicPill"),
   checkoutRouteOptions: document.querySelectorAll("[data-checkout-route]"),
+  superAdminPaypalEnabled: document.querySelector("#superAdminPaypalEnabled"),
+  superAdminRazorpayEnabled: document.querySelector("#superAdminRazorpayEnabled"),
   adminInputs: {
     aboutCollapsed: document.querySelector("#adminAboutCollapsed"),
     aboutExpanded: document.querySelector("#adminAboutExpanded"),
@@ -408,7 +415,7 @@ function parseAmountOptions(value) {
   const rawOptions = Array.isArray(value) ? value : String(value || "").split(",");
   const options = rawOptions
     .map((item) => Number.parseInt(item, 10))
-    .filter((amount) => Number.isFinite(amount) && amount > 0);
+    .filter((amount) => Number.isFinite(amount) && amount >= MIN_DONATION_AMOUNT);
 
   return options.length ? [...new Set(options)].slice(0, 8) : [...DEFAULT_SETTINGS.amountOptions];
 }
@@ -425,10 +432,12 @@ function normalizeSettings(settings) {
   next.meterCurrentAmount = Math.max(Number.parseFloat(next.meterCurrentAmount ?? next.startingSeeds) || 0, 0);
   next.meterCurrentAmount = getCurrentGoalCycleAmount(next.meterCurrentAmount, next.seedGoal);
   next.startingSeeds = 0;
-  next.seedPrice = Math.max(Number.parseInt(next.seedPrice, 10) || defaults.seedPrice, 1);
+  next.seedPrice = Math.max(Number.parseInt(next.seedPrice, 10) || defaults.seedPrice, MIN_DONATION_AMOUNT);
   next.amountOptions = parseAmountOptions(next.amountOptions);
   next.fortuneNumberEnabled = next.fortuneNumberEnabled === true || next.fortuneNumberEnabled === "true";
   next.checkoutRoute = next.checkoutRoute === "superadmin" ? "superadmin" : "standard";
+  next.razorpayEnabled = next.razorpayEnabled !== false && next.razorpayEnabled !== "false";
+  next.paypalEnabled = next.paypalEnabled !== false && next.paypalEnabled !== "false";
 
   Object.keys(defaults).forEach((key) => {
     if (key === "amountOptions" || typeof defaults[key] !== "string") return;
@@ -763,6 +772,8 @@ function applyBootstrap(payload) {
   state.settings = normalizeSettings({
     ...(payload.settings || {}),
     checkoutRoute: payload.payment?.checkoutRoute || payload.settings?.checkoutRoute,
+    razorpayEnabled: payload.payment?.razorpayEnabled ?? payload.settings?.razorpayEnabled,
+    paypalEnabled: payload.payment?.paypalEnabled ?? payload.settings?.paypalEnabled,
   });
   state.donations = Array.isArray(payload.donations) ? payload.donations : [];
   state.seedComments = normalizeSeedComments(payload.seedComments);
@@ -834,7 +845,7 @@ function finishInitialLoading() {
 }
 
 function getInitialDonationAmount() {
-  return Math.max(Number(state.settings.seedPrice) || SEED_DOLLAR_VALUE, 1);
+  return Math.max(Number(state.settings.seedPrice) || SEED_DOLLAR_VALUE, MIN_DONATION_AMOUNT);
 }
 
 async function initializeApp() {
@@ -2072,7 +2083,14 @@ function renderAdminForm() {
   inputs.paymentNote.value = settings.paymentNote;
   inputs.footerText.value = settings.footerText;
   inputs.fortuneNumberEnabled.checked = Boolean(settings.fortuneNumberEnabled);
+  if (elements.superAdminRazorpayEnabled) {
+    elements.superAdminRazorpayEnabled.checked = Boolean(settings.razorpayEnabled);
+  }
+  if (elements.superAdminPaypalEnabled) {
+    elements.superAdminPaypalEnabled.checked = Boolean(settings.paypalEnabled);
+  }
   renderCheckoutRouteControls();
+  renderCheckoutMethodToggles();
 }
 
 function getCheckoutRoute() {
@@ -2091,6 +2109,15 @@ function renderCheckoutRouteControls() {
     button.classList.toggle("is-selected", isActive);
     button.setAttribute("aria-checked", String(isActive));
   });
+}
+
+function renderCheckoutMethodToggles() {
+  if (elements.superAdminRazorpayEnabled) {
+    elements.superAdminRazorpayEnabled.checked = Boolean(state.settings.razorpayEnabled);
+  }
+  if (elements.superAdminPaypalEnabled) {
+    elements.superAdminPaypalEnabled.checked = Boolean(state.settings.paypalEnabled);
+  }
 }
 
 function renderAdminAnalytics() {
@@ -2359,6 +2386,17 @@ function getPaymentEmail() {
   return String(elements.paymentEmailInput?.value || "").trim();
 }
 
+function isRazorpayEnabled() {
+  return Boolean(state.settings.razorpayEnabled && (paymentConfig.razorpayKeyId || PUBLIC_CONFIG.razorpayKeyId));
+}
+
+function isPayPalEnabled() {
+  const route = getCheckoutRoute();
+  const clientId =
+    route === "superadmin" ? paymentConfig.superAdminPayPalClientId : paymentConfig.paypalClientId || PUBLIC_CONFIG.paypalClientId;
+  return Boolean(state.settings.paypalEnabled && clientId);
+}
+
 function isValidEmailAddress(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
 }
@@ -2383,8 +2421,9 @@ function stepSeedAmount(direction) {
 }
 
 function setAmount(amount) {
-  elements.amountInput.value = amount;
-  renderAmountOptions(amount);
+  const safeAmount = Math.max(Number.parseFloat(amount) || MIN_DONATION_AMOUNT, MIN_DONATION_AMOUNT);
+  elements.amountInput.value = safeAmount;
+  renderAmountOptions(safeAmount);
   elements.amountError.textContent = "";
   updateCheckoutLabel();
 }
@@ -2397,8 +2436,8 @@ function validateForm() {
   elements.amountError.textContent = "";
   elements.nameError.textContent = "";
 
-  if (amount < 1) {
-    elements.amountError.textContent = "Enter at least $1.";
+  if (amount < MIN_DONATION_AMOUNT) {
+    elements.amountError.textContent = `Enter at least $${MIN_DONATION_AMOUNT}.`;
     isValid = false;
   }
 
@@ -2419,6 +2458,29 @@ function setPaymentStatus(message, isError = false) {
   if (!elements.paymentStatus) return;
   elements.paymentStatus.textContent = message;
   elements.paymentStatus.classList.toggle("is-error", isError);
+}
+
+function updatePaymentMethodVisibility() {
+  const showRazorpay = isRazorpayEnabled();
+  const showPayPal = isPayPalEnabled();
+
+  if (elements.razorpayChoice) {
+    elements.razorpayChoice.hidden = !showRazorpay;
+  }
+  if (elements.paymentChoiceStack) {
+    elements.paymentChoiceStack.hidden = !showPayPal;
+  }
+  if (elements.paypalButton) {
+    elements.paypalButton.hidden = !showPayPal;
+  }
+  if (elements.cardButton) {
+    elements.cardButton.hidden = !showPayPal;
+  }
+  if (elements.paypalPoweredBy) {
+    elements.paypalPoweredBy.hidden = !showPayPal;
+  }
+
+  return { showRazorpay, showPayPal };
 }
 
 function submitDonation(event) {
@@ -2621,6 +2683,11 @@ async function startRazorpayCheckout() {
     return;
   }
 
+  if (!isRazorpayEnabled()) {
+    setPaymentStatus("Razorpay checkout is currently unavailable.", true);
+    return;
+  }
+
   try {
     const email = requirePaymentEmail();
     pendingDonation = { ...pendingDonation, email, paymentMethod: "razorpay", paymentMode: "test" };
@@ -2689,6 +2756,11 @@ async function startRazorpayCheckout() {
 
 async function renderPayPalButtons() {
   clearPayPalButtons();
+
+  if (!isPayPalEnabled()) {
+    setPaymentStatus("PayPal/card checkout is currently unavailable.");
+    return;
+  }
 
   if (!isBackendConfigured() || !backendReady) {
     setPaymentStatus("Backend is not configured yet. Fill src/config.js and deploy Supabase functions before live checkout.", true);
@@ -2789,11 +2861,18 @@ function openPaymentDialog() {
   window.clearTimeout(paymentCloseTimer);
   document.body.classList.add("payment-open");
   setPaymentStatus("Loading secure checkout...");
+  const { showRazorpay, showPayPal } = updatePaymentMethodVisibility();
   if (elements.paymentCopy) {
-    elements.paymentCopy.textContent =
-      paymentConfig.razorpayKeyId || PUBLIC_CONFIG.razorpayKeyId
-        ? "Razorpay test checkout is recommended for this session. The existing PayPal/card options stay below as fallback while we verify the flow."
-        : "Razorpay test checkout is not configured yet. The existing PayPal/card options stay below as fallback.";
+    if (showRazorpay && showPayPal) {
+      elements.paymentCopy.textContent =
+        "Razorpay test checkout is recommended for this session. PayPal/card options stay below as fallback.";
+    } else if (showRazorpay) {
+      elements.paymentCopy.textContent = "Razorpay test checkout is ready for this session.";
+    } else if (showPayPal) {
+      elements.paymentCopy.textContent = "PayPal/card checkout is ready for this session.";
+    } else {
+      elements.paymentCopy.textContent = "No payment methods are currently enabled. Please try again later.";
+    }
   }
   elements.paymentDialog.classList.remove("is-closing");
   if (elements.paymentEmailInput) {
@@ -2809,10 +2888,31 @@ function openPaymentDialog() {
   window.requestAnimationFrame(() => {
     elements.paymentDialog.classList.add("is-open");
   });
-  if (elements.razorpayChoice) {
-    elements.razorpayChoice.hidden = !paymentConfig.razorpayKeyId && !PUBLIC_CONFIG.razorpayKeyId;
+
+  const loadingTasks = [];
+  if (showRazorpay) {
+    loadingTasks.push(
+      loadRazorpaySdk().catch((error) => {
+        setPaymentStatus(error?.message || "Razorpay checkout could not load.", true);
+      }),
+    );
   }
-  renderPayPalButtons();
+  if (showPayPal) {
+    loadingTasks.push(renderPayPalButtons());
+  }
+
+  if (!loadingTasks.length) {
+    setPaymentStatus("No payment methods are currently enabled.", true);
+    return;
+  }
+
+  Promise.allSettled(loadingTasks).then(() => {
+    if (showRazorpay && !showPayPal) {
+      setPaymentStatus("Razorpay test checkout is ready.");
+    } else if (showRazorpay && showPayPal && !elements.paymentStatus.classList.contains("is-error")) {
+      setPaymentStatus("Razorpay and PayPal/card checkout are ready.");
+    }
+  });
 }
 
 function closePaymentDialog(afterClose) {
@@ -3063,6 +3163,8 @@ function getAdminSettings() {
     supportTitle: inputs.supportTitle.value,
     topicLabel: inputs.topicLabel.value,
     checkoutRoute: getCheckoutRoute(),
+    razorpayEnabled: Boolean(elements.superAdminRazorpayEnabled?.checked ?? state.settings.razorpayEnabled),
+    paypalEnabled: Boolean(elements.superAdminPaypalEnabled?.checked ?? state.settings.paypalEnabled),
   });
 }
 
@@ -3510,6 +3612,11 @@ elements.amountInput.addEventListener("input", () => {
   elements.amountError.textContent = "";
   updateCheckoutLabel();
 });
+elements.amountInput.addEventListener("blur", () => {
+  if (getAmount() < MIN_DONATION_AMOUNT) {
+    setAmount(MIN_DONATION_AMOUNT);
+  }
+});
 elements.decreaseSeedButton?.addEventListener("click", () => {
   stepSeedAmount(-1);
 });
@@ -3734,16 +3841,34 @@ elements.checkoutRouteOptions.forEach((button) => {
     });
   });
 });
+elements.superAdminRazorpayEnabled?.addEventListener("change", () => {
+  state.settings = normalizeSettings({ ...state.settings, razorpayEnabled: elements.superAdminRazorpayEnabled.checked });
+  setAdminStatus(`Razorpay checkout ${state.settings.razorpayEnabled ? "enabled" : "hidden"}. Save to make it live.`, "info", {
+    persist: true,
+  });
+});
+elements.superAdminPaypalEnabled?.addEventListener("change", () => {
+  state.settings = normalizeSettings({ ...state.settings, paypalEnabled: elements.superAdminPaypalEnabled.checked });
+  setAdminStatus(`PayPal/card checkout ${state.settings.paypalEnabled ? "enabled" : "hidden"}. Save to make it live.`, "info", {
+    persist: true,
+  });
+});
 elements.saveCheckoutRouteButton?.addEventListener("click", async () => {
-  const nextSettings = normalizeSettings({ ...state.settings, checkoutRoute: getCheckoutRoute() });
+  const nextSettings = normalizeSettings({
+    ...state.settings,
+    checkoutRoute: getCheckoutRoute(),
+    paypalEnabled: Boolean(elements.superAdminPaypalEnabled?.checked ?? state.settings.paypalEnabled),
+    razorpayEnabled: Boolean(elements.superAdminRazorpayEnabled?.checked ?? state.settings.razorpayEnabled),
+  });
 
   await runAdminAction(
     {
       button: elements.saveCheckoutRouteButton,
       busyText: "Saving...",
-      loadingMessage: "Saving PayPal checkout route...",
-      successMessage: () => `${getCheckoutRouteLabel(nextSettings.checkoutRoute)} checkout is now active.`,
-      errorMessage: "Could not save checkout route.",
+      loadingMessage: "Saving checkout settings...",
+      successMessage: () =>
+        `${getCheckoutRouteLabel(nextSettings.checkoutRoute)} checkout is active. Razorpay ${nextSettings.razorpayEnabled ? "on" : "off"}, PayPal/card ${nextSettings.paypalEnabled ? "on" : "off"}.`,
+      errorMessage: "Could not save checkout settings.",
     },
     async () => {
       if (isBackendConfigured() && getAdminAccessToken()) {
@@ -3761,6 +3886,7 @@ elements.saveCheckoutRouteButton?.addEventListener("click", async () => {
 
       resetPayPalSdk();
       renderCheckoutRouteControls();
+      renderCheckoutMethodToggles();
       renderApp();
     },
   );
