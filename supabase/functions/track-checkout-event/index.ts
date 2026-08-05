@@ -10,7 +10,7 @@ type CheckoutEventBody = {
   visitorKey?: string;
 };
 
-const ALLOWED_EVENTS = new Set(["checkout_button_clicked", "paypal_checkout_started"]);
+const ALLOWED_EVENTS = new Set(["checkout_button_clicked", "paypal_checkout_started", "razorpay_checkout_started"]);
 
 function sanitizePath(value: unknown) {
   const path = String(value || "/").trim();

@@ -7,6 +7,10 @@ type UpdateOrderBody = {
   fulfillmentNote?: string;
 };
 
+type DeleteDonationBody = {
+  donationId?: string;
+};
+
 function isDateOnly(value: string | null) {
   return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
 }
@@ -112,10 +116,42 @@ Deno.serve(async (request) => {
       return jsonResponse({ order: mapDigitalOrder(data) });
     }
 
+    if (request.method === "DELETE") {
+      if (adminProfile.role !== "super_admin") {
+        return errorResponse("Only superadmins can delete payment records.", 403);
+      }
+
+      const body = await readJson<DeleteDonationBody>(request);
+      const donationId = String(body.donationId || "").trim();
+
+      if (!donationId) return errorResponse("Donation id is required.", 422);
+
+      const { data: donation, error: donationError } = await supabase
+        .from("donations")
+        .select("id")
+        .eq("id", donationId)
+        .maybeSingle();
+
+      if (donationError) throw donationError;
+      if (!donation) return errorResponse("Donation not found.", 404);
+
+      const { error: commentDeleteError } = await supabase.from("seed_comments").delete().eq("donation_id", donationId);
+      if (commentDeleteError) throw commentDeleteError;
+
+      const { error: orderDeleteError } = await supabase.from("digital_orders").delete().eq("donation_id", donationId);
+      if (orderDeleteError) throw orderDeleteError;
+
+      const { error: deleteError } = await supabase.from("donations").delete().eq("id", donationId);
+      if (deleteError) throw deleteError;
+
+      return jsonResponse({ success: true, donationId });
+    }
+
     const month = url.searchParams.get("month");
     const exportRows = url.searchParams.get("export") === "csv";
     const startDate = url.searchParams.get("startDate");
     const endDate = url.searchParams.get("endDate");
+    const routeFilter = url.searchParams.get("route");
     let query = supabase
       .from("donations")
       .select(
@@ -145,7 +181,7 @@ Deno.serve(async (request) => {
     if (adminProfile.role === "admin") {
       query = query.neq("payment_route", "superadmin");
     } else if (adminProfile.role === "super_admin") {
-      query = query.eq("payment_route", "superadmin");
+      query = routeFilter === "standard" ? query.neq("payment_route", "superadmin") : query.eq("payment_route", "superadmin");
     }
 
     if (exportRows && isDateOnly(startDate)) {

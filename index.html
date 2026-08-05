@@ -186,6 +186,50 @@
           </section>
         </section>
 
+        <section class="admin-section admin-standard-donations" id="superAdminStandardDonationsSection" hidden>
+          <div class="admin-donation-heading">
+            <h3>Admin PayPal calendar</h3>
+            <p>Normal admin checkout records, visible here for SuperAdmin deletion and proof review.</p>
+          </div>
+          <section class="admin-calendar" aria-labelledby="superAdminStandardCalendarTitle">
+            <div class="admin-calendar-header">
+              <button
+                class="admin-calendar-nav"
+                id="superAdminStandardCalendarPrev"
+                type="button"
+                aria-label="Previous admin payment month"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m15 18-6-6 6-6" />
+                </svg>
+              </button>
+              <h4 id="superAdminStandardCalendarTitle">Admin PayPal calendar</h4>
+              <button
+                class="admin-calendar-nav"
+                id="superAdminStandardCalendarNext"
+                type="button"
+                aria-label="Next admin payment month"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m9 18 6-6-6-6" />
+                </svg>
+              </button>
+            </div>
+            <div class="admin-calendar-weekdays" aria-hidden="true">
+              <span>Sun</span>
+              <span>Mon</span>
+              <span>Tue</span>
+              <span>Wed</span>
+              <span>Thu</span>
+              <span>Fri</span>
+              <span>Sat</span>
+            </div>
+            <div class="admin-calendar-grid" id="superAdminStandardCalendarGrid" role="grid" aria-label="Admin PayPal donation records"></div>
+            <div class="admin-calendar-details" id="superAdminStandardCalendarDetails" aria-live="polite"></div>
+            <div class="admin-calendar-summary" id="superAdminStandardCalendarSummary" aria-live="polite"></div>
+          </section>
+        </section>
+
         <section class="admin-section admin-super-checkout-section" id="adminSuperCheckoutSection" hidden>
           <div class="admin-super-checkout-heading">
             <div>
@@ -596,9 +640,23 @@
 
         <h3>Pay with...</h3>
         <p class="payment-copy" id="paymentCopy">
-          You're paying Sow Your Seed Here for Your Soulmate 💫 directly through international PayPal/card checkout. Tips are voluntary and freely given.
+          Razorpay test checkout is recommended for this session. The existing PayPal/card options stay below as fallback while we verify the flow.
         </p>
         <p class="payment-status" id="paymentStatus" role="status" aria-live="polite"></p>
+
+        <div class="payment-choice payment-choice-razorpay" id="razorpayChoice">
+          <div class="payment-choice-head">
+            <span class="payment-choice-recommended">Recommended</span>
+            <span class="payment-choice-mode">Test mode</span>
+          </div>
+          <button class="razorpay-launch-button" id="razorpayCheckoutButton" type="button">
+            <span class="razorpay-label">
+              <strong>Razorpay</strong>
+              <small>Primary test checkout</small>
+            </span>
+            <span class="razorpay-cta">Open checkout</span>
+          </button>
+        </div>
 
         <div class="payment-choice-stack" aria-label="Choose payment method">
           <div class="payment-choice paypal-choice" id="paypalButton">

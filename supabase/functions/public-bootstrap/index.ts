@@ -73,23 +73,31 @@ Deno.serve(async (request) => {
 
     const { data: allDonations, error: donationsError } = await supabase
       .from("donations")
-      .select("id, display_name, amount, seed_count, frequency, supporter_message, paypal_status, created_at, payment_route, super_approved")
+      .select("id, display_name, amount, seed_count, frequency, supporter_message, paypal_status, created_at, payment_route, super_approved, payment_method, raw_payment")
       .eq("paypal_status", "COMPLETED")
       .order("created_at", { ascending: false })
       .limit(100);
     if (donationsError) throw donationsError;
-    const donations = (allDonations || []).filter(d => d.payment_route !== "superadmin").slice(0, 50);
+    const donations = (allDonations || [])
+      .filter((donation) => {
+        if (donation.payment_route === "superadmin") return false;
+        const rawPayment = donation.raw_payment && typeof donation.raw_payment === "object" ? donation.raw_payment : {};
+        return rawPayment.mode !== "test";
+      })
+      .slice(0, 50);
 
     const { data: allSeedComments, error: seedCommentsError } = await supabase
       .from("seed_comments")
-      .select("id, display_name, body, amount, seed_count, source, created_at, donations(payment_route, super_approved)")
+      .select("id, display_name, body, amount, seed_count, source, created_at, donations(payment_route, super_approved, payment_method, raw_payment)")
       .order("created_at", { ascending: false })
       .limit(1000);
     if (seedCommentsError) throw seedCommentsError;
     const seedComments = (allSeedComments || []).filter(c => {
       if (c.source === "legacy") return true;
       if (!c.donations) return true;
-      return c.donations.payment_route !== "superadmin";
+      if (c.donations.payment_route === "superadmin") return false;
+      const rawPayment = c.donations.raw_payment && typeof c.donations.raw_payment === "object" ? c.donations.raw_payment : {};
+      return rawPayment.mode !== "test";
     }).slice(0, 520);
 
     const { data: posts, error: postsError } = await supabase
@@ -178,6 +186,9 @@ Deno.serve(async (request) => {
       payment: {
         paypalClientId: getPayPalClientId(),
         superAdminPayPalClientId: getPayPalClientId("superadmin"),
+        razorpayKeyId: Deno.env.get("RAZORPAY_KEY_ID") || "",
+        razorpayCurrency: Deno.env.get("RAZORPAY_CURRENCY") || "USD",
+        razorpayMode: Deno.env.get("RAZORPAY_MODE") || "test",
         checkoutRoute,
         currency: Deno.env.get("PAYPAL_CURRENCY") || "USD",
         env: Deno.env.get("PAYPAL_ENV") || "sandbox",
