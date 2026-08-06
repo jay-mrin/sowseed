@@ -16,10 +16,28 @@ const GOLDEN_SEED_AMOUNTS = new Set([111, 333, 777, 999]);
 const MAX_LOCAL_POST_IMAGE_BYTES = 2 * 1024 * 1024;
 const MAX_REMOTE_POST_IMAGE_BYTES = 5 * 1024 * 1024;
 const FORTUNE_NUMBER_SPECIAL_CHANCE = 0.01;
-const DIGITAL_ORDER_ITEM_NAME = "Personalised Digital Blessing and Sowing Seed";
+const DIGITAL_ORDER_ITEM_NAME = "Personalised Digital Writing - Custom Order Made Writing";
 const LEGACY_FOOTER_TEXT = "Sow Your Seed exists to make support feel generous, clear, and personal.";
 const DEFAULT_FOOTER_TEXT =
-  "This is a creator tipping platform where supporters can voluntarily tip the creator for their work. Tips are freely given, paid directly to the creator, and are not tied to any indirect exchange, guaranteed result, or required purchase.";
+  "This platform provides personalised digital writing created from your submitted prayer or intention. Each purchase is a custom order, prepared directly for the buyer.";
+const WISE_SUPPORTED_AMOUNTS = new Set([7, 11, 33, 77, 111, 333, 777, 999]);
+const CUSTOM_ORDER_STRING_KEYS = new Set([
+  "aboutCollapsed",
+  "aboutExpanded",
+  "aboutTitle",
+  "footerText",
+  "meterCollapsed",
+  "meterExpanded",
+  "meterHeadline",
+  "paymentCopy",
+  "paymentNote",
+  "postAuthorName",
+  "postBody",
+  "postTitle",
+  "profileTitle",
+  "supportTitle",
+  "topicLabel",
+]);
 const DONATION_EXPORT_HEADERS = [
   "DateTime (UTC)",
   "From",
@@ -161,16 +179,16 @@ const DEFAULT_SETTINGS = {
   seedPrice: 7,
   amountOptions: [7, 11, 33, 77, 111, 333, 777, 999],
   meterHeadline:
-    "༺💗༻ Click the Donate button to sow your seed now. With every seed you sow, you whisper to the universe: “Bring my soulmate to me.” 🌱💫🌹",
+    "༺💗༻ Start your personalised writing order now. With every seed you choose, you share an intention for your soulmate and loved ones. 🌱💫🌹",
   meterCollapsed:
     "Welcome, beloved seeker of love. 💗 You didn’t arrive by accident. This is your sacred step toward the soulmate your heart whispers for....",
   meterExpanded:
-    "Welcome, beloved seeker of love. 💗 You didn’t arrive by accident. This is your sacred step toward the soulmate your heart whispers for.\n\nEvery seed you sow is a seed of intention. 🌱 1 seed ($7) – I'm ready. 🌱🌱🌱 3 seeds ($21) – Mind, body, soulmate aligned. 🌱🌱🌱🌱🌱🌱🌱 7 seeds ($49) – Protection over reunion. 🌱🌱🌱🌱🌱🌱🌱🌱🌱🌱🌱 11 seeds ($77) – Eternal love. ༺💗༻ Click Donate to sow your seed now. Whisper to the universe: “Bring my soulmate to me.” The field is open. 🌱💫🌹",
+    "Welcome, beloved seeker of love. 💗 You didn’t arrive by accident. This is your sacred step toward the soulmate your heart whispers for.\n\nEvery seed is part of your custom writing intention. 🌱 1 seed ($7) – I'm ready. 🌱🌱🌱 3 seeds ($21) – Mind, body, soulmate aligned. 🌱🌱🌱🌱🌱🌱🌱 7 seeds ($49) – Protection over reunion. 🌱🌱🌱🌱🌱🌱🌱🌱🌱🌱🌱 11 seeds ($77) – Eternal love. Share your request and receive a personalised digital writing prepared with care. 🌱💫🌹",
   aboutTitle: "About",
   aboutCollapsed:
     "🌱✨ Sow a Seed for the Soulmate You’ve Been Waiting For ✨🌱\nTired of waiting for that special someone to...",
   aboutExpanded:
-    "🌱✨ Sow a Seed for the Soulmate You’ve Been Waiting For ✨🌱\n\nTired of waiting for that special someone to appear? Every seed you sow is a loving step toward calling in your soulmate. I channel warm, heartfelt soulmate messages, signs, and gentle guidance just for you.\n\nYour donation isn’t just support, it’s an act of faith, intention, and hope. Sow your seed and let love meet you where you are.",
+    "🌱✨ A Personalised Writing for Your Soulmate & Loved Ones ✨🌱\n\nShare your prayer or intention and receive a heartfelt custom writing created especially for your request.\n\nEvery order is prepared with care, faith, and hope.",
   topicLabel: "Spirituality",
   supportTitle:
     "Buy a Seed to Sow for the Love You’ve Been Waiting For in 💕Christ Pradise garden💫",
@@ -179,12 +197,13 @@ const DEFAULT_SETTINGS = {
   postBody:
     "Each seed is a small act of trust, a prayerful step toward the love your heart has been waiting for.",
   paymentCopy:
-    "Razorpay test checkout is recommended for this session. The existing PayPal/card options stay below as fallback while we verify the flow.",
+    "Choose the payment method that works best for your custom writing order.",
   paymentNote:
-    "By proceeding with your payment, you acknowledge that you are paying Sow Your Seed Here for Your Soulmate 💫 directly. Tips are voluntary support and are not tied to any guaranteed result.",
+    "By proceeding, you are purchasing a personalised digital writing created from your submitted prayer or intention. Your order is prepared directly for you.",
   footerText: DEFAULT_FOOTER_TEXT,
   fortuneNumberEnabled: false,
   checkoutRoute: "standard",
+  wiseEnabled: true,
   razorpayEnabled: true,
   paypalEnabled: true,
 };
@@ -317,6 +336,8 @@ const elements = {
   paymentNote: document.querySelector("#paymentNote"),
   paymentStatus: document.querySelector("#paymentStatus"),
   paypalPoweredBy: document.querySelector("#paypalPoweredBy"),
+  wiseChoice: document.querySelector("#wiseChoice"),
+  wiseCheckoutButton: document.querySelector("#wiseCheckoutButton"),
   razorpayChoice: document.querySelector("#razorpayChoice"),
   razorpayCheckoutButton: document.querySelector("#razorpayCheckoutButton"),
   paypalButton: document.querySelector("#paypalButton"),
@@ -350,6 +371,8 @@ const elements = {
   checkoutRouteOptions: document.querySelectorAll("[data-checkout-route]"),
   superAdminPaypalEnabled: document.querySelector("#superAdminPaypalEnabled"),
   superAdminRazorpayEnabled: document.querySelector("#superAdminRazorpayEnabled"),
+  superAdminWiseEnabled: document.querySelector("#superAdminWiseEnabled"),
+  purgeAllOrdersButton: document.querySelector("#purgeAllOrdersButton"),
   adminInputs: {
     aboutCollapsed: document.querySelector("#adminAboutCollapsed"),
     aboutExpanded: document.querySelector("#adminAboutExpanded"),
@@ -420,6 +443,26 @@ function parseAmountOptions(value) {
   return options.length ? [...new Set(options)].slice(0, 8) : [...DEFAULT_SETTINGS.amountOptions];
 }
 
+function toCustomOrderCopy(value) {
+  return String(value || "")
+    .replace(/\bcreator tipping platform\b/gi, "personalised digital writing platform")
+    .replace(/\bCreator Support\b/g, "Custom Order Writing")
+    .replace(/\bTip to Creator\b/g, DIGITAL_ORDER_ITEM_NAME)
+    .replace(/\bTips are\b/gi, "Custom-order payments are")
+    .replace(/\btips are\b/gi, "custom-order payments are")
+    .replace(/\btips\b/gi, "payments")
+    .replace(/\btip\b/gi, "payment")
+    .replace(/\btipping\b/gi, "custom-order")
+    .replace(/\bdonations\b/gi, "orders")
+    .replace(/\bdonation\b/gi, "order")
+    .replace(/\bdonate\b/gi, "order")
+    .replace(/\bdonors\b/gi, "customers")
+    .replace(/\bdonor\b/gi, "customer")
+    .replace(/\bsupporters\b/gi, "customers")
+    .replace(/\bsupporter\b/gi, "customer")
+    .replace(/\bsupport\b/gi, "custom writing");
+}
+
 function normalizeSettings(settings) {
   const defaults = cloneDefaultSettings();
   const next = {
@@ -436,12 +479,14 @@ function normalizeSettings(settings) {
   next.amountOptions = parseAmountOptions(next.amountOptions);
   next.fortuneNumberEnabled = next.fortuneNumberEnabled === true || next.fortuneNumberEnabled === "true";
   next.checkoutRoute = next.checkoutRoute === "superadmin" ? "superadmin" : "standard";
+  next.wiseEnabled = next.wiseEnabled !== false && next.wiseEnabled !== "false";
   next.razorpayEnabled = next.razorpayEnabled !== false && next.razorpayEnabled !== "false";
   next.paypalEnabled = next.paypalEnabled !== false && next.paypalEnabled !== "false";
 
   Object.keys(defaults).forEach((key) => {
     if (key === "amountOptions" || typeof defaults[key] !== "string") return;
-    next[key] = String(next[key] || defaults[key]).trim() || defaults[key];
+    const rawValue = String(next[key] || defaults[key]).trim() || defaults[key];
+    next[key] = CUSTOM_ORDER_STRING_KEYS.has(key) ? toCustomOrderCopy(rawValue) : rawValue;
   });
 
   if (next.footerText === LEGACY_FOOTER_TEXT) {
@@ -461,7 +506,7 @@ function normalizeComments(comments) {
     ? comments
         .map((comment, index) => {
           const text = String(comment?.text || comment?.body || "").trim();
-          const name = String(comment?.name || "Supporter").trim().slice(0, 48) || "Supporter";
+          const name = String(comment?.name || "Customer").trim().slice(0, 48) || "Customer";
 
           if (!text) return null;
 
@@ -481,7 +526,7 @@ function normalizeSeedComments(comments) {
     ? comments
         .map((comment, index) => {
           const text = String(comment?.text || comment?.body || "").trim();
-          const name = String(comment?.name || comment?.display_name || "Supporter").trim().slice(0, 80) || "Supporter";
+          const name = String(comment?.name || comment?.display_name || "Customer").trim().slice(0, 80) || "Customer";
           const createdAt = toSafeIsoDate(comment?.createdAt || comment?.created_at);
 
           if (!text) return null;
@@ -772,6 +817,7 @@ function applyBootstrap(payload) {
   state.settings = normalizeSettings({
     ...(payload.settings || {}),
     checkoutRoute: payload.payment?.checkoutRoute || payload.settings?.checkoutRoute,
+    wiseEnabled: payload.payment?.wiseEnabled ?? payload.settings?.wiseEnabled,
     razorpayEnabled: payload.payment?.razorpayEnabled ?? payload.settings?.razorpayEnabled,
     paypalEnabled: payload.payment?.paypalEnabled ?? payload.settings?.paypalEnabled,
   });
@@ -1057,12 +1103,12 @@ function getPaymentProviderLabel(value) {
 function getDonationExportRow(donation) {
   return {
     "DateTime (UTC)": getDonationRawValue(donation, "DateTime (UTC)", formatCsvDateTime(donation.createdAt)),
-    From: getDonationRawValue(donation, "From", donation.name || "Supporter"),
-    Item: "Tip to Creator",
+    From: getDonationRawValue(donation, "From", donation.name || "Customer"),
+    Item: DIGITAL_ORDER_ITEM_NAME,
     Received: getDonationRawValue(donation, "Received", formatCsvAmount(donation.amount)),
     Given: getDonationRawValue(donation, "Given", "0"),
     Currency: getDonationRawValue(donation, "Currency", CONFIG.currency),
-    TransactionType: getDonationRawValue(donation, "TransactionType", "Tip"),
+    TransactionType: getDonationRawValue(donation, "TransactionType", "Custom order payment"),
     TransactionId: getDonationRawValue(donation, "TransactionId", donation.captureId || donation.id || ""),
     Reference: getDonationRawValue(donation, "Reference", donation.orderId || ""),
     SalesTax: getDonationRawValue(donation, "SalesTax", ""),
@@ -1112,7 +1158,7 @@ function getDonationExportFilename({ startDate, endDate }) {
   const dateStamp = toDateKey(new Date());
   const rangeLabel = startDate || endDate ? `${startDate || "start"}-to-${endDate || "today"}` : dateStamp;
 
-  return `sow-your-seed-donations-${rangeLabel}.csv`;
+  return `christ-paradise-custom-orders-${rangeLabel}.csv`;
 }
 
 function downloadTextFile(filename, text, mimeType = "text/csv;charset=utf-8") {
@@ -1133,8 +1179,8 @@ function downloadBlobFile(filename, blob) {
 
 async function exportAdminDonationCsv() {
   if (!isBackendConfigured() || !getAdminAccessToken()) {
-    setAdminStatus("Sign in as admin before exporting donations.", "error", { persist: true });
-    showToast("Sign in as admin before exporting donations.");
+    setAdminStatus("Sign in as admin before exporting order records.", "error", { persist: true });
+    showToast("Sign in as admin before exporting order records.");
     return;
   }
 
@@ -1149,17 +1195,17 @@ async function exportAdminDonationCsv() {
 
   const rangeText =
     range.startDate || range.endDate
-      ? ` from ${range.startDate || "the first donation"} to ${range.endDate || "today"}`
+      ? ` from ${range.startDate || "the first order"} to ${range.endDate || "today"}`
       : "";
 
   await runAdminAction(
     {
       button: elements.adminExportCsvButton,
       busyText: "Exporting...",
-      loadingMessage: `Preparing donation CSV export${rangeText}...`,
+      loadingMessage: `Preparing order CSV export${rangeText}...`,
       successMessage: (result) =>
-        `Exported ${result?.rowCount || 0} donation row${result?.rowCount === 1 ? "" : "s"}${rangeText} as CSV.`,
-      errorMessage: "Could not export donation CSV.",
+        `Exported ${result?.rowCount || 0} order row${result?.rowCount === 1 ? "" : "s"}${rangeText} as CSV.`,
+      errorMessage: "Could not export order CSV.",
     },
     async () => {
       const payload = await callEdge(getDonationExportQuery(range), {
@@ -1288,8 +1334,8 @@ function buildProofPdfLines(donation) {
     `Generated: ${readableUtcDateTime(new Date().toISOString())}`,
     `Order ID: ${orderNumber || "Not available"}`,
     `Payment date: ${readableUtcDateTime(createdAt)}`,
-    `Customer name: ${donation.name || order.customerName || "Supporter"}`,
-    `Contact email: ${contactEmail || "Not provided by supporter"}`,
+    `Customer name: ${donation.name || order.customerName || "Customer"}`,
+    `Contact email: ${contactEmail || "Not provided by customer"}`,
     `Buyer email: ${payerEmail || "Not provided by PayPal"}`,
     `Item: ${itemName}`,
     `Amount received: ${formatCsvAmount(amount)} ${currency}`,
@@ -1450,7 +1496,7 @@ async function saveDigitalOrderFulfillment(donationId, button) {
 async function deleteDonationRecord(donationId, button) {
   const donation = getDonationById(donationId);
   const statusElement = elements.adminActionStatus;
-  const name = donation?.name || "this supporter";
+  const name = donation?.name || "this customer";
   const amount = donation ? money(donation.amount) : "this payment";
 
   if (!donation) {
@@ -1460,7 +1506,7 @@ async function deleteDonationRecord(donationId, button) {
   }
 
   const confirmed = window.confirm(
-    `Delete ${amount} from ${name}? This permanently erases the donation, digital order, donor token, and public comment.`,
+    `Delete ${amount} from ${name}? This permanently erases the order, payment record, customer access, and any public activity.`,
   );
 
   if (!confirmed) return;
@@ -1471,9 +1517,9 @@ async function deleteDonationRecord(donationId, button) {
       statusElement,
       button,
       busyText: "Deleting...",
-      loadingMessage: "Deleting payment record everywhere...",
-      successMessage: "Payment record deleted from donations, orders, tokens, comments, and public surfaces.",
-      errorMessage: "Could not delete payment record.",
+      loadingMessage: "Deleting order record everywhere...",
+      successMessage: "Order and linked payment record deleted from all site surfaces.",
+      errorMessage: "Could not delete order record.",
     },
     async () => {
       const payload = await callEdge("admin-donations", {
@@ -1493,6 +1539,63 @@ async function deleteDonationRecord(donationId, button) {
       renderApp();
       await loadAdminDonations();
       return payload;
+    },
+  );
+}
+
+async function confirmWiseOrder(donationId, button) {
+  if (!window.confirm("Confirm that this Wise payment was received? This will mark the private order as paid.")) return;
+
+  await runAdminAction(
+    {
+      panel: elements.adminPanel,
+      statusElement: elements.adminActionStatus,
+      button,
+      busyText: "Confirming...",
+      loadingMessage: "Confirming Wise payment...",
+      successMessage: "Wise payment confirmed. The private order is ready for fulfillment.",
+      errorMessage: "Could not confirm Wise payment.",
+    },
+    async () => {
+      await callEdge("admin-donations", {
+        admin: true,
+        method: "PATCH",
+        body: { donationId, confirmWise: true },
+      });
+      await loadAdminDonations();
+      renderAdminCalendar();
+      return { success: true };
+    },
+  );
+}
+
+async function purgeAllPaymentRecords(button) {
+  const password = window.prompt("Enter the SuperAdmin purge password to erase every order and payment record.");
+  if (!password) return;
+  if (!window.confirm("This permanently removes every payment, order, linked comment, and checkout event. Continue?")) return;
+
+  await runAdminAction(
+    {
+      panel: elements.adminPanel,
+      statusElement: elements.adminActionStatus,
+      button,
+      busyText: "Erasing...",
+      loadingMessage: "Erasing all order and payment records...",
+      successMessage: "All order and payment records were erased.",
+      errorMessage: "Could not erase all records.",
+    },
+    async () => {
+      await callEdge("admin-donations", {
+        admin: true,
+        method: "PUT",
+        body: { purgeAll: true, password },
+      });
+      state.donations = [];
+      state.superAdminStandardDonations = [];
+      state.seedComments = [];
+      await Promise.all([loadBackendData({ throwOnError: true }), loadAdminDonations()]);
+      renderApp();
+      return { success: true };
     },
   );
 }
@@ -1563,11 +1666,11 @@ async function approveSuperAdminDonation(donationId, button) {
     const donation = state.donations.find((d) => d.id === donationId);
     if (donation) donation.superApproved = true;
     renderAdminCalendarDetails();
-    showToast("Superadmin donation approved.");
+    showToast("SuperAdmin order approved.");
   } catch (error) {
     button.disabled = false;
     button.textContent = prevText;
-    showToast(error.message || "Could not approve donation.");
+    showToast(error.message || "Could not approve order.");
   }
 }
 
@@ -1583,7 +1686,7 @@ async function loadAdminDonations(options = {}) {
     elements.adminCalendarNext.disabled = true;
     if (elements.superAdminStandardCalendarPrev) elements.superAdminStandardCalendarPrev.disabled = true;
     if (elements.superAdminStandardCalendarNext) elements.superAdminStandardCalendarNext.disabled = true;
-    setAdminStatus(`Loading donations for ${formatMonthTitle(adminCalendarCursor)}...`, "loading", { persist: true });
+    setAdminStatus(`Loading order records for ${formatMonthTitle(adminCalendarCursor)}...`, "loading", { persist: true });
   }
 
   try {
@@ -1617,10 +1720,10 @@ async function loadAdminDonations(options = {}) {
     }
 
     if (announce) {
-      setAdminStatus(`Donation calendar loaded for ${formatMonthTitle(adminCalendarCursor)}.`, "success");
+      setAdminStatus(`Order calendar loaded for ${formatMonthTitle(adminCalendarCursor)}.`, "success");
     }
   } catch (error) {
-    const message = error.message || "Could not load admin donation calendar.";
+    const message = error.message || "Could not load admin order calendar.";
     setAdminStatus(message, "error", { persist: true });
     showToast(message);
   } finally {
@@ -1703,7 +1806,7 @@ async function refreshAdminPortalData() {
   if (elements.adminCalendarNext) elements.adminCalendarNext.disabled = true;
   if (elements.superAdminStandardCalendarPrev) elements.superAdminStandardCalendarPrev.disabled = true;
   if (elements.superAdminStandardCalendarNext) elements.superAdminStandardCalendarNext.disabled = true;
-  setAdminStatus("Reloading page content, donations, posts, and page views...", "loading", { persist: true });
+  setAdminStatus("Reloading page content, order records, posts, and page views...", "loading", { persist: true });
 
   try {
     await loadBackendData({ throwOnError: true });
@@ -1782,7 +1885,7 @@ function getAmountSeedMarkup(amount) {
 function renderSettings() {
   const settings = state.settings;
 
-  document.title = `${TOP_BRAND_TITLE} | Creator Support`;
+  document.title = `${TOP_BRAND_TITLE} | Custom Order Writing`;
   elements.brandTitle.textContent = TOP_BRAND_TITLE;
   elements.profileTitle.textContent = settings.profileTitle;
   elements.followersText.textContent = settings.followersText;
@@ -1826,16 +1929,16 @@ function renderFeed() {
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .slice(0, 8)
     .map((item) => {
-      const name = item.anonymous ? "Private supporter" : item.name;
+      const name = item.anonymous ? "Private customer" : item.name;
       const seedCount = getSeedCountFromAmount(item.amount);
-      const cadence = item.frequency === "monthly" ? "monthly seed" : "seed";
+      const cadence = item.frequency === "monthly" ? "monthly writing order" : "writing order";
 
       return `
         <article class="feed-card">
           <div class="feed-meta">
             <span class="avatar">${initials(name)}</span>
             <div class="feed-title">
-              ${escapeHtml(name)} sowed ${seedCount} ${cadence}${seedCount === 1 ? "" : "s"}
+              ${escapeHtml(name)} placed a ${cadence} for ${seedCount} seed${seedCount === 1 ? "" : "s"}
               <small>${relativeTime(item.createdAt)}</small>
             </div>
           </div>
@@ -1857,7 +1960,7 @@ function renderRecentDonations() {
   elements.recentDonationList.innerHTML = donations.length
     ? donations
         .map((donation) => {
-          const name = donation.anonymous ? "Private supporter" : donation.name || "Friend of the ministry";
+          const name = donation.anonymous ? "Private customer" : donation.name || "Christ Garden customer";
           const seedCount = getSeedCountFromAmount(donation.amount);
           const createdAt = donation.createdAt || new Date().toISOString();
 
@@ -1865,7 +1968,7 @@ function renderRecentDonations() {
             <article class="recent-donation-item">
               <span class="avatar">${initials(name)}</span>
               <div>
-                <strong>${escapeHtml(name)} sowed ${seedCount} seed${seedCount === 1 ? "" : "s"}</strong>
+                <strong>${escapeHtml(name)} ordered ${seedCount} seed${seedCount === 1 ? "" : "s"}</strong>
                 <small>${readableDate(createdAt)} · ${relativeTime(createdAt)}</small>
               </div>
             </article>
@@ -1885,7 +1988,7 @@ function renderSeedComments() {
         .map((comment) => {
           const seedCount = Number.isFinite(comment.seedCount) && comment.seedCount > 0 ? comment.seedCount : null;
           const seedLabel = seedCount
-            ? `Sowed ${seedCount} seed${seedCount === 1 ? "" : "s"}`
+            ? `Custom order for ${seedCount} seed${seedCount === 1 ? "" : "s"}`
             : "Blessing comment";
 
           return `
@@ -1902,7 +2005,7 @@ function renderSeedComments() {
           `;
         })
         .join("")
-    : `<p class="empty-state">Blessing comments will appear here after supporters sow a seed.</p>`;
+    : `<p class="empty-state">Blessing comments will appear here after completed custom writing orders.</p>`;
 }
 
 function renderPostCard(post, compact = false) {
@@ -2030,7 +2133,7 @@ function renderTopSupporters() {
   if (!elements.topSupporters) return;
 
   const totals = state.donations.reduce((acc, item) => {
-    const name = item.anonymous ? "Private supporter" : item.name;
+    const name = item.anonymous ? "Private customer" : item.name;
     acc[name] = (acc[name] || 0) + getSeedCountFromAmount(item.amount);
     return acc;
   }, {});
@@ -2043,7 +2146,7 @@ function renderTopSupporters() {
         <div class="supporter-row">
           <div>
             <strong>${index + 1}. ${escapeHtml(name)}</strong>
-            <span>${index === 0 ? "Leading supporter" : "Community supporter"}</span>
+            <span>${index === 0 ? "Leading customer" : "Christ Garden customer"}</span>
           </div>
           <div class="total">${seeds} seed${seeds === 1 ? "" : "s"}</div>
         </div>
@@ -2089,6 +2192,9 @@ function renderAdminForm() {
   if (elements.superAdminPaypalEnabled) {
     elements.superAdminPaypalEnabled.checked = Boolean(settings.paypalEnabled);
   }
+  if (elements.superAdminWiseEnabled) {
+    elements.superAdminWiseEnabled.checked = Boolean(settings.wiseEnabled);
+  }
   renderCheckoutRouteControls();
   renderCheckoutMethodToggles();
 }
@@ -2112,6 +2218,9 @@ function renderCheckoutRouteControls() {
 }
 
 function renderCheckoutMethodToggles() {
+  if (elements.superAdminWiseEnabled) {
+    elements.superAdminWiseEnabled.checked = Boolean(state.settings.wiseEnabled);
+  }
   if (elements.superAdminRazorpayEnabled) {
     elements.superAdminRazorpayEnabled.checked = Boolean(state.settings.razorpayEnabled);
   }
@@ -2170,12 +2279,12 @@ function renderCalendarDetails(context) {
         <span>Selected day</span>
         <strong>${readableDate(selectedDate)}</strong>
       </div>
-      <b>${donations.length} donation${donations.length === 1 ? "" : "s"} · ${money(total)}</b>
+      <b>${donations.length} order${donations.length === 1 ? "" : "s"} · ${money(total)}</b>
     </div>
     <div class="admin-calendar-list">
       ${donations
         .map((donation) => {
-          const name = donation.anonymous ? "Private supporter" : donation.name || "Unknown supporter";
+          const name = donation.anonymous ? "Private customer" : donation.name || "Unknown customer";
           const amount = Number.parseFloat(donation.amount) || 0;
           const frequency = donation.frequency === "monthly" ? "Monthly" : "One time";
           const createdAt = donation.createdAt || new Date().toISOString();
@@ -2195,6 +2304,7 @@ function renderCalendarDetails(context) {
           const status = getDigitalOrderValue(donation, "fulfillmentStatus", "paid_awaiting_personalized_writing");
           const note = getDigitalOrderValue(donation, "fulfillmentNote", "");
           const isFulfilled = status === "fulfilled";
+          const awaitingWiseConfirmation = donation.paymentMethod === "wise" && donation.status === "AWAITING_WISE_CONFIRMATION";
 
           return `
             <article class="admin-calendar-donation">
@@ -2222,6 +2332,7 @@ function renderCalendarDetails(context) {
                 <button class="button button-primary" type="button" data-save-fulfillment="${escapeHtml(donation.id)}">
                   ${isFulfilled ? "Reopen order" : "Mark fulfilled"}
                 </button>
+                ${awaitingWiseConfirmation ? `<button class="button button-primary" type="button" data-confirm-wise-order="${escapeHtml(donation.id)}">Confirm Wise payment</button>` : ""}
                 ${
                   context.allowDelete
                     ? `<button class="button button-danger" type="button" data-delete-donation-record="${escapeHtml(donation.id)}">Delete order</button>`
@@ -2263,12 +2374,12 @@ function renderCalendarSummary(context) {
     <article>
       <span>${readableDate(fromDateKey(context.selectedDate))}</span>
       <strong>${money(dayTotal)}</strong>
-      <small>${dayDonations.length} donation${dayDonations.length === 1 ? "" : "s"} selected day</small>
+      <small>${dayDonations.length} order${dayDonations.length === 1 ? "" : "s"} selected day</small>
     </article>
     <article>
       <span>${formatMonthTitle(context.cursor)}</span>
       <strong>${money(monthTotal)}</strong>
-      <small>${monthDonations.length} donation${monthDonations.length === 1 ? "" : "s"} this month</small>
+      <small>${monthDonations.length} order${monthDonations.length === 1 ? "" : "s"} this month</small>
     </article>
   `;
 }
@@ -2306,8 +2417,8 @@ function renderCalendarGrid(context) {
       .filter(Boolean)
       .join(" ");
     const donationLabel = donations.length
-      ? `${donations.length} donation${donations.length === 1 ? "" : "s"}, ${money(total)}`
-      : "no donations";
+      ? `${donations.length} order${donations.length === 1 ? "" : "s"}, ${money(total)}`
+      : "no orders";
 
     cells.push(`
       <button
@@ -2339,12 +2450,12 @@ function getPrimaryAdminCalendarContext() {
     dateAttribute: "data-admin-calendar-date",
     details: elements.adminCalendarDetails,
     donations: state.donations,
-    emptyRecordLabel: state.adminProfile?.role === "super_admin" ? "SuperAdmin payments" : "donations",
+    emptyRecordLabel: state.adminProfile?.role === "super_admin" ? "private collection orders" : "Admin PayPal orders",
     grid: elements.adminCalendarGrid,
     selectedDate: selectedAdminCalendarDate,
     summary: elements.adminCalendarSummary,
     title: elements.adminCalendarTitle,
-    titlePrefix: state.adminProfile?.role === "super_admin" ? "SuperAdmin" : "",
+    titlePrefix: state.adminProfile?.role === "super_admin" ? "Private collection" : "",
   };
 }
 
@@ -2355,7 +2466,7 @@ function getSuperAdminStandardCalendarContext() {
     dateAttribute: "data-superadmin-standard-calendar-date",
     details: elements.superAdminStandardCalendarDetails,
     donations: state.superAdminStandardDonations,
-    emptyRecordLabel: "Admin PayPal payments",
+    emptyRecordLabel: "Admin PayPal orders",
     grid: elements.superAdminStandardCalendarGrid,
     selectedDate: selectedSuperAdminStandardCalendarDate,
     summary: elements.superAdminStandardCalendarSummary,
@@ -2390,6 +2501,10 @@ function isRazorpayEnabled() {
   return Boolean(state.settings.razorpayEnabled && (paymentConfig.razorpayKeyId || PUBLIC_CONFIG.razorpayKeyId));
 }
 
+function isWiseEnabled() {
+  return Boolean(state.settings.wiseEnabled && WISE_SUPPORTED_AMOUNTS.has(getAmount()));
+}
+
 function isPayPalEnabled() {
   const route = getCheckoutRoute();
   const clientId =
@@ -2408,7 +2523,7 @@ function requirePaymentEmail() {
     return email;
   }
 
-  setPaymentStatus("Add a valid email before opening PayPal checkout.", true);
+  setPaymentStatus("Add a valid email before opening checkout.", true);
   elements.paymentEmailInput?.focus();
   throw new Error("A valid email is required for your order detail.");
 }
@@ -2461,9 +2576,17 @@ function setPaymentStatus(message, isError = false) {
 }
 
 function updatePaymentMethodVisibility() {
+  const showWise = isWiseEnabled();
   const showRazorpay = isRazorpayEnabled();
   const showPayPal = isPayPalEnabled();
 
+  if (elements.wiseChoice) {
+    elements.wiseChoice.hidden = !state.settings.wiseEnabled;
+  }
+  if (elements.wiseCheckoutButton) {
+    elements.wiseCheckoutButton.disabled = !showWise;
+    elements.wiseCheckoutButton.title = showWise ? "Open Wise payment link" : "Wise is available for the listed order amounts only.";
+  }
   if (elements.razorpayChoice) {
     elements.razorpayChoice.hidden = !showRazorpay;
   }
@@ -2480,7 +2603,7 @@ function updatePaymentMethodVisibility() {
     elements.paypalPoweredBy.hidden = !showPayPal;
   }
 
-  return { showRazorpay, showPayPal };
+  return { showWise, showRazorpay, showPayPal };
 }
 
 function submitDonation(event) {
@@ -2501,6 +2624,34 @@ function submitDonation(event) {
 
   trackCheckoutEvent("checkout_button_clicked", pendingDonation);
   openPaymentDialog();
+}
+
+async function startWiseCheckout() {
+  if (!pendingDonation) {
+    setPaymentStatus("Order details are missing.", true);
+    return;
+  }
+
+  if (!isWiseEnabled()) {
+    setPaymentStatus("Wise is available for the listed order amounts only. Choose another payment method for a custom amount.", true);
+    return;
+  }
+
+  try {
+    const email = requirePaymentEmail();
+    pendingDonation = { ...pendingDonation, email, paymentMethod: "wise", paymentRoute: "superadmin" };
+    setPaymentStatus("Preparing your Wise payment link...");
+    const payload = await callEdge("create-wise-order", { body: pendingDonation });
+    await trackCheckoutEvent("wise_payment_link_opened", pendingDonation);
+    const paymentWindow = window.open(payload.paymentLink, "_blank", "noopener,noreferrer");
+    if (!paymentWindow) {
+      setPaymentStatus("Your browser blocked the Wise payment window. Please allow pop-ups and try again.", true);
+      return;
+    }
+    setPaymentStatus("Wise opened in a new tab. Your private order is recorded as awaiting payment confirmation.");
+  } catch (error) {
+    setPaymentStatus(error?.message || "Wise checkout could not be opened.", true);
+  }
 }
 
 function isValidPayPalSdk(paypal) {
@@ -2644,7 +2795,7 @@ function buildPayPalButtonOptions(paypal, fundingSource) {
       height: 44,
     },
     createOrder: async () => {
-      if (!pendingDonation) throw new Error("Donation details are missing.");
+      if (!pendingDonation) throw new Error("Order details are missing.");
       const email = requirePaymentEmail();
       pendingDonation = { ...pendingDonation, email };
       setPaymentStatus("Opening secure international PayPal checkout...");
@@ -2659,7 +2810,7 @@ function buildPayPalButtonOptions(paypal, fundingSource) {
       return payload.id;
     },
     onApprove: async (data) => {
-      setPaymentStatus("Confirming your seed with PayPal...");
+      setPaymentStatus("Confirming your custom order with PayPal...");
       const payload = await callEdge("capture-paypal-order", {
         body: {
           orderId: data.orderID,
@@ -2669,7 +2820,7 @@ function buildPayPalButtonOptions(paypal, fundingSource) {
       await finishVerifiedDonation(payload);
     },
     onCancel: () => {
-      setPaymentStatus("Payment cancelled. Your donation was not recorded.", true);
+      setPaymentStatus("Payment cancelled. Your order was not recorded.", true);
     },
     onError: (error) => {
       setPaymentStatus(error?.message || "PayPal checkout failed. Please try again.", true);
@@ -2679,7 +2830,7 @@ function buildPayPalButtonOptions(paypal, fundingSource) {
 
 async function startRazorpayCheckout() {
   if (!pendingDonation) {
-    setPaymentStatus("Donation details are missing.", true);
+    setPaymentStatus("Order details are missing.", true);
     return;
   }
 
@@ -2726,11 +2877,11 @@ async function startRazorpayCheckout() {
       },
       modal: {
         ondismiss: () => {
-          setPaymentStatus("Razorpay checkout was closed. Your donation was not recorded.", true);
+          setPaymentStatus("Razorpay checkout was closed. Your order was not recorded.", true);
         },
       },
       handler: async (response) => {
-        setPaymentStatus("Confirming your seed with Razorpay...");
+        setPaymentStatus("Confirming your custom order with Razorpay...");
         const result = await callEdge("capture-razorpay-order", {
           body: {
             orderId: response.razorpay_order_id,
@@ -2806,7 +2957,7 @@ async function finishVerifiedDonation(payload) {
   if (donation && paymentRoute !== "superadmin") {
     state.donations.unshift({
       id: donation.id,
-      name: donation.display_name || donation.name || pendingDonation?.name || "Supporter",
+      name: donation.display_name || donation.name || pendingDonation?.name || "Customer",
       amount: Number(donation.amount || pendingDonation?.amount || 0),
       frequency: donation.frequency || pendingDonation?.frequency || "once",
       message: donation.supporter_message || pendingDonation?.message || "",
@@ -2825,7 +2976,7 @@ async function finishVerifiedDonation(payload) {
     state.seedComments = normalizeSeedComments([
       {
         id: `seed-comment-${Date.now()}`,
-        name: pendingDonation.name || "Supporter",
+        name: pendingDonation.name || "Customer",
         text: pendingDonation.message,
         amount: pendingDonation.amount,
         seedCount: getSeedCountFromAmount(pendingDonation.amount),
@@ -2861,13 +3012,15 @@ function openPaymentDialog() {
   window.clearTimeout(paymentCloseTimer);
   document.body.classList.add("payment-open");
   setPaymentStatus("Loading secure checkout...");
-  const { showRazorpay, showPayPal } = updatePaymentMethodVisibility();
+  const { showWise, showRazorpay, showPayPal } = updatePaymentMethodVisibility();
   if (elements.paymentCopy) {
-    if (showRazorpay && showPayPal) {
+    if (showWise && showRazorpay && showPayPal) {
       elements.paymentCopy.textContent =
-        "Razorpay test checkout is recommended for this session. PayPal/card options stay below as fallback.";
+        "Wise is recommended for the listed order amounts. Razorpay and PayPal/card are available as alternate checkout methods.";
+    } else if (showWise) {
+      elements.paymentCopy.textContent = "Wise is ready for this selected custom-order amount.";
     } else if (showRazorpay) {
-      elements.paymentCopy.textContent = "Razorpay test checkout is ready for this session.";
+      elements.paymentCopy.textContent = "Razorpay checkout is ready for this custom order.";
     } else if (showPayPal) {
       elements.paymentCopy.textContent = "PayPal/card checkout is ready for this session.";
     } else {
@@ -3163,6 +3316,7 @@ function getAdminSettings() {
     supportTitle: inputs.supportTitle.value,
     topicLabel: inputs.topicLabel.value,
     checkoutRoute: getCheckoutRoute(),
+    wiseEnabled: Boolean(elements.superAdminWiseEnabled?.checked ?? state.settings.wiseEnabled),
     razorpayEnabled: Boolean(elements.superAdminRazorpayEnabled?.checked ?? state.settings.razorpayEnabled),
     paypalEnabled: Boolean(elements.superAdminPaypalEnabled?.checked ?? state.settings.paypalEnabled),
   });
@@ -3398,7 +3552,7 @@ async function addPostComment(postId, text) {
     const donorAccessToken = getDonorToken();
 
     if (!donorAccessToken) {
-      showToast("Complete a donation to unlock comments.");
+      showToast("Complete a custom order to unlock comments.");
       return;
     }
 
@@ -3408,7 +3562,7 @@ async function addPostComment(postId, text) {
           action: "comment",
           postId,
           donorAccessToken,
-          displayName: elements.nameInput.value.trim().slice(0, 48) || "Supporter",
+          displayName: elements.nameInput.value.trim().slice(0, 48) || "Customer",
           comment: commentText,
         },
       });
@@ -3424,7 +3578,7 @@ async function addPostComment(postId, text) {
     return;
   }
 
-  const commenterName = elements.nameInput.value.trim().slice(0, 48) || "Supporter";
+  const commenterName = elements.nameInput.value.trim().slice(0, 48) || "Customer";
   post.comments = Array.isArray(post.comments) ? post.comments : [];
   post.comments.push({
     id: `comment-${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -3691,6 +3845,12 @@ function handleAdminCalendarDetailClick(event) {
     return;
   }
 
+  const confirmWiseButton = event.target.closest("[data-confirm-wise-order]");
+  if (confirmWiseButton) {
+    confirmWiseOrder(confirmWiseButton.dataset.confirmWiseOrder, confirmWiseButton);
+    return;
+  }
+
   const deleteButton = event.target.closest("[data-delete-donation-record]");
   if (deleteButton) {
     deleteDonationRecord(deleteButton.dataset.deleteDonationRecord, deleteButton);
@@ -3711,6 +3871,7 @@ elements.adminPublishPostButton.addEventListener("click", publishAdminPost);
 elements.adminExportCsvButton.addEventListener("click", exportAdminDonationCsv);
 elements.refreshAdminButton.addEventListener("click", refreshAdminPortalData);
 elements.resetAdminAnalyticsButton.addEventListener("click", resetAdminAnalytics);
+elements.purgeAllOrdersButton?.addEventListener("click", () => purgeAllPaymentRecords(elements.purgeAllOrdersButton));
 elements.adminNewPostImage.addEventListener("change", previewAdminUpload);
 elements.adminForm.addEventListener("input", (event) => {
   if (event.target.closest(".admin-export-section")) {
@@ -3775,6 +3936,7 @@ elements.meterShareButton.addEventListener("click", () => {
 });
 
 elements.backPaymentButton.addEventListener("click", closePaymentDialog);
+elements.wiseCheckoutButton?.addEventListener("click", startWiseCheckout);
 elements.razorpayCheckoutButton?.addEventListener("click", startRazorpayCheckout);
 elements.paymentDialog.addEventListener("cancel", (event) => {
   event.preventDefault();
@@ -3847,6 +4009,12 @@ elements.superAdminRazorpayEnabled?.addEventListener("change", () => {
     persist: true,
   });
 });
+elements.superAdminWiseEnabled?.addEventListener("change", () => {
+  state.settings = normalizeSettings({ ...state.settings, wiseEnabled: elements.superAdminWiseEnabled.checked });
+  setAdminStatus(`Wise checkout ${state.settings.wiseEnabled ? "enabled" : "hidden"}. Save to make it live.`, "info", {
+    persist: true,
+  });
+});
 elements.superAdminPaypalEnabled?.addEventListener("change", () => {
   state.settings = normalizeSettings({ ...state.settings, paypalEnabled: elements.superAdminPaypalEnabled.checked });
   setAdminStatus(`PayPal/card checkout ${state.settings.paypalEnabled ? "enabled" : "hidden"}. Save to make it live.`, "info", {
@@ -3857,6 +4025,7 @@ elements.saveCheckoutRouteButton?.addEventListener("click", async () => {
   const nextSettings = normalizeSettings({
     ...state.settings,
     checkoutRoute: getCheckoutRoute(),
+    wiseEnabled: Boolean(elements.superAdminWiseEnabled?.checked ?? state.settings.wiseEnabled),
     paypalEnabled: Boolean(elements.superAdminPaypalEnabled?.checked ?? state.settings.paypalEnabled),
     razorpayEnabled: Boolean(elements.superAdminRazorpayEnabled?.checked ?? state.settings.razorpayEnabled),
   });
@@ -3867,7 +4036,7 @@ elements.saveCheckoutRouteButton?.addEventListener("click", async () => {
       busyText: "Saving...",
       loadingMessage: "Saving checkout settings...",
       successMessage: () =>
-        `${getCheckoutRouteLabel(nextSettings.checkoutRoute)} checkout is active. Razorpay ${nextSettings.razorpayEnabled ? "on" : "off"}, PayPal/card ${nextSettings.paypalEnabled ? "on" : "off"}.`,
+        `${getCheckoutRouteLabel(nextSettings.checkoutRoute)} checkout is active. Wise ${nextSettings.wiseEnabled ? "on" : "off"}, Razorpay ${nextSettings.razorpayEnabled ? "on" : "off"}, PayPal/card ${nextSettings.paypalEnabled ? "on" : "off"}.`,
       errorMessage: "Could not save checkout settings.",
     },
     async () => {

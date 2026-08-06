@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Sow Your Seed is a creator support page for tips, donations, and monthly encouragement."
+      content="Christ Paradise Garden offers personalised digital writing and custom order-made blessings."
     />
-    <title>Christ Paradise Garden💫✨🌱 | Creator Support</title>
+    <title>Christ Paradise Garden💫✨🌱 | Personalised Digital Writing</title>
     <link rel="icon" type="image/svg+xml" href="assets/seed-favicon.svg?v=1" />
     <link rel="shortcut icon" type="image/svg+xml" href="assets/seed-favicon.svg?v=1" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -16,7 +16,7 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="src/styles.css?v=55" />
+    <link rel="stylesheet" href="src/styles.css?v=56" />
   </head>
   <body class="app-loading">
     <div class="app-loader" id="appLoader" role="status" aria-live="polite" aria-label="Loading Sow Your Seed">
@@ -98,7 +98,7 @@
             <input id="adminFollowersText" type="text" />
           </label>
           <label>
-            <span>Donation meter headline</span>
+            <span>Order progress headline</span>
             <textarea id="adminMeterHeadline"></textarea>
           </label>
           <label>
@@ -130,7 +130,7 @@
             <input id="adminPostAuthorName" type="text" />
           </label>
           <label>
-            <span>Donation box title</span>
+            <span>Custom order box title</span>
             <textarea id="adminSupportTitle"></textarea>
           </label>
           <label>
@@ -145,7 +145,7 @@
 
         <section class="admin-section admin-donations">
           <div class="admin-donation-heading">
-            <h3>2. Donation calendar</h3>
+            <h3>2. Admin PayPal order calendar</h3>
           </div>
           <section class="admin-calendar" aria-labelledby="adminCalendarTitle">
             <div class="admin-calendar-header">
@@ -153,18 +153,18 @@
                 class="admin-calendar-nav"
                 id="adminCalendarPrev"
                 type="button"
-                aria-label="Previous donation month"
+                aria-label="Previous order month"
               >
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="m15 18-6-6 6-6" />
                 </svg>
               </button>
-              <h4 id="adminCalendarTitle">Donation calendar</h4>
+              <h4 id="adminCalendarTitle">Custom order calendar</h4>
               <button
                 class="admin-calendar-nav"
                 id="adminCalendarNext"
                 type="button"
-                aria-label="Next donation month"
+                aria-label="Next order month"
               >
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="m9 18 6-6-6-6" />
@@ -180,7 +180,7 @@
               <span>Fri</span>
               <span>Sat</span>
             </div>
-            <div class="admin-calendar-grid" id="adminCalendarGrid" role="grid" aria-label="Daily tip donation records"></div>
+            <div class="admin-calendar-grid" id="adminCalendarGrid" role="grid" aria-label="Daily Admin PayPal order records"></div>
             <div class="admin-calendar-details" id="adminCalendarDetails" aria-live="polite"></div>
             <div class="admin-calendar-summary" id="adminCalendarSummary" aria-live="polite"></div>
           </section>
@@ -224,7 +224,7 @@
               <span>Fri</span>
               <span>Sat</span>
             </div>
-            <div class="admin-calendar-grid" id="superAdminStandardCalendarGrid" role="grid" aria-label="Admin PayPal donation records"></div>
+            <div class="admin-calendar-grid" id="superAdminStandardCalendarGrid" role="grid" aria-label="Admin PayPal order records"></div>
             <div class="admin-calendar-details" id="superAdminStandardCalendarDetails" aria-live="polite"></div>
             <div class="admin-calendar-summary" id="superAdminStandardCalendarSummary" aria-live="polite"></div>
           </section>
@@ -233,8 +233,8 @@
         <section class="admin-section admin-super-checkout-section" id="adminSuperCheckoutSection" hidden>
           <div class="admin-super-checkout-heading">
             <div>
-              <h3>PayPal Checkout</h3>
-              <p>Choose which PayPal account receives every new checkout.</p>
+              <h3>Payment settings</h3>
+              <p>Choose which custom-order payment methods are available.</p>
             </div>
             <button class="button button-primary" id="saveCheckoutRouteButton" type="button">Save checkout</button>
           </div>
@@ -250,10 +250,17 @@
           </div>
           <div class="checkout-method-toggles" aria-label="Payment methods shown during checkout">
             <label class="admin-toggle checkout-method-toggle">
+              <input id="superAdminWiseEnabled" type="checkbox" checked />
+              <span>
+                <strong>Wise</strong>
+                Show Wise first for the supported custom-order amounts. Wise records remain private here.
+              </span>
+            </label>
+            <label class="admin-toggle checkout-method-toggle">
               <input id="superAdminRazorpayEnabled" type="checkbox" checked />
               <span>
                 <strong>Razorpay</strong>
-                Show Razorpay as the recommended checkout option.
+                Show Razorpay as an alternate private custom-order checkout.
               </span>
             </label>
             <label class="admin-toggle checkout-method-toggle">
@@ -263,6 +270,11 @@
                 Show PayPal wallet and eligible card checkout.
               </span>
             </label>
+          </div>
+          <div class="superadmin-purge">
+            <h4>Erase all payment records</h4>
+            <p>Permanently removes every payment, order, linked comment, and checkout event from the site.</p>
+            <button class="button button-danger" id="purgeAllOrdersButton" type="button">Erase all records</button>
           </div>
         </section>
 
@@ -326,9 +338,9 @@
                 <small>hourly page views last 24 hours</small>
               </article>
               <article>
-                <span>Donation taps</span>
+                <span>Order form taps</span>
                 <strong id="adminCheckoutClicks24h">0</strong>
-                <small>Sow button taps last 24 hours</small>
+                <small>custom order taps last 24 hours</small>
               </article>
               <article>
                 <span>PayPal checkout</span>
@@ -346,8 +358,8 @@
 
           <section class="admin-section admin-export-section">
             <div class="admin-export-heading">
-              <h3>5. Donation CSV export</h3>
-              <p>Choose a date range and download the same report-style CSV. The <strong>Item</strong> value exports as <strong>Tip to Creator</strong>.</p>
+              <h3>5. Order CSV export</h3>
+              <p>Choose a date range and download the Admin PayPal custom-order report.</p>
             </div>
             <div class="admin-export-range">
               <label>
@@ -401,7 +413,7 @@
           <img class="cover-image" src="assets/sow-cover.png" alt="Hands sowing seeds into a sunrise field" />
         </div>
 
-        <section class="profile-bar" aria-label="Creator profile">
+        <section class="profile-bar" aria-label="Christ Garden profile">
           <img class="profile-photo" src="assets/jesus-profile.png" alt="Illustrated portrait of Jesus Christ" />
           <div class="profile-copy">
             <h1 id="profileTitle">Sow Your Seed Here for Your Soulmate 💫</h1>
@@ -426,7 +438,7 @@
           </div>
         </section>
 
-        <nav class="profile-tabs" aria-label="Creator sections">
+        <nav class="profile-tabs" aria-label="Christ Garden sections">
           <a class="active" href="#about" data-section-tab="aboutView">About</a>
           <a href="#gallery" data-section-tab="galleryView">Gallery</a>
           <a href="#posts" data-section-tab="postsView">Posts</a>
@@ -435,9 +447,9 @@
 
       <section class="app-grid section-view is-active" id="aboutView" data-section-view>
         <div class="main-stack">
-          <section class="panel impact-panel donation-meter-card collapsible-card" id="impact" aria-label="Donation meter">
+          <section class="panel impact-panel donation-meter-card collapsible-card" id="impact" aria-label="Order progress">
             <div class="meter-header">
-              <h2 id="meterHeadline">༺💗༻ Click the Donate button to sow your seed now. With every seed you sow, you whisper to the universe: “Bring my soulmate to me.” 🌱💫🌹</h2>
+              <h2 id="meterHeadline">༺💗༻ Choose a personalised writing order for a heartfelt blessing made for your request. 🌱💫🌹</h2>
               <button class="meter-share-button" id="meterShareButton" type="button" aria-label="Share this page">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="m17 7 5 5-5 5" />
@@ -466,7 +478,7 @@
                 <p>
                 Every seed you sow is a seed of intention. 🌱 1 seed ($7) – I'm ready. 🌱🌱🌱 3 seeds ($21) –
                 Mind, body, soulmate aligned. 🌱🌱🌱🌱🌱🌱🌱 7 seeds ($49) – Protection over reunion.
-                🌱🌱🌱🌱🌱🌱🌱🌱🌱🌱🌱 11 seeds ($77) – Eternal love. ༺💗༻ Click Donate to sow your seed now.
+                🌱🌱🌱🌱🌱🌱🌱🌱🌱🌱🌱 11 seeds ($77) – Eternal love. Choose your personalised writing order when you are ready.
                 Whisper to the universe: “Bring my soulmate to me.” The field is open. 🌱💫🌹
                 </p>
               </div>
@@ -493,8 +505,7 @@
                   for you.
                 </p>
                 <p>
-                  Your donation isn’t just support, it’s an act of faith, intention, and hope. Sow your seed and let
-                  love meet you where you are.
+                  Every order begins with your prayer or intention and is prepared as a personal writing for you.
                 </p>
               </div>
             </div>
@@ -506,8 +517,8 @@
 
           <section class="panel recent-donations-panel" id="recentSeeds" aria-labelledby="recentSeedsTitle">
             <div class="section-heading">
-              <p class="section-kicker">Recent support</p>
-              <h2 id="recentSeedsTitle">Recent seeds from the community</h2>
+              <p class="section-kicker">Recent custom orders</p>
+              <h2 id="recentSeedsTitle">Recent writings from the community</h2>
             </div>
             <div class="recent-donation-list" id="recentDonationList"></div>
           </section>
@@ -517,7 +528,7 @@
           <section class="donation-card" id="support" aria-labelledby="supportTitle">
             <div class="donation-header">
               <div>
-                <p class="section-kicker">Tip or donate</p>
+                <p class="section-kicker">Personalised digital writing</p>
                 <h2 id="supportTitle">Buy a Seed to Sow for the Love You’ve Been Waiting For in 💕Christ Pradise garden💫</h2>
               </div>
               <span class="secure-pill">
@@ -613,7 +624,7 @@
             <div class="seed-comments-list" id="seedCommentsList" aria-live="polite"></div>
           </section>
 
-          <section class="post-stack" aria-label="Creator posts">
+          <section class="post-stack" aria-label="Christ Garden posts">
             <div class="post-author">
               <img src="assets/jesus-profile.png" alt="" />
               <strong id="postAuthorName">Sow Your Seed Here for Your Soulmate 💫</strong>
@@ -646,7 +657,7 @@
 
     <dialog class="payment-dialog" id="paymentDialog" aria-labelledby="paymentTitle">
       <div class="payment-card">
-        <h2 id="paymentTitle">Complete your secure seed</h2>
+        <h2 id="paymentTitle">Complete your custom order</h2>
         <p class="fortune-message">Your Fortune Message Awaits in Next Step</p>
 
         <label class="payment-email-field" for="paymentEmailInput">
@@ -656,13 +667,23 @@
 
         <h3>Pay with...</h3>
         <p class="payment-copy" id="paymentCopy">
-          Razorpay test checkout is recommended for this session. The existing PayPal/card options stay below as fallback while we verify the flow.
+          Choose a secure payment method for your personalised digital writing request.
         </p>
         <p class="payment-status" id="paymentStatus" role="status" aria-live="polite"></p>
 
-        <div class="payment-choice payment-choice-razorpay" id="razorpayChoice">
+        <div class="payment-choice payment-choice-wise" id="wiseChoice">
           <div class="payment-choice-head">
             <span class="payment-choice-recommended">Recommended</span>
+            <span class="payment-choice-mode">Wise</span>
+          </div>
+          <button class="wise-launch-button" id="wiseCheckoutButton" type="button">
+            <img src="assets/wise-button.png" alt="Pay with Wise" />
+          </button>
+        </div>
+
+        <div class="payment-choice payment-choice-razorpay" id="razorpayChoice">
+          <div class="payment-choice-head">
+            <span class="payment-choice-recommended">Alternate</span>
             <span class="payment-choice-mode">Test mode</span>
           </div>
           <button class="razorpay-launch-button" id="razorpayCheckoutButton" type="button">
@@ -690,8 +711,8 @@
         <button class="payment-back-button" id="backPaymentButton" type="button">Go back</button>
 
         <p class="payment-note" id="paymentNote">
-          By proceeding with your payment, you acknowledge that you are paying Sow Your Seed Here for Your Soulmate 💫
-          directly. Tips are voluntary support and are not tied to any guaranteed result.
+          By proceeding, you are purchasing a personalised digital writing created from your submitted prayer or intention.
+          Your order is prepared directly for you.
         </p>
       </div>
     </dialog>
@@ -712,7 +733,7 @@
         </div>
         <p class="section-kicker">Fortune received</p>
         <h2 id="receiptTitle">Your fortune for today</h2>
-        <p id="receiptSummary">A blessing will appear here after your donation is complete.</p>
+        <p id="receiptSummary">A blessing will appear here after your custom order is complete.</p>
         <div class="receipt-actions">
           <button class="button amen-button" id="doneButton" type="button">Amen</button>
         </div>
@@ -744,10 +765,10 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <footer class="footer">
-      <p id="footerText">This is a creator tipping platform where supporters can voluntarily tip the creator for their work. Tips are freely given, paid directly to the creator, and are not tied to any indirect exchange, guaranteed result, or required purchase.</p>
+      <p id="footerText">This platform provides personalised digital writing created from your submitted prayer or intention. Each purchase is a custom order, prepared directly for the buyer.</p>
     </footer>
 
     <script src="src/config.js?v=1"></script>
-    <script src="src/app.js?v=56" defer></script>
+    <script src="src/app.js?v=59" defer></script>
   </body>
 </html>

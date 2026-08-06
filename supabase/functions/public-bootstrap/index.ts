@@ -73,20 +73,23 @@ Deno.serve(async (request) => {
     const paypalEnabled =
       (settings as Record<string, unknown>).paypalEnabled !== false &&
       (settings as Record<string, unknown>).paypalEnabled !== "false";
+    const wiseEnabled =
+      (settings as Record<string, unknown>).wiseEnabled !== false &&
+      (settings as Record<string, unknown>).wiseEnabled !== "false";
     const goalAmount = Math.max(Number(settings.seedGoal) || 0, 0);
     const seedPrice = Math.max(Number(settings.seedPrice) || 7, 1);
     const rawCurrentAmount = Math.max(Number(settings.meterCurrentAmount ?? settings.startingSeeds) || 0, 0);
 
     const { data: allDonations, error: donationsError } = await supabase
       .from("donations")
-      .select("id, display_name, amount, seed_count, frequency, supporter_message, paypal_status, created_at, payment_route, super_approved, payment_method, raw_payment")
+      .select("id, display_name, amount, seed_count, frequency, supporter_message, paypal_status, created_at, payment_route, visibility_scope, super_approved, payment_method, raw_payment")
       .eq("paypal_status", "COMPLETED")
       .order("created_at", { ascending: false })
       .limit(100);
     if (donationsError) throw donationsError;
     const donations = (allDonations || [])
       .filter((donation) => {
-        if (donation.payment_route === "superadmin") return false;
+        if (donation.visibility_scope !== "public" || donation.payment_method !== "paypal") return false;
         const rawPayment = donation.raw_payment && typeof donation.raw_payment === "object" ? donation.raw_payment : {};
         return rawPayment.mode !== "test";
       })
@@ -94,14 +97,14 @@ Deno.serve(async (request) => {
 
     const { data: allSeedComments, error: seedCommentsError } = await supabase
       .from("seed_comments")
-      .select("id, display_name, body, amount, seed_count, source, created_at, donations(payment_route, super_approved, payment_method, raw_payment)")
+      .select("id, display_name, body, amount, seed_count, source, created_at, donations(payment_route, visibility_scope, super_approved, payment_method, raw_payment)")
       .order("created_at", { ascending: false })
       .limit(1000);
     if (seedCommentsError) throw seedCommentsError;
     const seedComments = (allSeedComments || []).filter(c => {
       if (c.source === "legacy") return true;
       if (!c.donations) return true;
-      if (c.donations.payment_route === "superadmin") return false;
+      if (c.donations.visibility_scope !== "public" || c.donations.payment_method !== "paypal") return false;
       const rawPayment = c.donations.raw_payment && typeof c.donations.raw_payment === "object" ? c.donations.raw_payment : {};
       return rawPayment.mode !== "test";
     }).slice(0, 520);
@@ -198,6 +201,7 @@ Deno.serve(async (request) => {
         checkoutRoute,
         razorpayEnabled,
         paypalEnabled,
+        wiseEnabled,
         currency: Deno.env.get("PAYPAL_CURRENCY") || "USD",
         env: Deno.env.get("PAYPAL_ENV") || "sandbox",
       },

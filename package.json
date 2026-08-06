@@ -2,13 +2,13 @@
   "name": "sow-your-seed",
   "version": "1.0.0",
   "private": true,
-  "description": "Creator tipping platform frontend with Supabase and PayPal backend assets.",
+    "description": "Personalised digital writing custom-order platform with Supabase payment backends.",
   "scripts": {
     "dev": "python3 -m http.server 5173",
     "check:js": "node --check src/app.js",
     "supabase:functions:serve": "supabase functions serve --env-file .env",
     "supabase:db:push": "supabase db push",
-    "supabase:deploy": "supabase functions deploy public-bootstrap create-paypal-order capture-paypal-order create-razorpay-order capture-razorpay-order paypal-webhook admin-profile admin-settings admin-posts admin-donations admin-analytics track-checkout-event post-engagement"
+    "supabase:deploy": "supabase functions deploy public-bootstrap create-paypal-order capture-paypal-order create-razorpay-order capture-razorpay-order create-wise-order paypal-webhook admin-profile admin-settings admin-posts admin-donations admin-analytics track-checkout-event post-engagement"
   },
   "devDependencies": {
     "supabase": "^2.39.2"

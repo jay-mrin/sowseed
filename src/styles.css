@@ -3006,7 +3006,8 @@ legend::after {
   margin: 18px 0 14px;
 }
 
-.payment-choice-razorpay {
+.payment-choice-razorpay,
+.payment-choice-wise {
   position: relative;
   display: grid;
   gap: 8px;
@@ -3052,7 +3053,8 @@ legend::after {
   background: rgba(255, 255, 255, 0.6);
 }
 
-.razorpay-launch-button {
+.razorpay-launch-button,
+.wise-launch-button {
   position: relative;
   display: block;
   width: 100%;
@@ -3071,7 +3073,8 @@ legend::after {
     border-color 160ms ease;
 }
 
-.razorpay-launch-button:hover {
+.razorpay-launch-button:hover,
+.wise-launch-button:hover {
   transform: translateY(-1px);
   border-color: rgba(174, 124, 255, 0.96);
   box-shadow:
@@ -3079,16 +3082,72 @@ legend::after {
     0 0 34px rgba(248, 50, 184, 0.2);
 }
 
-.razorpay-launch-button:active {
+.razorpay-launch-button:active,
+.wise-launch-button:active {
   transform: translateY(0) scale(0.99);
 }
 
-.razorpay-launch-button img {
+.razorpay-launch-button img,
+.wise-launch-button img {
   display: block;
   width: 100%;
   min-height: 58px;
   object-fit: cover;
   object-position: center;
+}
+
+.payment-choice-wise {
+  margin-bottom: 14px;
+}
+
+.wise-launch-button {
+  border-color: rgba(123, 168, 35, 0.56);
+  box-shadow:
+    0 16px 34px rgba(104, 150, 22, 0.15),
+    0 0 28px rgba(199, 230, 111, 0.16);
+}
+
+.wise-launch-button:hover {
+  border-color: rgba(89, 132, 18, 0.92);
+  box-shadow:
+    0 18px 36px rgba(104, 150, 22, 0.22),
+    0 0 34px rgba(199, 230, 111, 0.26);
+}
+
+.wise-launch-button:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.55) opacity(0.48);
+  transform: none;
+  box-shadow: none;
+}
+
+.superadmin-purge {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid rgba(230, 39, 39, 0.35);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(255, 244, 244, 0.92), rgba(255, 232, 242, 0.82));
+}
+
+.superadmin-purge h4,
+.superadmin-purge p {
+  margin: 0;
+}
+
+.superadmin-purge p {
+  color: #7f6671;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.superadmin-purge .button-danger {
+  justify-self: start;
+  border-color: rgba(198, 31, 31, 0.68);
+  color: #ffffff;
+  background: linear-gradient(135deg, #c41720, #f83280);
+  box-shadow: 0 12px 24px rgba(198, 31, 31, 0.2);
 }
 
 .payment-status {

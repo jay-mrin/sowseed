@@ -3,7 +3,7 @@ const PAYPAL_API_BASE = {
   live: "https://api-m.paypal.com",
 };
 
-export const DIGITAL_ORDER_ITEM_NAME = "Personalised Digital Blessing and Sowing Seed";
+export const DIGITAL_ORDER_ITEM_NAME = "Personalised Digital Writing - Custom Order Made Writing";
 
 function padDatePart(value: number) {
   return String(value).padStart(2, "0");

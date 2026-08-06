@@ -66,11 +66,11 @@ function buildExportRow(input: {
   return {
     "DateTime (UTC)": formatCsvDateTime(input.payment.created_at),
     From: input.displayName,
-    Item: "Tip to Creator",
+    Item: "Personalised Digital Writing - Custom Order Made Writing",
     Received: formatCsvAmount(input.amount),
     Given: "0",
     Currency: input.currency,
-    TransactionType: "Tip",
+    TransactionType: "Custom order payment",
     TransactionId: input.payment.id || "",
     Reference: input.payment.order_id || "",
     SalesTax: "",
@@ -210,7 +210,7 @@ Deno.serve(async (request) => {
     if (fortuneError || !fortunes?.length) throw fortuneError || new Error("No active fortune messages found.");
 
     const fortune = fortunes[Math.floor(Math.random() * fortunes.length)];
-    const displayName = String(body.donation?.name || payment.notes?.displayName || "Supporter").trim().slice(0, 80);
+    const displayName = String(body.donation?.name || payment.notes?.displayName || "Customer").trim().slice(0, 80);
     const supporterMessage = String(body.donation?.message || payment.notes?.supporterMessage || "").trim().slice(0, 280);
     const frequency = body.donation?.frequency === "monthly" ? "monthly" : "once";
     const orderNumber = String(payment.receipt || createDigitalOrderNumber());
@@ -246,7 +246,8 @@ Deno.serve(async (request) => {
         paypal_capture_id: payment.id,
         paypal_payer_email: payment.email || null,
         paypal_status: payment.status,
-        payment_route: "standard",
+        payment_route: "superadmin",
+        visibility_scope: "superadmin_private",
         receiver_identifier: null,
         fortune_id: fortune.id,
         fortune_message: fortune.message,
@@ -300,7 +301,7 @@ Deno.serve(async (request) => {
     return jsonResponse({
       donation: {
         ...donation,
-        paymentRoute: "standard",
+        paymentRoute: "superadmin",
         receiverIdentifier: null,
       },
       fortune: fortune.message,

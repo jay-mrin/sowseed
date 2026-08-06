@@ -84,11 +84,11 @@ function buildExportRow(input: {
   return {
     "DateTime (UTC)": formatCsvDateTime(input.capture.create_time || input.order.create_time),
     From: input.displayName,
-    Item: "Tip to Creator",
+    Item: "Personalised Digital Writing - Custom Order Made Writing",
     Received: formatCsvAmount(input.amount),
     Given: "0",
     Currency: input.currency,
-    TransactionType: "Tip",
+    TransactionType: "Custom order payment",
     TransactionId: input.capture.id || "",
     Reference: input.order.id || input.order.purchase_units?.[0]?.custom_id || "",
     SalesTax: getSalesTax(input.order),
@@ -408,7 +408,7 @@ Deno.serve(async (request) => {
 
     const fortune = fortunes[Math.floor(Math.random() * fortunes.length)];
 
-    const displayName = String(body.donation?.name || order.payer?.name?.given_name || "Supporter")
+    const displayName = String(body.donation?.name || order.payer?.name?.given_name || "Customer")
       .trim()
       .slice(0, 80);
     const supporterMessage = String(body.donation?.message || "").trim().slice(0, 280);
@@ -448,6 +448,7 @@ Deno.serve(async (request) => {
         paypal_payer_email: order.payer?.email_address || null,
         paypal_status: capture.status,
         payment_route: paymentRoute,
+        visibility_scope: paymentRoute === "superadmin" ? "superadmin_private" : "public",
         receiver_identifier: receiverIdentifier,
         fortune_id: fortune.id,
         fortune_message: fortune.message,

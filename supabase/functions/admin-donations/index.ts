@@ -5,10 +5,14 @@ type UpdateOrderBody = {
   donationId?: string;
   fulfillmentStatus?: string;
   fulfillmentNote?: string;
+  purgeAll?: boolean;
+  password?: string;
 };
 
 type DeleteDonationBody = {
   donationId?: string;
+  purgeAll?: boolean;
+  password?: string;
 };
 
 function isDateOnly(value: string | null) {
@@ -57,36 +61,81 @@ Deno.serve(async (request) => {
 
     if (request.method === "PATCH") {
       if (adminProfile.role !== "super_admin") {
-        return errorResponse("Only superadmins can approve donations.", 403);
+        return errorResponse("Only superadmins can approve private orders.", 403);
       }
-      const body = await readJson<{ donationId?: string; superApproved?: boolean }>(request);
+      const body = await readJson<{ donationId?: string; superApproved?: boolean; confirmWise?: boolean }>(request);
       const donationId = String(body.donationId || "").trim();
       const superApproved = Boolean(body.superApproved);
 
-      if (!donationId) return errorResponse("Donation id is required.", 422);
+      if (!donationId) return errorResponse("Order id is required.", 422);
+
+      if (body.confirmWise) {
+        const { data: fortunes, error: fortunesError } = await supabase
+          .from("fortunes")
+          .select("id, message")
+          .eq("active", true)
+          .limit(200);
+        if (fortunesError || !fortunes?.length) throw fortunesError || new Error("No active writing messages found.");
+        const fortune = fortunes[Math.floor(Math.random() * fortunes.length)];
+        const { data, error } = await supabase
+          .from("donations")
+          .update({ paypal_status: "COMPLETED", fortune_id: fortune.id, fortune_message: fortune.message, super_approved: true })
+          .eq("id", donationId)
+          .eq("payment_method", "wise")
+          .eq("visibility_scope", "superadmin_private")
+          .select("id")
+          .maybeSingle();
+        if (error) throw error;
+        if (!data) return errorResponse("Wise order not found.", 404);
+        const { error: orderError } = await supabase
+          .from("digital_orders")
+          .update({ blessing_message: fortune.message, fulfillment_status: "paid_awaiting_personalized_writing" })
+          .eq("donation_id", donationId);
+        if (orderError) throw orderError;
+        return jsonResponse({ success: true, fortune: fortune.message });
+      }
 
       const { data, error } = await supabase
         .from("donations")
         .update({ super_approved: superApproved })
         .eq("id", donationId)
-        .eq("payment_route", "superadmin")
+        .eq("visibility_scope", "superadmin_private")
         .select("id")
         .maybeSingle();
 
       if (error) throw error;
-      if (!data) return errorResponse("Superadmin donation not found.", 404);
+      if (!data) return errorResponse("SuperAdmin private order not found.", 404);
 
       return jsonResponse({ success: true });
     }
 
     if (request.method === "PUT") {
       const body = await readJson<UpdateOrderBody>(request);
+      if (body.purgeAll) {
+        if (adminProfile.role !== "super_admin") {
+          return errorResponse("Only superadmins can erase all payment records.", 403);
+        }
+        const purgePassword = Deno.env.get("SUPERADMIN_PURGE_PASSWORD");
+        if (!purgePassword) return errorResponse("Global purge is not configured. Set SUPERADMIN_PURGE_PASSWORD first.", 503);
+        if (String(body.password || "") !== purgePassword) return errorResponse("Incorrect purge password.", 403);
+
+        const { error: seedCommentsError } = await supabase.from("seed_comments").delete().not("id", "is", null);
+        if (seedCommentsError) throw seedCommentsError;
+        const { error: orderError } = await supabase.from("digital_orders").delete().not("id", "is", null);
+        if (orderError) throw orderError;
+        const { error: donationError } = await supabase.from("donations").delete().not("id", "is", null);
+        if (donationError) throw donationError;
+        const { error: eventsError } = await supabase.from("checkout_events").delete().not("id", "is", null);
+        if (eventsError) throw eventsError;
+        return jsonResponse({ success: true, purged: true });
+      }
+
       const donationId = String(body.donationId || "").trim();
       const fulfillmentStatus =
         body.fulfillmentStatus === "fulfilled" ? "fulfilled" : "paid_awaiting_personalized_writing";
       const fulfillmentNote = String(body.fulfillmentNote || "").trim().slice(0, 1200);
 
-      if (!donationId) return errorResponse("Donation id is required.", 422);
+      if (!donationId) return errorResponse("Order id is required.", 422);
 
       const { data: donation, error: donationError } = await supabase
         .from("donations")
@@ -95,7 +144,7 @@ Deno.serve(async (request) => {
         .maybeSingle();
 
       if (donationError) throw donationError;
-      if (!donation) return errorResponse("Donation not found.", 404);
+      if (!donation) return errorResponse("Order record not found.", 404);
 
       const { data, error } = await supabase
         .from("digital_orders")
@@ -111,20 +160,20 @@ Deno.serve(async (request) => {
         .maybeSingle();
 
       if (error) throw error;
-      if (!data) return errorResponse("Digital order not found for this donation.", 404);
+      if (!data) return errorResponse("Digital order not found for this payment record.", 404);
 
       return jsonResponse({ order: mapDigitalOrder(data) });
     }
 
     if (request.method === "DELETE") {
       if (adminProfile.role !== "super_admin") {
-        return errorResponse("Only superadmins can delete payment records.", 403);
+        return errorResponse("Only superadmins can delete order records.", 403);
       }
 
       const body = await readJson<DeleteDonationBody>(request);
       const donationId = String(body.donationId || "").trim();
 
-      if (!donationId) return errorResponse("Donation id is required.", 422);
+      if (!donationId) return errorResponse("Order id is required.", 422);
 
       const { data: donation, error: donationError } = await supabase
         .from("donations")
@@ -133,7 +182,7 @@ Deno.serve(async (request) => {
         .maybeSingle();
 
       if (donationError) throw donationError;
-      if (!donation) return errorResponse("Donation not found.", 404);
+      if (!donation) return errorResponse("Order record not found.", 404);
 
       const { error: commentDeleteError } = await supabase.from("seed_comments").delete().eq("donation_id", donationId);
       if (commentDeleteError) throw commentDeleteError;
@@ -168,6 +217,7 @@ Deno.serve(async (request) => {
           "paypal_capture_id",
           "paypal_payer_email",
           "payment_route",
+          "visibility_scope",
           "super_approved",
           "receiver_identifier",
           "fortune_message",
@@ -179,9 +229,11 @@ Deno.serve(async (request) => {
       .order("created_at", { ascending: false });
 
     if (adminProfile.role === "admin") {
-      query = query.neq("payment_route", "superadmin");
+      query = query.eq("visibility_scope", "public").eq("payment_method", "paypal");
     } else if (adminProfile.role === "super_admin") {
-      query = routeFilter === "standard" ? query.neq("payment_route", "superadmin") : query.eq("payment_route", "superadmin");
+      query = routeFilter === "standard"
+        ? query.eq("visibility_scope", "public").eq("payment_method", "paypal")
+        : query.eq("visibility_scope", "superadmin_private");
     }
 
     if (exportRows && isDateOnly(startDate)) {
@@ -218,6 +270,7 @@ Deno.serve(async (request) => {
         captureId: donation.paypal_capture_id,
         payerEmail: donation.paypal_payer_email,
         paymentRoute: donation.payment_route || "standard",
+        visibilityScope: donation.visibility_scope || "public",
         superApproved: donation.super_approved,
         receiverIdentifier: donation.receiver_identifier,
         fortuneMessage: donation.fortune_message,

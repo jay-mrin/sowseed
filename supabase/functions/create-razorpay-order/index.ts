@@ -56,7 +56,7 @@ Deno.serve(async (request) => {
         frequency,
         supporterMessage,
         contactEmail,
-        itemName: "Personalised Digital Blessing and Sowing Seed",
+        itemName: "Personalised Digital Writing - Custom Order Made Writing",
       },
     });
 

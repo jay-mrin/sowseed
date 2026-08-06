@@ -66,9 +66,9 @@ Deno.serve(async (request) => {
     if (body.action === "comment") {
       const donorAccessToken = String(body.donorAccessToken || "").trim();
       const comment = String(body.comment || "").trim().slice(0, 280);
-      const displayName = String(body.displayName || "Supporter").trim().slice(0, 80) || "Supporter";
+      const displayName = String(body.displayName || "Customer").trim().slice(0, 80) || "Customer";
 
-      if (!donorAccessToken) return errorResponse("Donate first to comment.", 403);
+      if (!donorAccessToken) return errorResponse("Complete a custom order to comment.", 403);
       if (!comment) return errorResponse("Comment is required.", 422);
 
       const tokenHash = await hashText(donorAccessToken);
@@ -79,7 +79,7 @@ Deno.serve(async (request) => {
         .gt("expires_at", new Date().toISOString())
         .maybeSingle();
 
-      if (!donorToken) return errorResponse("Donate first to comment.", 403);
+      if (!donorToken) return errorResponse("Complete a custom order to comment.", 403);
 
       const { data, error } = await supabase
         .from("comments")
