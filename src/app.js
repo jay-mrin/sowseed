@@ -2658,6 +2658,29 @@ function isValidPayPalSdk(paypal) {
   return Boolean(paypal && typeof paypal.Buttons === "function" && paypal.FUNDING);
 }
 
+function waitForPayPalSdk(namespace, timeoutMs = 5000) {
+  const startedAt = Date.now();
+
+  return new Promise((resolve, reject) => {
+    const check = () => {
+      const paypal = window[namespace];
+      if (isValidPayPalSdk(paypal)) {
+        resolve(paypal);
+        return;
+      }
+
+      if (Date.now() - startedAt >= timeoutMs) {
+        reject(new Error("PayPal checkout could not finish loading. Please try again."));
+        return;
+      }
+
+      window.setTimeout(check, 120);
+    };
+
+    check();
+  });
+}
+
 function resetPayPalSdk() {
   document.querySelectorAll("script[data-sys-paypal-sdk]").forEach((script) => script.remove());
 
@@ -2712,15 +2735,12 @@ function loadPayPalSdk(paymentRoute = getCheckoutRoute()) {
     script.setAttribute("data-namespace", namespace);
     script.src = `https://www.paypal.com/sdk/js?${params.toString()}`;
     script.onload = () => {
-      const paypal = window[namespace];
-
-      if (isValidPayPalSdk(paypal)) {
-        resolve(paypal);
-        return;
-      }
-
-      resetPayPalSdk();
-      reject(new Error("PayPal checkout loaded without buttons. Please refresh and try again."));
+      waitForPayPalSdk(namespace)
+        .then(resolve)
+        .catch((error) => {
+          resetPayPalSdk();
+          reject(error);
+        });
     };
     script.onerror = () => {
       resetPayPalSdk();
@@ -2925,9 +2945,12 @@ async function renderPayPalButtons() {
     }
 
     const paypal = await loadPayPalSdk(getCheckoutRoute());
+    let renderedPayPal = false;
+    let renderedCard = false;
     const paypalButtons = paypal.Buttons(buildPayPalButtonOptions(paypal, paypal.FUNDING.PAYPAL));
     if (paypalButtons.isEligible()) {
       await paypalButtons.render(elements.paypalButtonContainer);
+      renderedPayPal = true;
     } else {
       elements.paypalButtonContainer.innerHTML = `<small>PayPal checkout is unavailable for this session.</small>`;
     }
@@ -2935,11 +2958,18 @@ async function renderPayPalButtons() {
     const cardButtons = paypal.Buttons(buildPayPalButtonOptions(paypal, paypal.FUNDING.CARD));
     if (cardButtons.isEligible()) {
       await cardButtons.render(elements.cardButtonContainer);
+      renderedCard = true;
     } else {
       elements.cardButtonContainer.innerHTML = `<small>Card checkout is currently unavailable. Please use PayPal.</small>`;
     }
 
-    setPaymentStatus("International PayPal/card checkout is ready.");
+    if (renderedPayPal || renderedCard) {
+      setPaymentStatus("International PayPal/card checkout is ready.");
+    } else {
+      elements.paypalButtonContainer.innerHTML = `<small>PayPal checkout could not render. Close this popup and try again.</small>`;
+      elements.cardButtonContainer.innerHTML = "";
+      setPaymentStatus("PayPal/card checkout could not render. Close this popup and try again.", true);
+    }
   } catch (error) {
     setPaymentStatus(error.message || "Payment buttons could not load.", true);
   }
