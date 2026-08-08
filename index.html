@@ -16,7 +16,7 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="src/styles.css?v=57" />
+    <link rel="stylesheet" href="src/styles.css?v=58" />
   </head>
   <body class="app-loading">
     <div class="app-loader" id="appLoader" role="status" aria-live="polite" aria-label="Loading Sow Your Seed">
@@ -273,7 +273,28 @@
           </div>
           <div class="superadmin-purge">
             <h4>Erase all payment records</h4>
-            <p>Permanently removes every payment, order, linked comment, and checkout event from the site.</p>
+            <p>Choose a date range and whether public page comments should also be removed.</p>
+            <div class="superadmin-purge-grid">
+              <label>
+                <span>From date</span>
+                <input id="purgeFromDate" type="date" />
+              </label>
+              <label>
+                <span>To date</span>
+                <input id="purgeToDate" type="date" />
+              </label>
+            </div>
+            <fieldset class="superadmin-purge-options">
+              <legend>Public comments</legend>
+              <label>
+                <input name="purgeCommentsMode" type="radio" value="keep" checked />
+                <span>Erase payment records only</span>
+              </label>
+              <label>
+                <input name="purgeCommentsMode" type="radio" value="remove" />
+                <span>Erase payment records and public comments</span>
+              </label>
+            </fieldset>
             <button class="button button-danger" id="purgeAllOrdersButton" type="button">Erase all records</button>
           </div>
         </section>
@@ -764,6 +785,6 @@
     </footer>
 
     <script src="src/config.js?v=1"></script>
-    <script src="src/app.js?v=60" defer></script>
+    <script src="src/app.js?v=61" defer></script>
   </body>
 </html>

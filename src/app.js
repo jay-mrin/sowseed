@@ -373,6 +373,9 @@ const elements = {
   superAdminRazorpayEnabled: document.querySelector("#superAdminRazorpayEnabled"),
   superAdminWiseEnabled: document.querySelector("#superAdminWiseEnabled"),
   purgeAllOrdersButton: document.querySelector("#purgeAllOrdersButton"),
+  purgeFromDate: document.querySelector("#purgeFromDate"),
+  purgeToDate: document.querySelector("#purgeToDate"),
+  purgeCommentsMode: document.querySelectorAll("[name='purgeCommentsMode']"),
   adminInputs: {
     aboutCollapsed: document.querySelector("#adminAboutCollapsed"),
     aboutExpanded: document.querySelector("#adminAboutExpanded"),
@@ -1570,9 +1573,26 @@ async function confirmWiseOrder(donationId, button) {
 }
 
 async function purgeAllPaymentRecords(button) {
-  const password = window.prompt("Enter the SuperAdmin purge password to erase every order and payment record.");
+  const fromDate = elements.purgeFromDate?.value || "";
+  const toDate = elements.purgeToDate?.value || "";
+  const includePublicComments =
+    Array.from(elements.purgeCommentsMode || []).find((input) => input.checked)?.value === "remove";
+  const rangeLabel =
+    fromDate || toDate
+      ? `${fromDate || "the beginning"} through ${toDate || "today"}`
+      : "all dates";
+  const commentLabel = includePublicComments ? "Payment records and public comments" : "Payment records only";
+  const password = window.prompt(`Enter the SuperAdmin purge password to erase ${commentLabel.toLowerCase()} for ${rangeLabel}.`);
   if (!password) return;
-  if (!window.confirm("This permanently removes every payment, order, linked comment, and checkout event. Continue?")) return;
+  if (
+    !window.confirm(
+      `${commentLabel} will be permanently erased for ${rangeLabel}. ${
+        includePublicComments ? "Public comments linked to these orders will also disappear." : "Public comments will be kept on the page."
+      } Continue?`,
+    )
+  ) {
+    return;
+  }
 
   await runAdminAction(
     {
@@ -1580,19 +1600,18 @@ async function purgeAllPaymentRecords(button) {
       statusElement: elements.adminActionStatus,
       button,
       busyText: "Erasing...",
-      loadingMessage: "Erasing all order and payment records...",
-      successMessage: "All order and payment records were erased.",
-      errorMessage: "Could not erase all records.",
+      loadingMessage: `Erasing ${commentLabel.toLowerCase()} for ${rangeLabel}...`,
+      successMessage: `${commentLabel} erased for ${rangeLabel}.`,
+      errorMessage: "Could not erase selected records.",
     },
     async () => {
       await callEdge("admin-donations", {
         admin: true,
         method: "PUT",
-        body: { purgeAll: true, password },
+        body: { purgeAll: true, password, fromDate, toDate, includePublicComments },
       });
       state.donations = [];
       state.superAdminStandardDonations = [];
-      state.seedComments = [];
       await Promise.all([loadBackendData({ throwOnError: true }), loadAdminDonations()]);
       renderApp();
       return { success: true };

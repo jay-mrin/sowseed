@@ -7,6 +7,9 @@ type UpdateOrderBody = {
   fulfillmentNote?: string;
   purgeAll?: boolean;
   password?: string;
+  fromDate?: string;
+  toDate?: string;
+  includePublicComments?: boolean;
 };
 
 type DeleteDonationBody = {
@@ -22,6 +25,19 @@ function isDateOnly(value: string | null) {
 function getUtcDayStart(value: string) {
   const [year, month, day] = value.split("-").map(Number);
   return new Date(Date.UTC(year, month - 1, day));
+}
+
+function getUtcNextDayStart(value: string) {
+  const date = getUtcDayStart(value);
+  date.setUTCDate(date.getUTCDate() + 1);
+  return date;
+}
+
+function applyDateRange(query: any, fromDate: string, toDate: string) {
+  let nextQuery = query;
+  if (fromDate) nextQuery = nextQuery.gte("created_at", getUtcDayStart(fromDate).toISOString());
+  if (toDate) nextQuery = nextQuery.lt("created_at", getUtcNextDayStart(toDate).toISOString());
+  return nextQuery;
 }
 
 function mapDigitalOrder(value: any) {
@@ -119,15 +135,87 @@ Deno.serve(async (request) => {
         if (!purgePassword) return errorResponse("Global purge is not configured. Set SUPERADMIN_PURGE_PASSWORD first.", 503);
         if (String(body.password || "") !== purgePassword) return errorResponse("Incorrect purge password.", 403);
 
-        const { error: seedCommentsError } = await supabase.from("seed_comments").delete().not("id", "is", null);
-        if (seedCommentsError) throw seedCommentsError;
-        const { error: orderError } = await supabase.from("digital_orders").delete().not("id", "is", null);
-        if (orderError) throw orderError;
-        const { error: donationError } = await supabase.from("donations").delete().not("id", "is", null);
-        if (donationError) throw donationError;
-        const { error: eventsError } = await supabase.from("checkout_events").delete().not("id", "is", null);
+        const fromDate = String(body.fromDate || "").trim();
+        const toDate = String(body.toDate || "").trim();
+        const includePublicComments = body.includePublicComments === true;
+
+        if (fromDate && !isDateOnly(fromDate)) return errorResponse("From date must use YYYY-MM-DD.", 422);
+        if (toDate && !isDateOnly(toDate)) return errorResponse("To date must use YYYY-MM-DD.", 422);
+        if (fromDate && toDate && getUtcDayStart(fromDate).getTime() > getUtcDayStart(toDate).getTime()) {
+          return errorResponse("From date cannot be after to date.", 422);
+        }
+
+        const { data: donationsToPurge, error: donationsToPurgeError } = await applyDateRange(
+          supabase.from("donations").select("id, donor_token_id"),
+          fromDate,
+          toDate,
+        );
+        if (donationsToPurgeError) throw donationsToPurgeError;
+
+        const donationIds = (donationsToPurge || []).map((donation: { id: string }) => donation.id).filter(Boolean);
+        const donorTokenIds = (donationsToPurge || [])
+          .map((donation: { donor_token_id?: string | null }) => donation.donor_token_id)
+          .filter(Boolean);
+
+        if (!includePublicComments) {
+          if (donationIds.length) {
+            const { error: unlinkSeedCommentsError } = await supabase
+              .from("seed_comments")
+              .update({ donation_id: null })
+              .in("donation_id", donationIds);
+            if (unlinkSeedCommentsError) throw unlinkSeedCommentsError;
+          }
+
+          if (donationIds.length) {
+            const { error: unlinkDonorTokensError } = await supabase
+              .from("donor_tokens")
+              .update({ donation_id: null })
+              .in("donation_id", donationIds);
+            if (unlinkDonorTokensError) throw unlinkDonorTokensError;
+          }
+        } else {
+          const { error: seedCommentsError } = await applyDateRange(
+            supabase.from("seed_comments").delete(),
+            fromDate,
+            toDate,
+          ).not("id", "is", null);
+          if (seedCommentsError) throw seedCommentsError;
+
+          const { error: commentsError } = await applyDateRange(supabase.from("comments").delete(), fromDate, toDate).not(
+            "id",
+            "is",
+            null,
+          );
+          if (commentsError) throw commentsError;
+        }
+
+        if (donationIds.length) {
+          const { error: orderError } = await supabase.from("digital_orders").delete().in("donation_id", donationIds);
+          if (orderError) throw orderError;
+
+          const { error: donationError } = await supabase.from("donations").delete().in("id", donationIds);
+          if (donationError) throw donationError;
+        }
+
+        if (includePublicComments && donorTokenIds.length) {
+          const { error: donorTokensError } = await supabase.from("donor_tokens").delete().in("id", donorTokenIds);
+          if (donorTokensError) throw donorTokensError;
+        }
+
+        const { error: eventsError } = await applyDateRange(supabase.from("checkout_events").delete(), fromDate, toDate).not(
+          "id",
+          "is",
+          null,
+        );
         if (eventsError) throw eventsError;
-        return jsonResponse({ success: true, purged: true });
+
+        return jsonResponse({
+          success: true,
+          purged: true,
+          range: { fromDate: fromDate || null, toDate: toDate || null },
+          includePublicComments,
+          deletedPaymentRecords: donationIds.length,
+        });
       }
 
       const donationId = String(body.donationId || "").trim();
