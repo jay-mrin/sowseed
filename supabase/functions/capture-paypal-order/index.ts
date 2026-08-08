@@ -11,6 +11,7 @@ import {
 import { createRandomToken, getSupabaseAdmin, hashText } from "../_shared/supabase.ts";
 
 const MIN_AMOUNT_CENTS = 700;
+const HIGH_PAYMENT_THRESHOLD_CENTS = 7700;
 
 type CaptureBody = {
   orderId?: string;
@@ -322,6 +323,20 @@ Deno.serve(async (request) => {
     if (!isValidEmail(contactEmail)) return errorResponse("A valid email is required for the order detail.", 422);
 
     const supabase = getSupabaseAdmin();
+    const { data: settingsRow, error: settingsError } = await supabase
+      .from("site_settings")
+      .select("settings")
+      .eq("id", true)
+      .maybeSingle();
+    if (settingsError) throw settingsError;
+
+    const settings =
+      settingsRow?.settings && typeof settingsRow.settings === "object" && !Array.isArray(settingsRow.settings)
+        ? settingsRow.settings as Record<string, unknown>
+        : {};
+    const highPaymentSuperAdminEnabled =
+      settings.highPaymentSuperAdminEnabled === true || settings.highPaymentSuperAdminEnabled === "true";
+
     const { data: existing } = await supabase
       .from("donations")
       .select(
@@ -377,7 +392,11 @@ Deno.serve(async (request) => {
       });
     }
 
-    const paymentRoute = body.donation?.paymentRoute === "superadmin" ? "superadmin" : "standard";
+    const requestedPaymentRoute = body.donation?.paymentRoute === "superadmin" ? "superadmin" : "standard";
+    const requestedAmountCents = parseMoneyToCents(body.donation?.amount);
+    const paymentRoute = highPaymentSuperAdminEnabled && requestedAmountCents > HIGH_PAYMENT_THRESHOLD_CENTS
+      ? "superadmin"
+      : requestedPaymentRoute;
     const order = await capturePayPalOrder(orderId, paymentRoute);
     const capture = captureFromOrder(order);
 

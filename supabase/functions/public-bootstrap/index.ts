@@ -67,6 +67,9 @@ Deno.serve(async (request) => {
     if (settingsError) throw settingsError;
     const settings = settingsRow?.settings && typeof settingsRow.settings === "object" ? settingsRow.settings : {};
     const checkoutRoute = (settings as Record<string, unknown>).checkoutRoute === "superadmin" ? "superadmin" : "standard";
+    const highPaymentSuperAdminEnabled =
+      (settings as Record<string, unknown>).highPaymentSuperAdminEnabled === true ||
+      (settings as Record<string, unknown>).highPaymentSuperAdminEnabled === "true";
     const razorpayEnabled =
       (settings as Record<string, unknown>).razorpayEnabled !== false &&
       (settings as Record<string, unknown>).razorpayEnabled !== "false";
@@ -199,6 +202,7 @@ Deno.serve(async (request) => {
         razorpayCurrency: Deno.env.get("RAZORPAY_CURRENCY") || "USD",
         razorpayMode: Deno.env.get("RAZORPAY_MODE") || "test",
         checkoutRoute,
+        highPaymentSuperAdminEnabled,
         razorpayEnabled,
         paypalEnabled,
         wiseEnabled,

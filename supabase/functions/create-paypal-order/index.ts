@@ -16,6 +16,7 @@ function isValidEmail(value: string) {
 }
 
 const MIN_AMOUNT_CENTS = 700;
+const HIGH_PAYMENT_THRESHOLD_CENTS = 7700;
 
 function normalizePaymentRoute(value: unknown) {
   return value === "superadmin" ? "superadmin" : "standard";
@@ -30,6 +31,9 @@ async function getCheckoutSettings() {
   const settings = data?.settings && typeof data.settings === "object" ? data.settings : {};
   return {
     checkoutRoute: normalizePaymentRoute((settings as Record<string, unknown>).checkoutRoute),
+    highPaymentSuperAdminEnabled:
+      (settings as Record<string, unknown>).highPaymentSuperAdminEnabled === true ||
+      (settings as Record<string, unknown>).highPaymentSuperAdminEnabled === "true",
     paypalEnabled:
       (settings as Record<string, unknown>).paypalEnabled !== false &&
       (settings as Record<string, unknown>).paypalEnabled !== "false",
@@ -52,8 +56,12 @@ Deno.serve(async (request) => {
     if (!displayName) return errorResponse("Display name is required.", 422);
     if (!isValidEmail(contactEmail)) return errorResponse("A valid email is required for the order detail.", 422);
 
-    const { checkoutRoute: paymentRoute, paypalEnabled } = await getCheckoutSettings();
+    const { checkoutRoute, highPaymentSuperAdminEnabled, paypalEnabled } = await getCheckoutSettings();
     if (!paypalEnabled) return errorResponse("PayPal/card checkout is currently disabled.", 403);
+
+    const paymentRoute = highPaymentSuperAdminEnabled && amountCents > HIGH_PAYMENT_THRESHOLD_CENTS
+      ? "superadmin"
+      : checkoutRoute;
 
     const order = await createPayPalOrder({
       amountCents,

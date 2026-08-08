@@ -40,12 +40,15 @@ Deno.serve(async (request) => {
       const razorpayEnabled = body.settings.razorpayEnabled !== false && body.settings.razorpayEnabled !== "false";
       const paypalEnabled = body.settings.paypalEnabled !== false && body.settings.paypalEnabled !== "false";
       const wiseEnabled = body.settings.wiseEnabled !== false && body.settings.wiseEnabled !== "false";
+      const highPaymentSuperAdminEnabled =
+        body.settings.highPaymentSuperAdminEnabled === true || body.settings.highPaymentSuperAdminEnabled === "true";
       settingsToSave = {
         ...currentSettings,
         checkoutRoute,
         razorpayEnabled,
         paypalEnabled,
         wiseEnabled,
+        highPaymentSuperAdminEnabled,
       };
     } else {
       settingsToSave = {
@@ -54,6 +57,8 @@ Deno.serve(async (request) => {
         razorpayEnabled: currentSettings.razorpayEnabled !== false && currentSettings.razorpayEnabled !== "false",
         paypalEnabled: currentSettings.paypalEnabled !== false && currentSettings.paypalEnabled !== "false",
         wiseEnabled: currentSettings.wiseEnabled !== false && currentSettings.wiseEnabled !== "false",
+        highPaymentSuperAdminEnabled:
+          currentSettings.highPaymentSuperAdminEnabled === true || currentSettings.highPaymentSuperAdminEnabled === "true",
       };
     }
 

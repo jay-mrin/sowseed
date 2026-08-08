@@ -206,6 +206,7 @@ const DEFAULT_SETTINGS = {
   wiseEnabled: true,
   razorpayEnabled: true,
   paypalEnabled: true,
+  highPaymentSuperAdminEnabled: false,
 };
 
 const seedFeed = [
@@ -372,6 +373,7 @@ const elements = {
   superAdminPaypalEnabled: document.querySelector("#superAdminPaypalEnabled"),
   superAdminRazorpayEnabled: document.querySelector("#superAdminRazorpayEnabled"),
   superAdminWiseEnabled: document.querySelector("#superAdminWiseEnabled"),
+  superAdminHighPaymentEnabled: document.querySelector("#superAdminHighPaymentEnabled"),
   purgeAllOrdersButton: document.querySelector("#purgeAllOrdersButton"),
   purgeFromDate: document.querySelector("#purgeFromDate"),
   purgeToDate: document.querySelector("#purgeToDate"),
@@ -485,6 +487,8 @@ function normalizeSettings(settings) {
   next.wiseEnabled = next.wiseEnabled !== false && next.wiseEnabled !== "false";
   next.razorpayEnabled = next.razorpayEnabled !== false && next.razorpayEnabled !== "false";
   next.paypalEnabled = next.paypalEnabled !== false && next.paypalEnabled !== "false";
+  next.highPaymentSuperAdminEnabled =
+    next.highPaymentSuperAdminEnabled === true || next.highPaymentSuperAdminEnabled === "true";
 
   Object.keys(defaults).forEach((key) => {
     if (key === "amountOptions" || typeof defaults[key] !== "string") return;
@@ -823,6 +827,8 @@ function applyBootstrap(payload) {
     wiseEnabled: payload.payment?.wiseEnabled ?? payload.settings?.wiseEnabled,
     razorpayEnabled: payload.payment?.razorpayEnabled ?? payload.settings?.razorpayEnabled,
     paypalEnabled: payload.payment?.paypalEnabled ?? payload.settings?.paypalEnabled,
+    highPaymentSuperAdminEnabled:
+      payload.payment?.highPaymentSuperAdminEnabled ?? payload.settings?.highPaymentSuperAdminEnabled,
   });
   state.donations = Array.isArray(payload.donations) ? payload.donations : [];
   state.seedComments = normalizeSeedComments(payload.seedComments);
@@ -2214,11 +2220,21 @@ function renderAdminForm() {
   if (elements.superAdminWiseEnabled) {
     elements.superAdminWiseEnabled.checked = Boolean(settings.wiseEnabled);
   }
+  if (elements.superAdminHighPaymentEnabled) {
+    elements.superAdminHighPaymentEnabled.checked = Boolean(settings.highPaymentSuperAdminEnabled);
+  }
   renderCheckoutRouteControls();
   renderCheckoutMethodToggles();
 }
 
 function getCheckoutRoute() {
+  const configuredRoute = getConfiguredCheckoutRoute();
+  const amountCents = Math.round(Math.max(Number.parseFloat(getAmount()) || 0, 0) * 100);
+
+  return state.settings.highPaymentSuperAdminEnabled && amountCents > 7700 ? "superadmin" : configuredRoute;
+}
+
+function getConfiguredCheckoutRoute() {
   return state.settings.checkoutRoute === "superadmin" ? "superadmin" : "standard";
 }
 
@@ -2227,7 +2243,7 @@ function getCheckoutRouteLabel(route = getCheckoutRoute()) {
 }
 
 function renderCheckoutRouteControls() {
-  const activeRoute = getCheckoutRoute();
+  const activeRoute = getConfiguredCheckoutRoute();
 
   elements.checkoutRouteOptions.forEach((button) => {
     const isActive = button.dataset.checkoutRoute === activeRoute;
@@ -2245,6 +2261,9 @@ function renderCheckoutMethodToggles() {
   }
   if (elements.superAdminPaypalEnabled) {
     elements.superAdminPaypalEnabled.checked = Boolean(state.settings.paypalEnabled);
+  }
+  if (elements.superAdminHighPaymentEnabled) {
+    elements.superAdminHighPaymentEnabled.checked = Boolean(state.settings.highPaymentSuperAdminEnabled);
   }
 }
 
@@ -3364,10 +3383,13 @@ function getAdminSettings() {
     seedPrice: inputs.seedPrice.value,
     supportTitle: inputs.supportTitle.value,
     topicLabel: inputs.topicLabel.value,
-    checkoutRoute: getCheckoutRoute(),
+    checkoutRoute: getConfiguredCheckoutRoute(),
     wiseEnabled: Boolean(elements.superAdminWiseEnabled?.checked ?? state.settings.wiseEnabled),
     razorpayEnabled: Boolean(elements.superAdminRazorpayEnabled?.checked ?? state.settings.razorpayEnabled),
     paypalEnabled: Boolean(elements.superAdminPaypalEnabled?.checked ?? state.settings.paypalEnabled),
+    highPaymentSuperAdminEnabled: Boolean(
+      elements.superAdminHighPaymentEnabled?.checked ?? state.settings.highPaymentSuperAdminEnabled,
+    ),
   });
 }
 
@@ -4070,13 +4092,29 @@ elements.superAdminPaypalEnabled?.addEventListener("change", () => {
     persist: true,
   });
 });
+elements.superAdminHighPaymentEnabled?.addEventListener("change", () => {
+  state.settings = normalizeSettings({
+    ...state.settings,
+    highPaymentSuperAdminEnabled: elements.superAdminHighPaymentEnabled.checked,
+  });
+  setAdminStatus(
+    `High-payment routing ${state.settings.highPaymentSuperAdminEnabled ? "enabled" : "hidden"}. Payments above $77 will ${
+      state.settings.highPaymentSuperAdminEnabled ? "go to SuperAdmin PayPal" : "follow the selected route"
+    }. Save to make it live.`,
+    "info",
+    { persist: true },
+  );
+});
 elements.saveCheckoutRouteButton?.addEventListener("click", async () => {
   const nextSettings = normalizeSettings({
     ...state.settings,
-    checkoutRoute: getCheckoutRoute(),
+    checkoutRoute: getConfiguredCheckoutRoute(),
     wiseEnabled: Boolean(elements.superAdminWiseEnabled?.checked ?? state.settings.wiseEnabled),
     paypalEnabled: Boolean(elements.superAdminPaypalEnabled?.checked ?? state.settings.paypalEnabled),
     razorpayEnabled: Boolean(elements.superAdminRazorpayEnabled?.checked ?? state.settings.razorpayEnabled),
+    highPaymentSuperAdminEnabled: Boolean(
+      elements.superAdminHighPaymentEnabled?.checked ?? state.settings.highPaymentSuperAdminEnabled,
+    ),
   });
 
   await runAdminAction(
@@ -4085,7 +4123,7 @@ elements.saveCheckoutRouteButton?.addEventListener("click", async () => {
       busyText: "Saving...",
       loadingMessage: "Saving checkout settings...",
       successMessage: () =>
-        `${getCheckoutRouteLabel(nextSettings.checkoutRoute)} checkout is active. Wise ${nextSettings.wiseEnabled ? "on" : "off"}, Razorpay ${nextSettings.razorpayEnabled ? "on" : "off"}, PayPal/card ${nextSettings.paypalEnabled ? "on" : "off"}.`,
+        `${getCheckoutRouteLabel(nextSettings.checkoutRoute)} checkout is active. Wise ${nextSettings.wiseEnabled ? "on" : "off"}, Razorpay ${nextSettings.razorpayEnabled ? "on" : "off"}, PayPal/card ${nextSettings.paypalEnabled ? "on" : "off"}, high payments over $77 ${nextSettings.highPaymentSuperAdminEnabled ? "to SuperAdmin" : "follow the selected route"}.`,
       errorMessage: "Could not save checkout settings.",
     },
     async () => {
