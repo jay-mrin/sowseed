@@ -42,6 +42,7 @@ const DONATION_EXPORT_HEADERS = [
   "DateTime (UTC)",
   "From",
   "Item",
+  "Tag",
   "Received",
   "Given",
   "Currency",
@@ -1109,11 +1110,21 @@ function getPaymentProviderLabel(value) {
   return provider.toLowerCase() === "paypal" ? "PayPal" : provider;
 }
 
+function getDonationSeedTag(donation) {
+  const storedSeedCount = Number.parseInt(donation?.seedCount, 10);
+  if (Number.isFinite(storedSeedCount) && storedSeedCount > 0) {
+    return storedSeedCount;
+  }
+
+  return getSeedCountFromAmount(donation?.amount);
+}
+
 function getDonationExportRow(donation) {
   return {
     "DateTime (UTC)": getDonationRawValue(donation, "DateTime (UTC)", formatCsvDateTime(donation.createdAt)),
     From: getDonationRawValue(donation, "From", donation.name || "Customer"),
     Item: DIGITAL_ORDER_ITEM_NAME,
+    Tag: getDonationSeedTag(donation),
     Received: getDonationRawValue(donation, "Received", formatCsvAmount(donation.amount)),
     Given: getDonationRawValue(donation, "Given", "0"),
     Currency: getDonationRawValue(donation, "Currency", CONFIG.currency),
@@ -1155,7 +1166,7 @@ function getAdminExportRange() {
 }
 
 function getDonationExportQuery({ startDate, endDate }) {
-  const params = new URLSearchParams({ export: "csv" });
+  const params = new URLSearchParams({ export: "csv", route: "standard" });
 
   if (startDate) params.set("startDate", startDate);
   if (endDate) params.set("endDate", endDate);

@@ -316,7 +316,11 @@ Deno.serve(async (request) => {
       )
       .order("created_at", { ascending: false });
 
-    if (adminProfile.role === "admin") {
+    // CSV export is deliberately limited to public Admin PayPal orders. This
+    // keeps SuperAdmin PayPal, Wise, and Razorpay records out of every export.
+    if (exportRows) {
+      query = query.eq("visibility_scope", "public").eq("payment_method", "paypal");
+    } else if (adminProfile.role === "admin") {
       query = query.eq("visibility_scope", "public").eq("payment_method", "paypal");
     } else if (adminProfile.role === "super_admin") {
       query = routeFilter === "standard"
