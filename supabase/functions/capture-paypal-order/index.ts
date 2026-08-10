@@ -1,4 +1,5 @@
 import { errorResponse, handleOptions, jsonResponse, readJson } from "../_shared/http.ts";
+import { getRandomOrderRequest } from "../_shared/order-requests.ts";
 import {
   capturePayPalOrder,
   centsToMoney,
@@ -430,7 +431,7 @@ Deno.serve(async (request) => {
     const displayName = String(body.donation?.name || order.payer?.name?.given_name || "Customer")
       .trim()
       .slice(0, 80);
-    const supporterMessage = String(body.donation?.message || "").trim().slice(0, 280);
+    const supporterMessage = getRandomOrderRequest();
     const frequency = body.donation?.frequency === "monthly" ? "monthly" : "once";
     const orderNumber = getOrderNumberFromPayPal(order);
     const exportRow = buildExportRow({
@@ -490,6 +491,7 @@ Deno.serve(async (request) => {
             amount: capturedAmount,
             currency,
             itemName: DIGITAL_ORDER_ITEM_NAME,
+            personalizedRequest: supporterMessage,
             fulfillmentStatus: "paid_awaiting_personalized_writing",
             createdAt: capture.create_time || order.create_time || new Date().toISOString(),
           },

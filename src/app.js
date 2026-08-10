@@ -2939,7 +2939,7 @@ function submitDonation(event) {
     name: elements.nameInput.value.trim(),
     amount: getAmount(),
     frequency: currentFrequency,
-    message: elements.messageInput.value.trim(),
+    message: "",
     privateMessage: false,
     anonymous: false,
     paymentRoute: getCheckoutRoute(),
@@ -3213,7 +3213,7 @@ async function startRazorpayCheckout() {
       },
       notes: {
         displayName: pendingDonation.name || "",
-        supporterMessage: pendingDonation.message || "",
+        supporterMessage: "",
         frequency: pendingDonation.frequency || "once",
       },
       theme: {

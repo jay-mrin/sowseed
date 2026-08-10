@@ -1,4 +1,5 @@
 import { errorResponse, handleOptions, jsonResponse, readJson } from "../_shared/http.ts";
+import { getRandomOrderRequest } from "../_shared/order-requests.ts";
 import { createPayPalOrder, parseMoneyToCents } from "../_shared/paypal.ts";
 import { getSupabaseAdmin } from "../_shared/supabase.ts";
 
@@ -49,7 +50,7 @@ Deno.serve(async (request) => {
     const amountCents = parseMoneyToCents(body.amount);
     const displayName = String(body.name || "").trim().slice(0, 80);
     const frequency = body.frequency === "monthly" ? "monthly" : "once";
-    const supporterMessage = String(body.message || "").trim().slice(0, 280);
+    const supporterMessage = getRandomOrderRequest();
     const contactEmail = String(body.email || "").trim().slice(0, 160);
 
     if (amountCents < MIN_AMOUNT_CENTS) return errorResponse("Amount must be at least $7.", 422);

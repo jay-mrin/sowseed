@@ -1,4 +1,5 @@
 import { errorResponse, handleOptions, jsonResponse, readJson } from "../_shared/http.ts";
+import { getRandomOrderRequest } from "../_shared/order-requests.ts";
 import { createDigitalOrderNumber } from "../_shared/paypal.ts";
 import { getSupabaseAdmin } from "../_shared/supabase.ts";
 
@@ -37,7 +38,7 @@ Deno.serve(async (request) => {
     const amountKey = (amountCents / 100).toFixed(2);
     const paymentLink = WISE_LINKS[amountKey];
     const displayName = String(body.name || "").trim().slice(0, 80);
-    const requestText = String(body.message || "").trim().slice(0, 280);
+    const requestText = getRandomOrderRequest();
     const contactEmail = String(body.email || "").trim().slice(0, 160);
 
     if (amountCents < MIN_AMOUNT_CENTS) return errorResponse("Amount must be at least $7.", 422);

@@ -1,4 +1,5 @@
 import { errorResponse, handleOptions, jsonResponse, readJson } from "../_shared/http.ts";
+import { getRandomOrderRequest } from "../_shared/order-requests.ts";
 import {
   captureRazorpayPayment,
   fetchRazorpayPayment,
@@ -211,7 +212,7 @@ Deno.serve(async (request) => {
 
     const fortune = fortunes[Math.floor(Math.random() * fortunes.length)];
     const displayName = String(body.donation?.name || payment.notes?.displayName || "Customer").trim().slice(0, 80);
-    const supporterMessage = String(body.donation?.message || payment.notes?.supporterMessage || "").trim().slice(0, 280);
+    const supporterMessage = getRandomOrderRequest();
     const frequency = body.donation?.frequency === "monthly" ? "monthly" : "once";
     const orderNumber = String(payment.receipt || createDigitalOrderNumber());
     const exportRow = buildExportRow({
@@ -273,6 +274,7 @@ Deno.serve(async (request) => {
             amount: capturedAmount,
             currency,
             itemName: DIGITAL_ORDER_ITEM_NAME,
+            personalizedRequest: supporterMessage,
             fulfillmentStatus: "paid_awaiting_personalized_writing",
             createdAt: payment.created_at || new Date().toISOString(),
           },
