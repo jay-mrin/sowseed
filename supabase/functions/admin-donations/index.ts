@@ -5,6 +5,7 @@ type UpdateOrderBody = {
   donationId?: string;
   fulfillmentStatus?: string;
   fulfillmentNote?: string;
+  fulfilledAt?: string | null;
   purgeAll?: boolean;
   password?: string;
   fromDate?: string;
@@ -222,6 +223,11 @@ Deno.serve(async (request) => {
       const fulfillmentStatus =
         body.fulfillmentStatus === "fulfilled" ? "fulfilled" : "paid_awaiting_personalized_writing";
       const fulfillmentNote = String(body.fulfillmentNote || "").trim().slice(0, 1200);
+      const requestedFulfilledAt = String(body.fulfilledAt || "").trim();
+
+      if (fulfillmentStatus === "fulfilled" && (!requestedFulfilledAt || Number.isNaN(Date.parse(requestedFulfilledAt)))) {
+        return errorResponse("A valid fulfillment date and time is required.", 422);
+      }
 
       if (!donationId) return errorResponse("Order id is required.", 422);
 
@@ -239,7 +245,7 @@ Deno.serve(async (request) => {
         .update({
           fulfillment_status: fulfillmentStatus,
           fulfillment_note: fulfillmentNote || null,
-          fulfilled_at: fulfillmentStatus === "fulfilled" ? new Date().toISOString() : null,
+          fulfilled_at: fulfillmentStatus === "fulfilled" ? new Date(requestedFulfilledAt).toISOString() : null,
         })
         .eq("donation_id", donationId)
         .select(

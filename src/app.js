@@ -317,6 +317,11 @@ const elements = {
   followButton: document.querySelector("#followButton"),
   followersText: document.querySelector("#followersText"),
   footerText: document.querySelector("#footerText"),
+  fulfillmentCancelButton: document.querySelector("#cancelFulfillmentButton"),
+  fulfillmentDateInput: document.querySelector("#fulfillmentDateInput"),
+  fulfillmentDialog: document.querySelector("#fulfillmentDialog"),
+  fulfillmentForm: document.querySelector("#fulfillmentForm"),
+  fulfillmentTimeInput: document.querySelector("#fulfillmentTimeInput"),
   closeFortuneNumberButton: document.querySelector("#closeFortuneNumberButton"),
   fortuneNumberCopy: document.querySelector("#fortuneNumberCopy"),
   fortuneNumberDialog: document.querySelector("#fortuneNumberDialog"),
@@ -404,6 +409,7 @@ const elements = {
 
 let currentFrequency = "once";
 let currentReceiptText = "";
+let pendingFulfillmentAction = null;
 let backendReady = false;
 const paypalSdkPromises = new Map();
 let paypalSdkKey = "";
@@ -1668,7 +1674,54 @@ function cssAttributeValue(value) {
   return window.CSS?.escape ? window.CSS.escape(stringValue) : stringValue.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 
-async function saveDigitalOrderFulfillment(donationId, button) {
+function getLocalDatePart(date = new Date()) {
+  const pad = (value) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function getLocalTimePart(date = new Date()) {
+  const pad = (value) => String(value).padStart(2, "0");
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function closeFulfillmentDialog() {
+  pendingFulfillmentAction = null;
+  elements.fulfillmentDialog?.classList.remove("is-open");
+  if (typeof elements.fulfillmentDialog?.close === "function") {
+    elements.fulfillmentDialog.close();
+  } else {
+    elements.fulfillmentDialog?.removeAttribute("open");
+  }
+}
+
+function openFulfillmentDialog(donationId, button) {
+  pendingFulfillmentAction = { donationId, button };
+  const now = new Date();
+  elements.fulfillmentDateInput.value = getLocalDatePart(now);
+  elements.fulfillmentTimeInput.value = getLocalTimePart(now);
+
+  if (typeof elements.fulfillmentDialog.showModal === "function") {
+    elements.fulfillmentDialog.showModal();
+  } else {
+    elements.fulfillmentDialog.setAttribute("open", "");
+  }
+
+  window.requestAnimationFrame(() => {
+    elements.fulfillmentDialog.classList.add("is-open");
+  });
+  window.setTimeout(() => elements.fulfillmentDateInput.focus(), 80);
+}
+
+function getSelectedFulfillmentTimestamp() {
+  const localValue = `${elements.fulfillmentDateInput.value}T${elements.fulfillmentTimeInput.value}`;
+  const selectedDate = new Date(localValue);
+  if (!elements.fulfillmentDateInput.value || !elements.fulfillmentTimeInput.value || Number.isNaN(selectedDate.getTime())) {
+    return null;
+  }
+  return selectedDate.toISOString();
+}
+
+async function saveDigitalOrderFulfillment(donationId, button, fulfilledAt = "") {
   const donation = getDonationById(donationId);
   const statusElement = elements.adminActionStatus;
   const panel = elements.adminPanel;
@@ -1677,6 +1730,11 @@ async function saveDigitalOrderFulfillment(donationId, button) {
   const note = noteField?.value || "";
   const order = getDigitalOrder(donation);
   const nextStatus = order?.fulfillmentStatus === "fulfilled" ? "paid_awaiting_personalized_writing" : "fulfilled";
+
+  if (nextStatus === "fulfilled" && !fulfilledAt) {
+    openFulfillmentDialog(donationId, button);
+    return;
+  }
 
   await runAdminAction(
     {
@@ -1699,6 +1757,7 @@ async function saveDigitalOrderFulfillment(donationId, button) {
           donationId,
           fulfillmentStatus: nextStatus,
           fulfillmentNote: note,
+          fulfilledAt: nextStatus === "fulfilled" ? fulfilledAt : null,
         },
       });
 
@@ -4138,6 +4197,25 @@ function handleAdminCalendarDetailClick(event) {
 
 elements.adminCalendarDetails.addEventListener("click", handleAdminCalendarDetailClick);
 elements.superAdminStandardCalendarDetails?.addEventListener("click", handleAdminCalendarDetailClick);
+
+elements.fulfillmentCancelButton?.addEventListener("click", closeFulfillmentDialog);
+elements.fulfillmentForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const fulfilledAt = getSelectedFulfillmentTimestamp();
+  if (!fulfilledAt || !pendingFulfillmentAction) return;
+
+  const { donationId, button } = pendingFulfillmentAction;
+  closeFulfillmentDialog();
+  saveDigitalOrderFulfillment(donationId, button, fulfilledAt);
+});
+elements.fulfillmentDialog?.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeFulfillmentDialog();
+});
+elements.fulfillmentDialog?.addEventListener("close", () => {
+  elements.fulfillmentDialog.classList.remove("is-open");
+  pendingFulfillmentAction = null;
+});
 
 elements.profileTabs.forEach((tab) => {
   tab.addEventListener("click", (event) => {

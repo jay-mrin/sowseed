@@ -353,6 +353,96 @@ a {
   gap: 10px;
 }
 
+.fulfillment-dialog {
+  width: min(460px, calc(100% - 32px));
+  padding: 0;
+  border: 0;
+  border-radius: 26px;
+  background: transparent;
+  opacity: 0;
+  transform: translateY(12px) scale(0.96);
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.fulfillment-dialog::backdrop {
+  background: rgba(247, 234, 241, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.fulfillment-dialog.is-open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.fulfillment-card {
+  display: grid;
+  gap: 18px;
+  padding: 28px;
+  border: 1px solid rgba(217, 215, 207, 0.78);
+  border-radius: 26px;
+  background: var(--white);
+  box-shadow: 0 24px 70px rgba(25, 25, 25, 0.16);
+}
+
+.fulfillment-card h2 {
+  margin: 4px 0 0;
+  color: #1d232c;
+  font-size: 25px;
+  line-height: 1.1;
+}
+
+.fulfillment-dialog-copy {
+  margin: 10px 0 0;
+  color: #777582;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.fulfillment-dialog-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.fulfillment-dialog-fields label {
+  display: grid;
+  gap: 8px;
+  color: #606068;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.fulfillment-dialog-fields input {
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: var(--ink);
+  background: #f1efed;
+  font: inherit;
+  font-size: 15px;
+}
+
+.fulfillment-dialog-fields input:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 4px rgba(30, 147, 171, 0.1);
+  outline: 0;
+}
+
+.fulfillment-dialog-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 520px) {
+  .fulfillment-dialog-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
 .admin-panel {
   position: fixed;
   inset: 0;

@@ -16,7 +16,7 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="src/styles.css?v=59" />
+    <link rel="stylesheet" href="src/styles.css?v=60" />
   </head>
   <body class="app-loading">
     <div class="app-loader" id="appLoader" role="status" aria-live="polite" aria-label="Loading Sow Your Seed">
@@ -55,6 +55,30 @@
         <div class="admin-login-actions">
           <button class="button button-secondary" id="cancelAdminLoginButton" type="button">Cancel</button>
           <button class="button button-primary" type="submit">Enter portal</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="fulfillment-dialog" id="fulfillmentDialog" aria-labelledby="fulfillmentDialogTitle">
+      <form class="fulfillment-card" id="fulfillmentForm">
+        <div>
+          <p class="section-kicker">Order fulfillment</p>
+          <h2 id="fulfillmentDialogTitle">When was this order fulfilled?</h2>
+          <p class="fulfillment-dialog-copy">Choose the date and local time the personalised writing was completed and delivered.</p>
+        </div>
+        <div class="fulfillment-dialog-fields">
+          <label>
+            <span>Fulfilled date</span>
+            <input id="fulfillmentDateInput" type="date" required />
+          </label>
+          <label>
+            <span>Fulfilled time</span>
+            <input id="fulfillmentTimeInput" type="time" required />
+          </label>
+        </div>
+        <div class="fulfillment-dialog-actions">
+          <button class="button button-secondary" id="cancelFulfillmentButton" type="button">Cancel</button>
+          <button class="button button-primary" type="submit">Mark fulfilled</button>
         </div>
       </form>
     </dialog>
@@ -799,6 +823,6 @@
     </footer>
 
     <script src="src/config.js?v=1"></script>
-    <script src="src/app.js?v=63" defer></script>
+    <script src="src/app.js?v=64" defer></script>
   </body>
 </html>
