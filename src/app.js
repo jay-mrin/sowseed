@@ -11,13 +11,13 @@ const ADMIN_PASSWORD = "sowseed";
 const PAYMENT_ANIMATION_MS = 220;
 const SEED_DOLLAR_VALUE = 7;
 const MIN_DONATION_AMOUNT = 7;
-const TOP_BRAND_TITLE = "Christ Paradise Garden💫✨🌱";
+const TOP_BRAND_TITLE = "Seed garden";
 const GOLDEN_SEED_AMOUNTS = new Set([111, 333, 777, 999]);
 const MAX_LOCAL_POST_IMAGE_BYTES = 2 * 1024 * 1024;
 const MAX_REMOTE_POST_IMAGE_BYTES = 5 * 1024 * 1024;
 const FORTUNE_NUMBER_SPECIAL_CHANCE = 0.01;
 const DIGITAL_ORDER_ITEM_NAME = "Personalised Digital Writing - Custom Order Made Writing";
-const LEGACY_FOOTER_TEXT = "Sow Your Seed exists to make support feel generous, clear, and personal.";
+const LEGACY_FOOTER_TEXT = "Seed garden exists to make support feel generous, clear, and personal.";
 const DEFAULT_FOOTER_TEXT =
   "This platform provides personalised digital writing created from your submitted request or intention. Each purchase is a custom order, prepared directly for the buyer. Contact: sowyourseed@christgarden.church";
 const WISE_SUPPORTED_AMOUNTS = new Set([7, 11, 33, 77, 111, 333, 777, 999]);
@@ -172,7 +172,7 @@ const FORTUNE_MESSAGES = [
 ];
 
 const DEFAULT_SETTINGS = {
-  profileTitle: "Sow Your Seed Here for Your Soulmate 💫",
+  profileTitle: "Sow Your Seed 💫",
   followersText: "167 Followers",
   seedGoal: 700,
   startingSeeds: 0,
@@ -193,8 +193,8 @@ const DEFAULT_SETTINGS = {
   topicLabel: "Digital writing",
   supportTitle:
     "Choose Your Seed Offering for Your Soulmate & Loved Ones🌱💗 and get a personalised mail as your digital writing order",
-  postAuthorName: "Sow Your Seed Here for Your Soulmate 💫",
-  postTitle: "༺💗༻ A Divine Invitation: Sow Your Seed Here for Your Soulmate 🌱💫🌹",
+  postAuthorName: "Sow Your Seed 💫",
+  postTitle: "༺💗༻ A Divine Invitation: Sow Your Seed 🌱💫🌹",
   postBody:
     "Each seed is a small act of trust, a prayerful step toward the love your heart has been waiting for.",
   paymentCopy:
@@ -2804,8 +2804,8 @@ function updateCheckoutLabel() {
   const cadence = currentFrequency === "monthly" ? "/mo" : "";
   const seedUnits = getSeedUnitsFromAmount(amount, state.settings.seedPrice);
 
-  elements.checkoutLabel.textContent = "Sow Your Seed";
-  elements.checkoutButton.setAttribute("aria-label", `Sow Your Seed ${money(amount)}${cadence}`);
+  elements.checkoutLabel.textContent = "Seed garden";
+  elements.checkoutButton.setAttribute("aria-label", `Seed garden ${money(amount)}${cadence}`);
   elements.seedPriceLabel.textContent = formatSeedUnits(seedUnits);
 }
 
@@ -4290,7 +4290,7 @@ elements.followButton.addEventListener("click", () => {
   state.followed = !state.followed;
   saveState();
   renderFollowState();
-  showToast(state.followed ? "You are now following Sow Your Seed." : "You unfollowed Sow Your Seed.");
+  showToast(state.followed ? "You are now following Seed garden." : "You unfollowed Seed garden.");
 });
 
 if (elements.copyReceiptButton) {
