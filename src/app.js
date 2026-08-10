@@ -203,6 +203,7 @@ const DEFAULT_SETTINGS = {
     "By proceeding, you are purchasing a personalised digital writing created from your submitted prayer or intention. Your order is prepared directly for you.",
   footerText: DEFAULT_FOOTER_TEXT,
   fortuneNumberEnabled: false,
+  blessingWallEnabled: true,
   checkoutRoute: "standard",
   wiseEnabled: true,
   razorpayEnabled: true,
@@ -366,6 +367,7 @@ const elements = {
   saveCheckoutRouteButton: document.querySelector("#saveCheckoutRouteButton"),
   saveAdminButton: document.querySelector("#saveAdminButton"),
   seedCommentsList: document.querySelector("#seedCommentsList"),
+  seedCommentsPanel: document.querySelector("#seedCommentsPanel"),
   seedPriceLabel: document.querySelector("#seedPriceLabel"),
   sectionViews: document.querySelectorAll("[data-section-view]"),
   showMoreButtons: document.querySelectorAll("[data-toggle-target]"),
@@ -391,6 +393,7 @@ const elements = {
     amountOptions: document.querySelector("#adminAmountOptions"),
     followersText: document.querySelector("#adminFollowersText"),
     footerText: document.querySelector("#adminFooterText"),
+    blessingWallEnabled: document.querySelector("#adminBlessingWallEnabled"),
     fortuneNumberEnabled: document.querySelector("#adminFortuneNumberEnabled"),
     meterCollapsed: document.querySelector("#adminMeterCollapsed"),
     meterExpanded: document.querySelector("#adminMeterExpanded"),
@@ -490,6 +493,7 @@ function normalizeSettings(settings) {
   next.seedPrice = Math.max(Number.parseInt(next.seedPrice, 10) || defaults.seedPrice, MIN_DONATION_AMOUNT);
   next.amountOptions = parseAmountOptions(next.amountOptions);
   next.fortuneNumberEnabled = next.fortuneNumberEnabled === true || next.fortuneNumberEnabled === "true";
+  next.blessingWallEnabled = next.blessingWallEnabled !== false && next.blessingWallEnabled !== "false";
   next.checkoutRoute = next.checkoutRoute === "superadmin" ? "superadmin" : "standard";
   next.wiseEnabled = next.wiseEnabled !== false && next.wiseEnabled !== "false";
   next.razorpayEnabled = next.razorpayEnabled !== false && next.razorpayEnabled !== "false";
@@ -2204,6 +2208,9 @@ function renderSettings() {
   elements.paymentCopy.textContent = settings.paymentCopy;
   elements.paymentNote.textContent = settings.paymentNote;
   elements.footerText.textContent = settings.footerText;
+  if (elements.seedCommentsPanel) {
+    elements.seedCommentsPanel.hidden = !settings.blessingWallEnabled;
+  }
   renderAmountOptions();
   renderAdminForm();
   updateCheckoutLabel();
@@ -2488,6 +2495,7 @@ function renderAdminForm() {
   inputs.paymentCopy.value = settings.paymentCopy;
   inputs.paymentNote.value = settings.paymentNote;
   inputs.footerText.value = settings.footerText;
+  inputs.blessingWallEnabled.checked = Boolean(settings.blessingWallEnabled);
   inputs.fortuneNumberEnabled.checked = Boolean(settings.fortuneNumberEnabled);
   if (elements.superAdminRazorpayEnabled) {
     elements.superAdminRazorpayEnabled.checked = Boolean(settings.razorpayEnabled);
@@ -3648,6 +3656,7 @@ function getAdminSettings() {
     amountOptions: parseAmountOptions(inputs.amountOptions.value),
     followersText: inputs.followersText.value,
     footerText: inputs.footerText.value,
+    blessingWallEnabled: inputs.blessingWallEnabled.checked,
     fortuneNumberEnabled: inputs.fortuneNumberEnabled.checked,
     meterCollapsed: inputs.meterCollapsed.value,
     meterExpanded: inputs.meterExpanded.value,

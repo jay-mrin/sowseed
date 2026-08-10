@@ -358,6 +358,13 @@
                 Show visitors a golden seed prompt that reveals a weighted fortune seed number.
               </span>
             </label>
+            <label class="admin-toggle">
+              <input id="adminBlessingWallEnabled" type="checkbox" />
+              <span>
+                <strong>Blessing Wall</strong>
+                Show or hide the public community blessing comments section.
+              </span>
+            </label>
             <label>
               <span>Footer text</span>
               <input id="adminFooterText" type="text" />
@@ -665,7 +672,7 @@
             </form>
           </section>
 
-          <section class="panel seed-comments-panel" aria-labelledby="seedCommentsTitle">
+          <section class="panel seed-comments-panel" id="seedCommentsPanel" aria-labelledby="seedCommentsTitle">
             <div class="section-heading">
               <p class="section-kicker">Blessing wall</p>
               <h2 id="seedCommentsTitle">Comments from the community</h2>
