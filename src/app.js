@@ -180,19 +180,19 @@ const DEFAULT_SETTINGS = {
   seedPrice: 7,
   amountOptions: [7, 11, 33, 77, 111, 333, 777, 999],
   meterHeadline:
-    "༺💗༻ Start your personalised writing order now. With every seed you choose, you share an intention for your soulmate and loved ones. 🌱💫🌹",
+    "༺💗༻ Click the order button to sow your seed now. With every seed you sow you get a personalised mail of your request. 🌱💫🌹",
   meterCollapsed:
-    "Welcome, beloved seeker of love. 💗 You didn’t arrive by accident. This is your sacred step toward the soulmate your heart whispers for....",
+    "Welcome, beloved seeker of love. 💗 You didn’t arrive by accident. Make an order and receive your personalised writing.",
   meterExpanded:
-    "Welcome, beloved seeker of love. 💗 You didn’t arrive by accident. This is your sacred step toward the soulmate your heart whispers for.\n\nEvery seed is part of your custom writing intention. 🌱 1 seed ($7) – I'm ready. 🌱🌱🌱 3 seeds ($21) – Mind, body, soulmate aligned. 🌱🌱🌱🌱🌱🌱🌱 7 seeds ($49) – Protection over reunion. 🌱🌱🌱🌱🌱🌱🌱🌱🌱🌱🌱 11 seeds ($77) – Eternal love. Share your request and receive a personalised digital writing prepared with care. 🌱💫🌹",
+    "Welcome, beloved seeker of love. 💗 You didn’t arrive by accident. Make an order and receive your personalised writing.\n\nWith every seed you sow you get a personalised mail of your request, prepared with care and intention. 🌱💫🌹",
   aboutTitle: "About",
   aboutCollapsed:
-    "🌱✨ Sow a Seed for the Soulmate You’ve Been Waiting For ✨🌱\nTired of waiting for that special someone to...",
+    "🌱✨ Personalised Digital Writing Made for Your Request ✨🌱\nShare your intention and receive a custom writing created with care...",
   aboutExpanded:
-    "🌱✨ A Personalised Writing for Your Soulmate & Loved Ones ✨🌱\n\nShare your prayer or intention and receive a heartfelt custom writing created especially for your request.\n\nEvery order is prepared with care, faith, and hope.",
+    "🌱✨ Personalised Digital Writing Made for Your Request ✨🌱\n\nShare your prayer, intention, or message and receive a heartfelt custom writing created especially for your order.\n\nEvery personalised mail is prepared with care, faith, and thoughtful attention to what you asked for.",
   topicLabel: "Spirituality",
   supportTitle:
-    "Buy a Seed to Sow for the Love You’ve Been Waiting For in 💕Christ Pradise garden💫",
+    "Choose Your Seed Offering for Your Soulmate & Loved Ones🌱💗 and get a personalised mail as your digital writing order",
   postAuthorName: "Sow Your Seed Here for Your Soulmate 💫",
   postTitle: "༺💗༻ A Divine Invitation: Sow Your Seed Here for Your Soulmate 🌱💫🌹",
   postBody:
