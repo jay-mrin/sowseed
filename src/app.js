@@ -19,7 +19,7 @@ const FORTUNE_NUMBER_SPECIAL_CHANCE = 0.01;
 const DIGITAL_ORDER_ITEM_NAME = "Personalised Digital Writing - Custom Order Made Writing";
 const LEGACY_FOOTER_TEXT = "Sow Your Seed exists to make support feel generous, clear, and personal.";
 const DEFAULT_FOOTER_TEXT =
-  "This platform provides personalised digital writing created from your submitted prayer or intention. Each purchase is a custom order, prepared directly for the buyer.";
+  "This platform provides personalised digital writing created from your submitted request or intention. Each purchase is a custom order, prepared directly for the buyer. Contact: sowyourseed@christgarden.church";
 const WISE_SUPPORTED_AMOUNTS = new Set([7, 11, 33, 77, 111, 333, 777, 999]);
 const CUSTOM_ORDER_STRING_KEYS = new Set([
   "aboutCollapsed",
@@ -190,7 +190,7 @@ const DEFAULT_SETTINGS = {
     "🌱✨ Personalised Digital Writing Made for Your Request ✨🌱\nShare your intention and receive a custom writing created with care...",
   aboutExpanded:
     "🌱✨ Personalised Digital Writing Made for Your Request ✨🌱\n\nShare your prayer, intention, or message and receive a heartfelt custom writing created especially for your order.\n\nEvery personalised mail is prepared with care, faith, and thoughtful attention to what you asked for.",
-  topicLabel: "Spirituality",
+  topicLabel: "Digital writing",
   supportTitle:
     "Choose Your Seed Offering for Your Soulmate & Loved Ones🌱💗 and get a personalised mail as your digital writing order",
   postAuthorName: "Sow Your Seed Here for Your Soulmate 💫",
