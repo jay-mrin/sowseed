@@ -1297,11 +1297,22 @@ function getFulfillmentStatusLabel(status) {
   return status === "fulfilled" ? "Fulfilled" : "Paid, awaiting personalized writing";
 }
 
-function readableUtcDateTime(dateString) {
+function readableIndiaDateTime(dateString) {
   const date = new Date(dateString || Date.now());
   const safeDate = Number.isNaN(date.getTime()) ? new Date() : date;
 
-  return `${formatCsvDateTime(safeDate.toISOString())} UTC`;
+  const parts = new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(safeDate);
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+
+  return `${values.day}/${values.month}/${values.year} ${values.hour}:${values.minute} IST`;
 }
 
 function normalizePdfText(value) {
@@ -1462,14 +1473,14 @@ function getProofPdfData(donation) {
 function startPremiumPdfPage(commands, continuation = false) {
   commands.push(`${pdfRgb("#f8f0f7")} rg`, `0 0 ${PDF_PAGE_WIDTH} ${PDF_PAGE_HEIGHT} re f`);
   pdfRoundedRect(commands, 28, 35, 539, 772, 20, "#ffffff", "#e8e2df", 1.2);
-  pdfText(commands, "CHRIST PARADISE GARDEN", 50, 785, 9, "F2", "#1593aa");
+  pdfText(commands, "SEED GARDEN RIGHTS", 50, 785, 9, "F2", "#1593aa");
   if (continuation) {
     pdfText(commands, "Custom order record continued", 50, 758, 18, "F2", "#1d232c");
   }
 }
 
 function finishPremiumPdfPage(commands) {
-  pdfText(commands, "Christ Paradise Garden - Custom Order Record", 50, 50, 8.5, "F1", "#8f95a5");
+  pdfText(commands, "Seed Garden Rights - Custom Order Record", 50, 50, 8.5, "F1", "#8f95a5");
 }
 
 function buildPremiumOrderPdf(donation) {
@@ -1507,7 +1518,7 @@ function buildPremiumOrderPdf(donation) {
 
   newPage(false);
   pdfText(commands, data.customerName, 50, 760, 20, "F2", "#232833");
-  pdfText(commands, `${data.frequency}  •  ${readableUtcDateTime(data.createdAt)}`, 50, 736, 11.5, "F2", "#969daa");
+  pdfText(commands, `${data.frequency}  •  ${readableIndiaDateTime(data.createdAt)}`, 50, 736, 11.5, "F2", "#969daa");
   pdfTextRight(commands, `${formatCsvAmount(data.amount)} ${data.currency}`, 545, 760, 20, "F2", "#232833");
 
   drawPdfInfoCard(commands, { x: 50, y: 650, width: 238, height: 62, label: "Order ID", value: data.orderNumber });
@@ -1560,7 +1571,7 @@ function buildPremiumOrderPdf(donation) {
     pdfText(commands, line, 66, y - 22 - index * 16, 10.5, "F1", "#4e484f");
   });
   y -= noteHeight + 18;
-  drawSection("Fulfilled at", data.fulfilledAt ? readableUtcDateTime(data.fulfilledAt) : "Not available");
+  drawSection("Fulfilled at", data.fulfilledAt ? readableIndiaDateTime(data.fulfilledAt) : "Not available");
 
   finishPremiumPdfPage(commands);
   pages.push(commands);
