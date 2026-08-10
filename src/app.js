@@ -1107,7 +1107,11 @@ function getDonationRawValue(donation, key, fallback = "") {
 function getPaymentProviderLabel(value) {
   const provider = String(value || "").trim();
   if (!provider) return "PayPal";
-  return provider.toLowerCase() === "paypal" ? "PayPal" : provider;
+  const normalized = provider.toLowerCase();
+  if (normalized === "paypal") return "PayPal";
+  if (normalized === "razorpay") return "Razorpay";
+  if (normalized === "wise") return "Wise";
+  return provider;
 }
 
 function getDonationSeedTag(donation) {
@@ -1257,8 +1261,14 @@ function getDigitalOrder(donation) {
     customerName: rawOrder.customerName,
     contactEmail: rawOrder.contactEmail,
     payerEmail: rawOrder.payerEmail,
+    provider: rawOrder.provider || rawOrder.paymentProvider,
+    providerOrderId: rawOrder.providerOrderId,
+    providerTransactionId: rawOrder.providerTransactionId,
     paypalOrderId: rawOrder.paypalOrderId,
     paypalCaptureId: rawOrder.paypalCaptureId,
+    razorpayOrderId: rawOrder.razorpayOrderId,
+    razorpayPaymentId: rawOrder.razorpayPaymentId,
+    wiseReference: rawOrder.wiseReference,
     amount: rawOrder.amount,
     currency: rawOrder.currency,
     personalizedRequest: donation?.message || "",
@@ -1331,77 +1341,253 @@ function pdfEscape(value) {
   return normalizePdfText(value).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
 }
 
-function buildProofPdfLines(donation) {
-  const order = getDigitalOrder(donation) || {};
-  const rawOrder = getDonationRawRow(donation);
-  const orderNumber = getDigitalOrderValue(donation, "orderNumber", getDonationRawValue(donation, "Reference", donation.orderId || donation.id || ""));
-  const itemName = getDigitalOrderValue(donation, "itemName", DIGITAL_ORDER_ITEM_NAME);
-  const request = getDigitalOrderValue(donation, "personalizedRequest", donation.message || "No personalized request was entered.");
-  const blessing = getDigitalOrderValue(donation, "blessingMessage", donation.fortuneMessage || "Blessing message was delivered after confirmed payment.");
-  const status = getDigitalOrderValue(donation, "fulfillmentStatus", "paid_awaiting_personalized_writing");
-  const fulfilledAt = getDigitalOrderValue(donation, "fulfilledAt", "");
-  const fulfillmentNote = getDigitalOrderValue(donation, "fulfillmentNote", "No fulfillment note has been added yet.");
-  const contactEmail = getDigitalOrderValue(donation, "contactEmail", "");
-  const payerEmail = getDigitalOrderValue(donation, "payerEmail", donation.payerEmail || getDonationRawValue(donation, "BuyerEmail", ""));
-  const paypalOrderId = getDigitalOrderValue(donation, "paypalOrderId", donation.orderId || getDonationRawValue(donation, "Reference", ""));
-  const paypalCaptureId = getDigitalOrderValue(donation, "paypalCaptureId", donation.captureId || getDonationRawValue(donation, "TransactionId", ""));
-  const createdAt = donation.createdAt || order.createdAt || rawOrder["DateTime (UTC)"] || new Date().toISOString();
-  const amount = Number(donation.amount || order.amount || 0);
-  const currency = order.currency || getDonationRawValue(donation, "Currency", CONFIG.currency);
-  const lines = [
-    "Sow Your Seed - Digital Service Order Proof",
-    "",
-    `Generated: ${readableUtcDateTime(new Date().toISOString())}`,
-    `Order ID: ${orderNumber || "Not available"}`,
-    `Payment date: ${readableUtcDateTime(createdAt)}`,
-    `Customer name: ${donation.name || order.customerName || "Customer"}`,
-    `Contact email: ${contactEmail || "Not provided by customer"}`,
-    `Buyer email: ${payerEmail || "Not provided by PayPal"}`,
-    `Item: ${itemName}`,
-    `Amount received: ${formatCsvAmount(amount)} ${currency}`,
-    `Payment provider: ${getPaymentProviderLabel(donation.paymentMethod)}`,
-    `PayPal order ID: ${paypalOrderId || "Not available"}`,
-    `PayPal transaction/capture ID: ${paypalCaptureId || "Not available"}`,
-    `Payment status: ${donation.status || "COMPLETED"}`,
-    `Frequency: ${donation.frequency === "monthly" ? "Monthly" : "One time"}`,
-    `Fulfillment status: ${getFulfillmentStatusLabel(status)}`,
-    `Fulfilled at: ${fulfilledAt ? readableUtcDateTime(fulfilledAt) : "Not marked fulfilled yet"}`,
-    "",
-    "Personalized-writing request:",
-    ...wrapPdfText(request),
-    "",
-    "Heartfelt blessing delivered after payment:",
-    ...wrapPdfText(blessing),
-    "",
-    "Admin fulfillment note:",
-    ...wrapPdfText(fulfillmentNote),
-  ];
+const FULFILLED_PDF_NOTE =
+  "The personalised digital writing was completed in accordance with the customer's order request and delivered electronically to the customer's provided email address.";
 
-  return lines.slice(0, 58);
+const PDF_PAGE_WIDTH = 595.2756;
+const PDF_PAGE_HEIGHT = 841.8898;
+
+function pdfRgb(hex) {
+  const normalized = String(hex).replace("#", "");
+  const red = Number.parseInt(normalized.slice(0, 2), 16) / 255;
+  const green = Number.parseInt(normalized.slice(2, 4), 16) / 255;
+  const blue = Number.parseInt(normalized.slice(4, 6), 16) / 255;
+  return `${red.toFixed(4)} ${green.toFixed(4)} ${blue.toFixed(4)}`;
 }
 
-function buildSimplePdf(lines) {
-  const pageLines = lines.map((line) => pdfEscape(line));
-  const content = [
-    "BT",
-    "/F1 18 Tf",
-    "50 760 Td",
-    `(${pageLines[0] || "Digital Service Order Proof"}) Tj`,
-    "/F1 10.5 Tf",
-    "0 -28 Td",
-    ...pageLines.slice(1).flatMap((line) => [`(${line}) Tj`, "0 -15 Td"]),
-    "ET",
-  ].join("\n");
+function pdfText(commands, value, x, y, size = 11, font = "F1", color = "#1d232c") {
+  commands.push(`${pdfRgb(color)} rg`);
+  commands.push(`BT /${font} ${size} Tf 1 0 0 1 ${x.toFixed(2)} ${y.toFixed(2)} Tm (${pdfEscape(value)}) Tj ET`);
+}
+
+function pdfTextRight(commands, value, rightX, y, size = 11, font = "F1", color = "#1d232c") {
+  const text = normalizePdfText(value);
+  const estimatedWidth = text.length * size * 0.52;
+  pdfText(commands, text, Math.max(40, rightX - estimatedWidth), y, size, font, color);
+}
+
+function pdfRoundedRect(commands, x, y, width, height, radius, fill, stroke = null, lineWidth = 1) {
+  const k = 0.5522848;
+  const r = Math.min(radius, width / 2, height / 2);
+  const path = [
+    `${(x + r).toFixed(2)} ${y.toFixed(2)} m`,
+    `${(x + width - r).toFixed(2)} ${y.toFixed(2)} l`,
+    `${(x + width - r + r * k).toFixed(2)} ${y.toFixed(2)} ${(x + width).toFixed(2)} ${(y + r - r * k).toFixed(2)} ${(x + width).toFixed(2)} ${(y + r).toFixed(2)} c`,
+    `${(x + width).toFixed(2)} ${(y + height - r).toFixed(2)} l`,
+    `${(x + width).toFixed(2)} ${(y + height - r + r * k).toFixed(2)} ${(x + width - r + r * k).toFixed(2)} ${(y + height).toFixed(2)} ${(x + width - r).toFixed(2)} ${(y + height).toFixed(2)} c`,
+    `${(x + r).toFixed(2)} ${(y + height).toFixed(2)} l`,
+    `${(x + r - r * k).toFixed(2)} ${(y + height).toFixed(2)} ${(x).toFixed(2)} ${(y + height - r + r * k).toFixed(2)} ${(x).toFixed(2)} ${(y + height - r).toFixed(2)} c`,
+    `${x.toFixed(2)} ${(y + r).toFixed(2)} l`,
+    `${x.toFixed(2)} ${(y + r - r * k).toFixed(2)} ${(x + r - r * k).toFixed(2)} ${y.toFixed(2)} ${(x + r).toFixed(2)} ${y.toFixed(2)} c`,
+    "h",
+  ];
+
+  if (fill) commands.push(`${pdfRgb(fill)} rg`);
+  if (stroke) {
+    commands.push(`${pdfRgb(stroke)} RG`, `${lineWidth} w`);
+  }
+  commands.push(path.join("\n"), fill && stroke ? "B" : fill ? "f" : "S");
+}
+
+function drawPdfInfoCard(commands, { x, y, width, height, label, value, maxCharacters = 36 }) {
+  pdfRoundedRect(commands, x, y, width, height, 12, "#f3f0ee");
+  pdfText(commands, label.toUpperCase(), x + 12, y + height - 20, 8.5, "F2", "#969daa");
+  const lines = wrapPdfText(value || "Not available", maxCharacters).slice(0, 2);
+  lines.forEach((line, index) => {
+    pdfText(commands, line, x + 12, y + height - 41 - index * 13, 10.5, "F2", "#232833");
+  });
+}
+
+function getProofPdfData(donation) {
+  const order = getDigitalOrder(donation) || {};
+  const rawOrder = getDonationRawRow(donation);
+  const providerKey = String(donation.paymentMethod || order.provider || getDonationRawValue(donation, "PaymentProvider", "paypal"))
+    .trim()
+    .toLowerCase();
+  const provider = getPaymentProviderLabel(providerKey);
+  const orderNumber = getDigitalOrderValue(
+    donation,
+    "orderNumber",
+    getDonationRawValue(donation, "Reference", donation.orderId || donation.id || ""),
+  );
+  const transactionId =
+    getDigitalOrderValue(donation, "providerTransactionId", "") ||
+    getDigitalOrderValue(
+      donation,
+      providerKey === "paypal" ? "paypalCaptureId" : providerKey === "razorpay" ? "razorpayPaymentId" : "wiseReference",
+      donation.captureId || getDonationRawValue(donation, "TransactionId", ""),
+    );
+  const providerOrderId =
+    getDigitalOrderValue(donation, "providerOrderId", "") ||
+    getDigitalOrderValue(
+      donation,
+      providerKey === "paypal" ? "paypalOrderId" : providerKey === "razorpay" ? "razorpayOrderId" : "wiseReference",
+      donation.orderId || getDonationRawValue(donation, "Reference", ""),
+    );
+  const createdAt = donation.createdAt || order.createdAt || rawOrder["DateTime (UTC)"] || new Date().toISOString();
+  const status = getDigitalOrderValue(donation, "fulfillmentStatus", "paid_awaiting_personalized_writing");
+
+  return {
+    customerName: donation.name || order.customerName || "Customer",
+    frequency: donation.frequency === "monthly" ? "Monthly" : "One time",
+    createdAt,
+    orderNumber,
+    transactionId,
+    providerOrderId,
+    contactEmail: getDigitalOrderValue(donation, "contactEmail", ""),
+    payerEmail: getDigitalOrderValue(donation, "payerEmail", donation.payerEmail || getDonationRawValue(donation, "BuyerEmail", "")),
+    itemName: getDigitalOrderValue(donation, "itemName", DIGITAL_ORDER_ITEM_NAME),
+    amount: Number(donation.amount || order.amount || 0),
+    currency: order.currency || getDonationRawValue(donation, "Currency", CONFIG.currency),
+    provider,
+    providerKey,
+    paymentStatus: donation.status || "COMPLETED",
+    fulfillmentStatus: status,
+    fulfilledAt: getDigitalOrderValue(donation, "fulfilledAt", ""),
+    request: getDigitalOrderValue(donation, "personalizedRequest", donation.message || "No personalized request was entered."),
+    blessing: getDigitalOrderValue(
+      donation,
+      "blessingMessage",
+      donation.fortuneMessage || "No blessing or order message was recorded.",
+    ),
+  };
+}
+
+function startPremiumPdfPage(commands, continuation = false) {
+  commands.push(`${pdfRgb("#f8f0f7")} rg`, `0 0 ${PDF_PAGE_WIDTH} ${PDF_PAGE_HEIGHT} re f`);
+  pdfRoundedRect(commands, 28, 35, 539, 772, 20, "#ffffff", "#e8e2df", 1.2);
+  pdfText(commands, "CHRIST PARADISE GARDEN", 50, 785, 9, "F2", "#1593aa");
+  if (continuation) {
+    pdfText(commands, "Custom order record continued", 50, 758, 18, "F2", "#1d232c");
+  }
+}
+
+function finishPremiumPdfPage(commands) {
+  pdfText(commands, "Christ Paradise Garden - Custom Order Record", 50, 50, 8.5, "F1", "#8f95a5");
+}
+
+function buildPremiumOrderPdf(donation) {
+  const data = getProofPdfData(donation);
+  const pages = [];
+  let commands = [];
+  let y = 0;
+
+  const newPage = (continuation = false) => {
+    if (commands.length) {
+      finishPremiumPdfPage(commands);
+      pages.push(commands);
+    }
+    commands = [];
+    startPremiumPdfPage(commands, continuation);
+    y = continuation ? 720 : 0;
+  };
+
+  const ensureSpace = (height) => {
+    if (y - height < 84) newPage(true);
+  };
+
+  const drawSection = (title, value, maxCharacters = 82) => {
+    const lines = wrapPdfText(value, maxCharacters);
+    ensureSpace(32 + lines.length * 15);
+    pdfText(commands, title.toUpperCase(), 50, y, 11, "F2", "#606068");
+    y -= 20;
+    lines.forEach((line) => {
+      ensureSpace(17);
+      pdfText(commands, line, 50, y, 10.5, "F1", "#45454a");
+      y -= 15;
+    });
+    y -= 8;
+  };
+
+  newPage(false);
+  pdfText(commands, data.customerName, 50, 760, 20, "F2", "#232833");
+  pdfText(commands, `${data.frequency}  •  ${readableUtcDateTime(data.createdAt)}`, 50, 736, 11.5, "F2", "#969daa");
+  pdfTextRight(commands, `${formatCsvAmount(data.amount)} ${data.currency}`, 545, 760, 20, "F2", "#232833");
+
+  drawPdfInfoCard(commands, { x: 50, y: 650, width: 238, height: 62, label: "Order ID", value: data.orderNumber });
+  drawPdfInfoCard(commands, {
+    x: 307,
+    y: 650,
+    width: 238,
+    height: 62,
+    label: "Transaction ID",
+    value: data.transactionId,
+  });
+  drawPdfInfoCard(commands, {
+    x: 50,
+    y: 570,
+    width: 238,
+    height: 62,
+    label: "Contact email",
+    value: data.contactEmail || "Not provided",
+  });
+  drawPdfInfoCard(commands, {
+    x: 307,
+    y: 570,
+    width: 238,
+    height: 62,
+    label: "Item",
+    value: data.itemName,
+    maxCharacters: 38,
+  });
+
+  pdfRoundedRect(commands, 50, 512, 238, 40, 12, "#f3f0ee");
+  pdfText(commands, "STATUS", 62, 536, 8.5, "F2", "#969daa");
+  pdfText(commands, getFulfillmentStatusLabel(data.fulfillmentStatus), 62, 521, 11.5, "F2", "#232833");
+  pdfRoundedRect(commands, 307, 512, 238, 40, 12, "#f3f0ee");
+  pdfText(commands, "PAYMENT PROVIDER", 319, 536, 8.5, "F2", "#969daa");
+  pdfText(commands, data.provider, 319, 521, 11.5, "F2", "#232833");
+
+  y = 478;
+  drawSection("Payment details", `Payment status: ${data.paymentStatus}  •  Provider order ID: ${data.providerOrderId || "Not available"}`);
+  drawSection("Buyer email", data.payerEmail || "Not provided by the payment provider.");
+  drawSection("Personalized writing request", data.request);
+  drawSection("Blessing / order message", data.blessing);
+
+  const noteLines = wrapPdfText(FULFILLED_PDF_NOTE, 86);
+  const noteHeight = noteLines.length * 16 + 32;
+  ensureSpace(noteHeight + 38);
+  pdfText(commands, "FULFILLMENT NOTE", 50, y, 12, "F2", "#606068");
+  y -= 20;
+  pdfRoundedRect(commands, 50, y - noteHeight, 495, noteHeight, 12, "#faf8f7", "#ded8d4", 1);
+  noteLines.forEach((line, index) => {
+    pdfText(commands, line, 66, y - 22 - index * 16, 10.5, "F1", "#4e484f");
+  });
+  y -= noteHeight + 18;
+  drawSection("Fulfilled at", data.fulfilledAt ? readableUtcDateTime(data.fulfilledAt) : "Not available");
+
+  finishPremiumPdfPage(commands);
+  pages.push(commands);
+  return buildPdfDocument(pages);
+}
+
+function buildPdfDocument(pageContents) {
+  const pageCount = pageContents.length;
+  const fontNormalId = 3 + pageCount * 2;
+  const fontBoldId = fontNormalId + 1;
+  const pageIds = pageContents.map((_, index) => 3 + index * 2);
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
-    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
-    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-    `<< /Length ${content.length} >>\nstream\n${content}\nendstream`,
+    `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pageCount} >>`,
   ];
+
+  pageContents.forEach((commands) => {
+    const pageId = objects.length + 1;
+    const contentId = pageId + 1;
+    const content = commands.join("\n");
+    objects.push(
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PDF_PAGE_WIDTH} ${PDF_PAGE_HEIGHT}] /Resources << /Font << /F1 ${fontNormalId} 0 R /F2 ${fontBoldId} 0 R >> >> /Contents ${contentId} 0 R >>`,
+      `<< /Length ${content.length} >>\nstream\n${content}\nendstream`,
+    );
+  });
+
+  objects.push(
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>",
+  );
+
   let pdf = "%PDF-1.4\n";
   const offsets = [0];
-
   objects.forEach((object, index) => {
     offsets.push(pdf.length);
     pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
@@ -1413,7 +1599,6 @@ function buildSimplePdf(lines) {
     pdf += `${String(offset).padStart(10, "0")} 00000 n \n`;
   });
   pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
-
   return pdf;
 }
 
@@ -1426,10 +1611,15 @@ function getDonationById(donationId) {
 }
 
 function getOrderProofFilename(donation) {
+  const customerName = donation.name || getDigitalOrderValue(donation, "customerName", "Customer");
   const orderNumber = getDigitalOrderValue(donation, "orderNumber", donation.captureId || donation.id || "transaction");
-  const safeOrderNumber = String(orderNumber).replace(/[^a-z0-9-]+/gi, "-").replace(/^-+|-+$/g, "") || "transaction";
+  const toFilenamePart = (value, fallback) =>
+    String(value || fallback)
+      .trim()
+      .replace(/[^a-z0-9-]+/gi, "_")
+      .replace(/^_+|_+$/g, "") || fallback;
 
-  return `sow-your-seed-${safeOrderNumber}.pdf`;
+  return `${toFilenamePart(customerName, "Customer")}_${toFilenamePart(orderNumber, "Order")}_Fulfilled.pdf`;
 }
 
 function downloadOrderProofPdf(donationId) {
@@ -1442,9 +1632,16 @@ function downloadOrderProofPdf(donationId) {
     return;
   }
 
-  const pdf = buildSimplePdf(buildProofPdfLines(donation));
+  const status = getDigitalOrderValue(donation, "fulfillmentStatus", "paid_awaiting_personalized_writing");
+  if (status !== "fulfilled") {
+    setAdminStatus("Mark this order fulfilled before downloading its proof PDF.", "error", { persist: true, statusElement });
+    showToast("Fulfill the order before downloading the PDF.");
+    return;
+  }
+
+  const pdf = buildPremiumOrderPdf(donation);
   downloadBlobFile(getOrderProofFilename(donation), new Blob([pdf], { type: "application/pdf" }));
-  setAdminStatus("Downloaded PayPal proof PDF for this digital-service order.", "success", { statusElement });
+  setAdminStatus("Downloaded the fulfilled custom-order PDF.", "success", { statusElement });
 }
 
 function updateDonationDigitalOrder(donationId, order) {
@@ -2377,7 +2574,7 @@ function renderCalendarDetails(context) {
                 <textarea data-fulfillment-note="${escapeHtml(donation.id)}" placeholder="Write proof notes, delivery details, or custom writing summary.">${escapeHtml(note)}</textarea>
               </label>
               <div class="admin-order-actions">
-                <button class="button button-secondary" type="button" data-download-order-proof="${escapeHtml(donation.id)}">Download PDF</button>
+                <button class="button button-secondary" type="button" data-download-order-proof="${escapeHtml(donation.id)}" ${isFulfilled ? "" : "disabled title=\"Available after the order is fulfilled\""}>Download PDF</button>
                 <button class="button button-primary" type="button" data-save-fulfillment="${escapeHtml(donation.id)}">
                   ${isFulfilled ? "Reopen order" : "Mark fulfilled"}
                 </button>
