@@ -16,7 +16,7 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="src/styles.css?v=60" />
+    <link rel="stylesheet" href="src/styles.css?v=71" />
   </head>
   <body class="app-loading">
     <div class="app-loader" id="appLoader" role="status" aria-live="polite" aria-label="Loading Seed garden">
@@ -88,7 +88,7 @@
       <div class="admin-panel-header">
         <div>
           <p class="section-kicker">Admin portal</p>
-          <h2 id="adminTitle">Full page controls</h2>
+          <h2 id="adminTitle">Order controls</h2>
         </div>
         <div class="admin-header-actions">
           <button class="button button-secondary admin-refresh-button" id="refreshAdminButton" type="button">
@@ -111,65 +111,64 @@
       <div class="admin-status" id="adminActionStatus" role="status" aria-live="polite" hidden></div>
 
       <form class="admin-form admin-portal-grid" id="adminForm">
-        <section class="admin-section admin-editor-section">
-          <h3>1. Page editing</h3>
-          <label>
-            <span>Page title</span>
-            <input id="adminProfileTitle" type="text" />
-          </label>
-          <label>
-            <span>Followers text</span>
-            <input id="adminFollowersText" type="text" />
-          </label>
-          <label>
-            <span>Order progress headline</span>
-            <textarea id="adminMeterHeadline"></textarea>
-          </label>
-          <label>
-            <span>Meter preview text</span>
-            <textarea id="adminMeterCollapsed"></textarea>
-          </label>
-          <label>
-            <span>Meter full text</span>
-            <textarea id="adminMeterExpanded"></textarea>
-          </label>
-          <label>
-            <span>About heading</span>
-            <input id="adminAboutTitle" type="text" />
-          </label>
-          <label>
-            <span>About preview text</span>
-            <textarea id="adminAboutCollapsed"></textarea>
-          </label>
-          <label>
-            <span>About full text</span>
-            <textarea id="adminAboutExpanded"></textarea>
-          </label>
-          <label>
-            <span>Topic pill</span>
-            <input id="adminTopicLabel" type="text" />
-          </label>
-          <label>
-            <span>Post author</span>
-            <input id="adminPostAuthorName" type="text" />
-          </label>
-          <label>
-            <span>Custom order box title</span>
-            <textarea id="adminSupportTitle"></textarea>
-          </label>
-          <label>
-            <span>Payment note</span>
-            <textarea id="adminPaymentCopy"></textarea>
-          </label>
-          <label>
-            <span>Checkout disclaimer</span>
-            <textarea id="adminPaymentNote"></textarea>
-          </label>
+        <section class="admin-section admin-super-checkout-section" id="adminSuperCheckoutSection" hidden>
+          <div class="admin-super-checkout-heading">
+            <div>
+              <h3>Payment routing</h3>
+              <p>Choose the PayPal collection account and optionally route payments of $21 or more to SuperAdmin.</p>
+            </div>
+            <button class="button button-primary" id="saveCheckoutRouteButton" type="button">Save routing</button>
+          </div>
+          <div class="checkout-route-options" role="radiogroup" aria-label="Default PayPal collection account">
+            <button class="checkout-route-option" type="button" data-checkout-route="standard" role="radio" aria-checked="true">
+              <span>Admin</span>
+              <small>Send payments to the Admin PayPal account.</small>
+            </button>
+            <button class="checkout-route-option" type="button" data-checkout-route="superadmin" role="radio" aria-checked="false">
+              <span>SuperAdmin</span>
+              <small>Send payments to the SuperAdmin PayPal account.</small>
+            </button>
+          </div>
+          <div class="checkout-routing-override" aria-label="Payment routing override">
+            <label class="admin-toggle checkout-routing-toggle">
+              <input id="superAdminHighPaymentEnabled" type="checkbox" />
+              <span>
+                <strong>Route payments of $21 or more to SuperAdmin</strong>
+                When enabled, every PayPal payment of at least $21 goes to SuperAdmin regardless of the default selection.
+              </span>
+            </label>
+          </div>
+          <div class="superadmin-purge">
+            <h4>Erase all payment records</h4>
+            <p>Choose a date range and whether public page comments should also be removed.</p>
+            <div class="superadmin-purge-grid">
+              <label>
+                <span>From date</span>
+                <input id="purgeFromDate" type="date" />
+              </label>
+              <label>
+                <span>To date</span>
+                <input id="purgeToDate" type="date" />
+              </label>
+            </div>
+            <fieldset class="superadmin-purge-options">
+              <legend>Public comments</legend>
+              <label>
+                <input name="purgeCommentsMode" type="radio" value="keep" checked />
+                <span>Erase payment records only</span>
+              </label>
+              <label>
+                <input name="purgeCommentsMode" type="radio" value="remove" />
+                <span>Erase payment records and public comments</span>
+              </label>
+            </fieldset>
+            <button class="button button-danger" id="purgeAllOrdersButton" type="button">Erase all records</button>
+          </div>
         </section>
 
         <section class="admin-section admin-donations">
           <div class="admin-donation-heading">
-            <h3>2. Admin PayPal order calendar</h3>
+            <h3 id="adminDonationHeading">1. Admin PayPal order calendar</h3>
           </div>
           <section class="admin-calendar" aria-labelledby="adminCalendarTitle">
             <div class="admin-calendar-header">
@@ -210,129 +209,9 @@
           </section>
         </section>
 
-        <section class="admin-section admin-standard-donations" id="superAdminStandardDonationsSection" hidden>
-          <div class="admin-donation-heading">
-            <h3>Admin PayPal calendar</h3>
-            <p>Normal admin checkout records, visible here for SuperAdmin deletion and proof review.</p>
-          </div>
-          <section class="admin-calendar" aria-labelledby="superAdminStandardCalendarTitle">
-            <div class="admin-calendar-header">
-              <button
-                class="admin-calendar-nav"
-                id="superAdminStandardCalendarPrev"
-                type="button"
-                aria-label="Previous admin payment month"
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="m15 18-6-6 6-6" />
-                </svg>
-              </button>
-              <h4 id="superAdminStandardCalendarTitle">Admin PayPal calendar</h4>
-              <button
-                class="admin-calendar-nav"
-                id="superAdminStandardCalendarNext"
-                type="button"
-                aria-label="Next admin payment month"
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="m9 18 6-6-6-6" />
-                </svg>
-              </button>
-            </div>
-            <div class="admin-calendar-weekdays" aria-hidden="true">
-              <span>Sun</span>
-              <span>Mon</span>
-              <span>Tue</span>
-              <span>Wed</span>
-              <span>Thu</span>
-              <span>Fri</span>
-              <span>Sat</span>
-            </div>
-            <div class="admin-calendar-grid" id="superAdminStandardCalendarGrid" role="grid" aria-label="Admin PayPal order records"></div>
-            <div class="admin-calendar-details" id="superAdminStandardCalendarDetails" aria-live="polite"></div>
-            <div class="admin-calendar-summary" id="superAdminStandardCalendarSummary" aria-live="polite"></div>
-          </section>
-        </section>
-
-        <section class="admin-section admin-super-checkout-section" id="adminSuperCheckoutSection" hidden>
-          <div class="admin-super-checkout-heading">
-            <div>
-              <h3>Payment settings</h3>
-              <p>Choose which custom-order payment methods are available.</p>
-            </div>
-            <button class="button button-primary" id="saveCheckoutRouteButton" type="button">Save checkout</button>
-          </div>
-          <div class="checkout-route-options" role="radiogroup" aria-label="PayPal checkout route">
-            <button class="checkout-route-option" type="button" data-checkout-route="standard" role="radio" aria-checked="true">
-              <span>Admin</span>
-              <small>All payments go to the normal admin PayPal account.</small>
-            </button>
-            <button class="checkout-route-option" type="button" data-checkout-route="superadmin" role="radio" aria-checked="false">
-              <span>SuperAdmin</span>
-              <small>All payments go to the SuperAdmin PayPal account.</small>
-            </button>
-          </div>
-          <div class="checkout-method-toggles" aria-label="Payment methods shown during checkout">
-            <label class="admin-toggle checkout-method-toggle">
-              <input id="superAdminWiseEnabled" type="checkbox" checked />
-              <span>
-                <strong>Wise</strong>
-                Show Wise first for the supported custom-order amounts. Wise records remain private here.
-              </span>
-            </label>
-            <label class="admin-toggle checkout-method-toggle">
-              <input id="superAdminRazorpayEnabled" type="checkbox" checked />
-              <span>
-                <strong>Razorpay</strong>
-                Show Razorpay as an alternate private custom-order checkout.
-              </span>
-            </label>
-            <label class="admin-toggle checkout-method-toggle">
-              <input id="superAdminPaypalEnabled" type="checkbox" checked />
-              <span>
-                <strong>PayPal / Card</strong>
-                Show PayPal wallet and eligible card checkout.
-              </span>
-            </label>
-            <label class="admin-toggle checkout-method-toggle checkout-method-toggle-high-payment">
-              <input id="superAdminHighPaymentEnabled" type="checkbox" />
-              <span>
-                <strong>High payment over $77</strong>
-                When enabled, every PayPal payment above $77 goes to the SuperAdmin PayPal account, regardless of the route selected above.
-              </span>
-            </label>
-          </div>
-          <div class="superadmin-purge">
-            <h4>Erase all payment records</h4>
-            <p>Choose a date range and whether public page comments should also be removed.</p>
-            <div class="superadmin-purge-grid">
-              <label>
-                <span>From date</span>
-                <input id="purgeFromDate" type="date" />
-              </label>
-              <label>
-                <span>To date</span>
-                <input id="purgeToDate" type="date" />
-              </label>
-            </div>
-            <fieldset class="superadmin-purge-options">
-              <legend>Public comments</legend>
-              <label>
-                <input name="purgeCommentsMode" type="radio" value="keep" checked />
-                <span>Erase payment records only</span>
-              </label>
-              <label>
-                <input name="purgeCommentsMode" type="radio" value="remove" />
-                <span>Erase payment records and public comments</span>
-              </label>
-            </fieldset>
-            <button class="button button-danger" id="purgeAllOrdersButton" type="button">Erase all records</button>
-          </div>
-        </section>
-
         <div class="admin-right-column">
           <section class="admin-section admin-settings-section">
-            <h3>3. Goal and checkout settings</h3>
+            <h3>2. Goal settings</h3>
             <div class="admin-grid">
               <label>
                 <span>Goal amount ($)</span>
@@ -344,20 +223,9 @@
               </label>
               <label>
                 <span>Seed price ($)</span>
-                <input id="adminSeedPrice" type="number" min="1" step="1" />
-              </label>
-              <label>
-                <span>Amount buttons</span>
-                <input id="adminAmountOptions" type="text" placeholder="6, 11, 33, 99" />
+                <input id="adminSeedPrice" type="number" min="7" step="1" />
               </label>
             </div>
-            <label class="admin-toggle">
-              <input id="adminFortuneNumberEnabled" type="checkbox" />
-              <span>
-                <strong>Fortune Number</strong>
-                Show visitors a golden seed prompt that reveals a weighted fortune seed number.
-              </span>
-            </label>
             <label class="admin-toggle">
               <input id="adminBlessingWallEnabled" type="checkbox" />
               <span>
@@ -365,20 +233,15 @@
                 Show or hide the public community blessing comments section.
               </span>
             </label>
-            <label>
-              <span>Footer text</span>
-              <input id="adminFooterText" type="text" />
-            </label>
             <div class="admin-actions">
-              <button class="button button-secondary" id="resetAdminButton" type="button">Reset defaults</button>
-              <button class="button button-primary" id="saveAdminButton" type="submit">Save changes</button>
+              <button class="button button-primary" id="saveAdminButton" type="submit">Save goal settings</button>
             </div>
           </section>
 
           <section class="admin-section admin-analytics-section">
             <div class="admin-analytics-heading">
               <div>
-                <h3>4. Page views</h3>
+                <h3>3. Page views</h3>
                 <p>Real visitor activity recorded from the last 24 hours.</p>
               </div>
               <button class="button button-secondary admin-analytics-reset-button" id="resetAdminAnalyticsButton" type="button">
@@ -404,7 +267,7 @@
               <article>
                 <span>PayPal checkout</span>
                 <strong id="adminPaypalStarts24h">0</strong>
-                <small>PayPal/card starts last 24 hours</small>
+                <small>PayPal starts last 24 hours</small>
               </article>
               <article>
                 <span>Payments completed</span>
@@ -415,28 +278,11 @@
             <p class="admin-analytics-updated" id="adminAnalyticsUpdated">Waiting for analytics...</p>
           </section>
 
-          <section class="admin-section admin-export-section">
-            <div class="admin-export-heading">
-              <h3>5. Order CSV export</h3>
-              <p>Choose a date range and download the Admin PayPal custom-order report.</p>
-            </div>
-            <div class="admin-export-range">
-              <label>
-                <span>From date</span>
-                <input id="adminExportStartDate" type="date" />
-              </label>
-              <label>
-                <span>To date</span>
-                <input id="adminExportEndDate" type="date" />
-              </label>
-            </div>
-            <button class="button button-secondary" id="adminExportCsvButton" type="button">Export CSV</button>
-          </section>
         </div>
 
         <section class="admin-section admin-posts-section">
           <div class="admin-posts-heading">
-            <h3>6. Posts and gallery</h3>
+            <h3>4. Posts</h3>
             <p>Publish posts with a title, description, and uploaded photo.</p>
           </div>
           <div class="admin-post-editor">
@@ -479,27 +325,15 @@
             <p id="followersText">167 Followers</p>
           </div>
           <div class="profile-actions">
-            <a class="button button-primary" href="#support">
-              <span>Seed garden</span>
+            <a class="button button-primary profile-seed-cta" href="#support">
+              <span>Sow Your Seed Today</span>
               <span aria-hidden="true">🌱</span>
             </a>
-            <button class="button button-secondary" id="followButton" type="button">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-              <span>Follow</span>
-            </button>
-            <button class="button button-round" type="button" aria-label="More profile actions">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M5 12h.01M12 12h.01M19 12h.01" />
-              </svg>
-            </button>
           </div>
         </section>
 
         <nav class="profile-tabs" aria-label="Christ Garden sections">
           <a class="active" href="#about" data-section-tab="aboutView">About</a>
-          <a href="#gallery" data-section-tab="galleryView">Gallery</a>
           <a href="#posts" data-section-tab="postsView">Posts</a>
         </nav>
       </section>
@@ -508,31 +342,23 @@
         <div class="main-stack">
           <section class="panel impact-panel donation-meter-card collapsible-card" id="impact" aria-label="Order progress">
             <div class="meter-header">
-              <h2 id="meterHeadline">༺💗༻ Click the order button to sow your seed now. With every seed you sow you get a personalised mail of your request. 🌱💫🌹</h2>
-              <button class="meter-share-button" id="meterShareButton" type="button" aria-label="Share this page">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="m17 7 5 5-5 5" />
-                  <path d="M2 19v-1a6 6 0 0 1 6-6h14" />
-                </svg>
-              </button>
+              <h2 id="meterHeadline">Sow Your Seed 🌱with faith💫 trust🌹 and patience ༺💗༻</h2>
             </div>
 
             <div class="goal-meter" aria-label="Custom order progress">
               <div class="progress-track">
                 <div class="progress-fill" id="progressFill"></div>
               </div>
-              <p class="meter-percent" id="progressPercent">0% of goal</p>
+              <p class="meter-percent" id="progressPercent">0% Fulfilled</p>
             </div>
 
             <div class="meter-copy collapsible-content" id="meterContent">
               <p class="collapsed-preview" id="meterCollapsed">
-                Welcome, beloved seeker of love. 💗 You didn’t arrive by accident. Make an order and receive your
-                personalised writing.
+                Welcome, beloved seeker of love. 💗 You didn’t arrive by accident. Make an order
               </p>
               <div class="expanded-copy" id="meterExpanded">
                 <p>
-                Welcome, beloved seeker of love. 💗 You didn’t arrive by accident. Make an order and receive your
-                personalised writing.
+                Welcome, beloved seeker of love. 💗 You didn’t arrive by accident. Make an order
                 </p>
                 <p>
                 With every seed you sow you get a personalised mail of your request, prepared with care and intention.
@@ -571,21 +397,20 @@
             <span class="topic-pill" id="topicPill">Digital writing</span>
           </section>
 
-          <section class="panel recent-donations-panel" id="recentSeeds" aria-labelledby="recentSeedsTitle">
+          <section class="panel recent-donations-panel" id="recentSeeds" aria-label="Recent custom orders">
             <div class="section-heading">
               <p class="section-kicker">Recent custom orders</p>
-              <h2 id="recentSeedsTitle">Recent writings from the community</h2>
             </div>
             <div class="recent-donation-list" id="recentDonationList"></div>
           </section>
         </div>
 
         <aside class="support-column">
-          <section class="donation-card" id="support" aria-labelledby="supportTitle">
+          <section class="donation-card minimal-offering" id="support" aria-labelledby="supportTitle">
             <div class="donation-header">
               <div>
                 <p class="section-kicker">Personalised digital writing</p>
-                <h2 id="supportTitle">Choose Your Seed Offering for Your Soulmate &amp; Loved Ones🌱💗 and get a personalised mail as your digital writing order</h2>
+                <h2 id="supportTitle">Buy a Seed to Sow for the Love You&rsquo;ve Been Waiting For 💗💕</h2>
               </div>
               <span class="secure-pill">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -596,79 +421,55 @@
               </span>
             </div>
 
-            <form id="supportForm" novalidate>
-              <fieldset>
-                <legend>Choose Your Seed Offering for Your Soulmate &amp; Loved Ones🌱💗</legend>
-                <div class="amount-grid" id="amountGrid">
-                  <button class="amount-option active" type="button" data-amount="7">
-                    <span class="amount-option-value"><span class="amount-option-number">7</span><span class="amount-option-seed-mark" aria-hidden="true">🌱</span></span>
-                    <span class="amount-option-title">Receive a Blessing</span>
-                  </button>
-                  <button class="amount-option" type="button" data-amount="11">
-                    <span class="amount-option-value"><span class="amount-option-number">11</span><span class="amount-option-seed-mark" aria-hidden="true">🌱</span></span>
-                    <span class="amount-option-title">Heaven's Special Blessing</span>
-                  </button>
-                  <button class="amount-option" type="button" data-amount="33">
-                    <span class="amount-option-value"><span class="amount-option-number">33</span><img class="amount-option-seed-mark amount-option-seed-image" src="assets/blue-seed.png" alt="" /></span>
-                    <span class="amount-option-title">Prayer for Your Soulmate</span>
-                  </button>
-                  <button class="amount-option" type="button" data-amount="77">
-                    <span class="amount-option-value"><span class="amount-option-number">77</span><img class="amount-option-seed-mark amount-option-seed-image" src="assets/blue-seed.png" alt="" /></span>
-                    <span class="amount-option-title">Bless Your Soulmate &amp; Your Bond</span>
-                  </button>
-                  <button class="amount-option" type="button" data-amount="111">
-                    <span class="amount-option-value"><span class="amount-option-number">111</span><img class="amount-option-seed-mark amount-option-seed-image" src="assets/purple-seed.png" alt="" /></span>
-                    <span class="amount-option-title">Sacred Blessing for Soulmate &amp; Family</span>
-                  </button>
-                  <button class="amount-option" type="button" data-amount="333">
-                    <span class="amount-option-value"><span class="amount-option-number">333</span><img class="amount-option-seed-mark amount-option-seed-image" src="assets/purple-seed.png" alt="" /></span>
-                    <span class="amount-option-title">Soulmate Divine Guidance &amp; Protection</span>
-                  </button>
-                  <button class="amount-option" type="button" data-amount="777">
-                    <span class="amount-option-value"><span class="amount-option-number">777</span><img class="amount-option-seed-mark amount-option-seed-image" src="assets/golden-seed.png" alt="" /></span>
-                    <span class="amount-option-title">For You &amp; Everyone You Love</span>
-                  </button>
-                  <button class="amount-option" type="button" data-amount="999">
-                    <span class="amount-option-value"><span class="amount-option-number">999</span><img class="amount-option-seed-mark amount-option-seed-image" src="assets/golden-seed.png" alt="" /></span>
-                    <span class="amount-option-title">Ultimate Prayer Offering for Love, Family &amp; Protection</span>
-                  </button>
-                </div>
-              </fieldset>
-
-              <div class="seed-quantity-row" aria-label="Seed quantity">
-                <button class="seed-stepper-button" id="decreaseSeedButton" type="button" aria-label="Decrease seed amount">−</button>
+            <form class="minimal-offering-form" id="supportForm" novalidate>
+              <div class="seed-quantity-row" aria-label="Seed quantity and amount">
+                <label class="compact-amount-field">
+                  <span class="visually-hidden">Seed offering amount</span>
+                  <span aria-hidden="true">$</span>
+                  <input id="amountInput" type="number" min="7" step="0.01" value="7" inputmode="decimal" aria-describedby="amountError" />
+                </label>
+                <button class="seed-stepper-button" id="decreaseSeedButton" type="button" aria-label="Decrease seed quantity">−</button>
                 <div class="seed-price">
                   <span class="seed-icon" aria-hidden="true">🌱</span>
                   <strong id="seedPriceLabel">1 Seed</strong>
                 </div>
-                <button class="seed-stepper-button seed-stepper-button-plus" id="increaseSeedButton" type="button" aria-label="Increase seed amount">+</button>
+                <button class="seed-stepper-button seed-stepper-button-plus" id="increaseSeedButton" type="button" aria-label="Increase seed quantity">+</button>
               </div>
+              <small id="amountError" class="error-message compact-amount-error"></small>
 
-              <label class="field">
-                <span class="money-input">
-                  <span>$</span>
-                  <input id="amountInput" type="number" min="7" step="0.01" value="7" inputmode="decimal" placeholder="Enter custom amount" />
-                </span>
-                <small id="amountError" class="error-message"></small>
+              <label class="field minimal-text-field">
+                <span class="visually-hidden">Email for your order</span>
+                <input id="paymentEmailInput" type="email" inputmode="email" autocomplete="email" placeholder="Email" aria-describedby="emailError" required />
+                <small id="emailError" class="error-message"></small>
               </label>
 
-              <label class="field icon-field">
-                <span aria-hidden="true">👤</span>
-                <input id="nameInput" type="text" placeholder="Your Name" maxlength="48" />
-                <small id="nameError" class="error-message"></small>
+              <label class="field minimal-text-field">
+                <span class="visually-hidden">Display name</span>
+                <input id="nameInput" type="text" placeholder="Display name (optional)" maxlength="48" autocomplete="name" />
               </label>
 
-              <label class="field icon-field textarea-field">
-                <span aria-hidden="true">🙏</span>
-                <textarea id="messageInput" maxlength="180" readonly placeholder="A personalised writing request will be selected for your order"></textarea>
+              <label class="field minimal-text-field textarea-field">
+                <span class="visually-hidden">Your message</span>
+                <textarea id="messageInput" maxlength="180" placeholder="Your message (optional)"></textarea>
               </label>
 
-              <button class="button button-primary checkout-button" id="checkoutButton" type="submit">
-                <span aria-hidden="true">🌱</span>
-                <span id="checkoutLabel">Seed garden</span>
-                <span aria-hidden="true">✝</span>
+              <button class="button button-primary checkout-button" id="checkoutButton" type="submit" aria-expanded="false" aria-controls="inlinePaypalCheckout">
+                <span id="checkoutLabel">Sow Your Seed</span>
               </button>
-              <p class="donate-fortune-note">✨ Get Your Fortune Message Today ✨</p>
+
+              <section class="inline-paypal-checkout" id="inlinePaypalCheckout" aria-label="PayPal checkout" hidden>
+                <p class="payment-copy" id="paymentCopy" hidden></p>
+                <p class="payment-status" id="paymentStatus" role="status" aria-live="polite"></p>
+                <div class="payment-choice paypal-choice" id="paypalButton">
+                  <span>PayPal</span>
+                  <div class="paypal-button-slot" id="paypalButtonContainer"></div>
+                </div>
+                <div class="payment-choice card-choice" id="cardButton">
+                  <span>Debit or credit card</span>
+                  <div class="paypal-button-slot" id="cardButtonContainer"></div>
+                </div>
+                <p class="payment-note" id="paymentNote" hidden></p>
+              </section>
             </form>
           </section>
 
@@ -690,16 +491,6 @@
         </aside>
       </section>
 
-      <section class="section-view gallery-view" id="galleryView" data-section-view hidden>
-        <section class="panel gallery-panel" id="gallery" aria-labelledby="galleryTitle">
-          <div class="section-heading">
-            <p class="section-kicker">Gallery</p>
-            <h2 id="galleryTitle">Photo gallery from recent posts</h2>
-          </div>
-          <div class="gallery-grid" id="galleryGrid"></div>
-        </section>
-      </section>
-
       <section class="section-view posts-view" id="postsView" data-section-view hidden>
         <section class="panel posts-panel" id="posts" aria-labelledby="postsTitle">
           <div class="section-heading">
@@ -710,63 +501,6 @@
         </section>
       </section>
     </main>
-
-    <dialog class="payment-dialog" id="paymentDialog" aria-labelledby="paymentTitle">
-      <div class="payment-card">
-        <h2 id="paymentTitle">Complete your custom order</h2>
-        <p class="fortune-message">Your Fortune Message Awaits in Next Step</p>
-
-        <label class="payment-email-field" for="paymentEmailInput">
-          <span>Email for your order detail</span>
-          <input id="paymentEmailInput" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" />
-        </label>
-
-        <h3>Pay with...</h3>
-        <p class="payment-copy" id="paymentCopy">
-          Choose a secure payment method for your personalised digital writing request.
-        </p>
-        <p class="payment-status" id="paymentStatus" role="status" aria-live="polite"></p>
-
-        <div class="payment-choice payment-choice-wise" id="wiseChoice">
-          <div class="payment-choice-head">
-            <span class="payment-choice-recommended">Recommended</span>
-          </div>
-          <button class="wise-launch-button" id="wiseCheckoutButton" type="button">
-            <img src="assets/wise-button.png" alt="Pay with Wise" />
-          </button>
-        </div>
-
-        <div class="payment-choice payment-choice-razorpay" id="razorpayChoice">
-          <button class="razorpay-launch-button" id="razorpayCheckoutButton" type="button">
-            <img src="assets/razorpay-button.png" alt="Pay with Razorpay" />
-          </button>
-        </div>
-
-        <div class="payment-choice-stack" id="paymentChoiceStack" aria-label="Choose payment method">
-          <div class="payment-choice paypal-choice" id="paypalButton">
-            <span>PayPal</span>
-            <div class="paypal-button-slot" id="paypalButtonContainer"></div>
-          </div>
-          <div class="payment-choice card-choice" id="cardButton">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h13A2.5 2.5 0 0 1 21 7.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 16.5v-9Z" />
-              <path d="M3 10h18M7 15h4" />
-            </svg>
-            <span>Debit or Credit Card</span>
-            <div class="paypal-button-slot" id="cardButtonContainer"></div>
-          </div>
-        </div>
-
-        <p class="powered-by" id="paypalPoweredBy">Powered by <strong>PayPal</strong></p>
-
-        <button class="payment-back-button" id="backPaymentButton" type="button">Go back</button>
-
-        <p class="payment-note" id="paymentNote">
-          By proceeding, you are purchasing a personalised digital writing created from your submitted prayer or intention.
-          Your order is prepared directly for you.
-        </p>
-      </div>
-    </dialog>
 
     <dialog class="receipt-dialog" id="receiptDialog" aria-labelledby="receiptTitle">
       <div class="receipt-card">
@@ -791,32 +525,10 @@
       </div>
     </dialog>
 
-    <dialog class="fortune-number-dialog" id="fortuneNumberDialog" aria-labelledby="fortuneNumberTitle">
-      <div class="fortune-number-card">
-        <button class="icon-button close-fortune-number" id="closeFortuneNumberButton" type="button" aria-label="Close fortune seed prompt">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="m6 6 12 12M18 6 6 18" />
-          </svg>
-        </button>
-        <button class="fortune-seed-button" id="fortuneSeedButton" type="button" aria-label="Golden seed blessing" tabindex="-1">
-          <svg viewBox="0 0 96 96" aria-hidden="true">
-            <path class="fortune-seed-core" d="M67.9 11.4C46.8 14.9 24.9 35.6 20.4 57.6c-3.6 17.2 7.4 28.5 24.7 25.1C66.8 78.7 86.5 56.8 88.7 35.5c1.4-13.1-6.4-26.6-20.8-24.1Z" />
-            <path class="fortune-seed-shine" d="M36.6 62.2c6.9-16.8 18.9-28.8 36-36" />
-            <path class="fortune-seed-sprout" d="M38.2 70c10.2-3.3 17.1-10.3 20.8-20.7" />
-          </svg>
-        </button>
-        <p class="section-kicker">Golden seed blessing</p>
-        <h2 id="fortuneNumberTitle">A golden seed, My Child</h2>
-        <p class="fortune-number-copy" id="fortuneNumberCopy">The blessing is in your hand. Sow the seed.</p>
-        <p class="fortune-number-result" id="fortuneNumberResult" hidden></p>
-        <button class="button amen-button fortune-number-amen" id="fortuneNumberDoneButton" type="button">Amen</button>
-      </div>
-    </dialog>
-
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <footer class="footer">
-      <p id="footerText">This platform provides personalised digital writing created from your submitted request or intention. Each purchase is a custom order, prepared directly for the buyer.</p>
+      <p>This platform provides personalised digital writing created from your submitted request or intention. Each purchase is a custom order, prepared directly for the buyer.</p>
       <nav class="footer-links" aria-label="Legal and information links">
         <a href="about-us.html">About Us</a>
         <span aria-hidden="true">·</span>
@@ -830,6 +542,6 @@
     </footer>
 
     <script src="src/config.js?v=1"></script>
-    <script src="src/app.js?v=64" defer></script>
+    <script src="src/app.js?v=76" defer></script>
   </body>
 </html>

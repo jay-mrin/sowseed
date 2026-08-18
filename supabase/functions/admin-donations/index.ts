@@ -80,37 +80,11 @@ Deno.serve(async (request) => {
       if (adminProfile.role !== "super_admin") {
         return errorResponse("Only superadmins can approve private orders.", 403);
       }
-      const body = await readJson<{ donationId?: string; superApproved?: boolean; confirmWise?: boolean }>(request);
+      const body = await readJson<{ donationId?: string; superApproved?: boolean }>(request);
       const donationId = String(body.donationId || "").trim();
       const superApproved = Boolean(body.superApproved);
 
       if (!donationId) return errorResponse("Order id is required.", 422);
-
-      if (body.confirmWise) {
-        const { data: fortunes, error: fortunesError } = await supabase
-          .from("fortunes")
-          .select("id, message")
-          .eq("active", true)
-          .limit(200);
-        if (fortunesError || !fortunes?.length) throw fortunesError || new Error("No active writing messages found.");
-        const fortune = fortunes[Math.floor(Math.random() * fortunes.length)];
-        const { data, error } = await supabase
-          .from("donations")
-          .update({ paypal_status: "COMPLETED", fortune_id: fortune.id, fortune_message: fortune.message, super_approved: true })
-          .eq("id", donationId)
-          .eq("payment_method", "wise")
-          .eq("visibility_scope", "superadmin_private")
-          .select("id")
-          .maybeSingle();
-        if (error) throw error;
-        if (!data) return errorResponse("Wise order not found.", 404);
-        const { error: orderError } = await supabase
-          .from("digital_orders")
-          .update({ blessing_message: fortune.message, fulfillment_status: "paid_awaiting_personalized_writing" })
-          .eq("donation_id", donationId);
-        if (orderError) throw orderError;
-        return jsonResponse({ success: true, fortune: fortune.message });
-      }
 
       const { data, error } = await supabase
         .from("donations")
@@ -260,20 +234,21 @@ Deno.serve(async (request) => {
     }
 
     if (request.method === "DELETE") {
-      if (adminProfile.role !== "super_admin") {
-        return errorResponse("Only superadmins can delete order records.", 403);
-      }
-
       const body = await readJson<DeleteDonationBody>(request);
       const donationId = String(body.donationId || "").trim();
 
       if (!donationId) return errorResponse("Order id is required.", 422);
 
-      const { data: donation, error: donationError } = await supabase
+      let donationQuery = supabase
         .from("donations")
         .select("id")
-        .eq("id", donationId)
-        .maybeSingle();
+        .eq("id", donationId);
+
+      if (adminProfile.role === "admin") {
+        donationQuery = donationQuery.eq("visibility_scope", "public").eq("payment_method", "paypal");
+      }
+
+      const { data: donation, error: donationError } = await donationQuery.maybeSingle();
 
       if (donationError) throw donationError;
       if (!donation) return errorResponse("Order record not found.", 404);
@@ -291,10 +266,6 @@ Deno.serve(async (request) => {
     }
 
     const month = url.searchParams.get("month");
-    const exportRows = url.searchParams.get("export") === "csv";
-    const startDate = url.searchParams.get("startDate");
-    const endDate = url.searchParams.get("endDate");
-    const routeFilter = url.searchParams.get("route");
     let query = supabase
       .from("donations")
       .select(
@@ -322,36 +293,20 @@ Deno.serve(async (request) => {
       )
       .order("created_at", { ascending: false });
 
-    // CSV export is deliberately limited to public Admin PayPal orders. This
-    // keeps SuperAdmin PayPal, Wise, and Razorpay records out of every export.
-    if (exportRows) {
-      query = query.eq("visibility_scope", "public").eq("payment_method", "paypal");
-    } else if (adminProfile.role === "admin") {
+    if (adminProfile.role === "admin") {
       query = query.eq("visibility_scope", "public").eq("payment_method", "paypal");
     } else if (adminProfile.role === "super_admin") {
-      query = routeFilter === "standard"
-        ? query.eq("visibility_scope", "public").eq("payment_method", "paypal")
-        : query.eq("visibility_scope", "superadmin_private");
+      query = query.eq("visibility_scope", "superadmin_private");
     }
 
-    if (exportRows && isDateOnly(startDate)) {
-      query = query.gte("created_at", getUtcDayStart(startDate as string).toISOString());
-    }
-
-    if (exportRows && isDateOnly(endDate)) {
-      const end = getUtcDayStart(endDate as string);
-      end.setUTCDate(end.getUTCDate() + 1);
-      query = query.lt("created_at", end.toISOString());
-    }
-
-    if (!exportRows && month && /^\d{4}-\d{2}$/.test(month)) {
+    if (month && /^\d{4}-\d{2}$/.test(month)) {
       const [year, monthIndex] = month.split("-").map(Number);
       const start = new Date(Date.UTC(year, monthIndex - 1, 1));
       const end = new Date(Date.UTC(year, monthIndex, 1));
       query = query.gte("created_at", start.toISOString()).lt("created_at", end.toISOString());
     }
 
-    const { data, error } = await query.limit(exportRows ? 5000 : 500);
+    const { data, error } = await query.limit(500);
     if (error) throw error;
 
     return jsonResponse({

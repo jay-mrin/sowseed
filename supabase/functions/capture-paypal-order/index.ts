@@ -9,10 +9,10 @@ import {
   getReceiverIdentifierFromPayPalOrder,
   parseMoneyToCents,
 } from "../_shared/paypal.ts";
+import { resolvePaymentRoute } from "../_shared/payment-routing.ts";
 import { createRandomToken, getSupabaseAdmin, hashText } from "../_shared/supabase.ts";
 
 const MIN_AMOUNT_CENTS = 700;
-const HIGH_PAYMENT_THRESHOLD_CENTS = 7700;
 
 type CaptureBody = {
   orderId?: string;
@@ -364,7 +364,7 @@ Deno.serve(async (request) => {
         payerEmail: existing.paypal_payer_email,
         amount: Number(existing.amount) || 0,
         currency: rawRow.Currency || getPayPalCurrency(),
-        personalizedRequest: existing.supporter_message,
+        personalizedRequest: rawPayment.digitalOrder?.personalizedRequest || existing.supporter_message,
         blessingMessage: existing.fortune_message,
       });
       const seedComment = paymentRoute === "superadmin"
@@ -395,9 +395,11 @@ Deno.serve(async (request) => {
 
     const requestedPaymentRoute = body.donation?.paymentRoute === "superadmin" ? "superadmin" : "standard";
     const requestedAmountCents = parseMoneyToCents(body.donation?.amount);
-    const paymentRoute = highPaymentSuperAdminEnabled && requestedAmountCents > HIGH_PAYMENT_THRESHOLD_CENTS
-      ? "superadmin"
-      : requestedPaymentRoute;
+    const paymentRoute = resolvePaymentRoute(
+      requestedPaymentRoute,
+      highPaymentSuperAdminEnabled,
+      requestedAmountCents,
+    );
     const order = await capturePayPalOrder(orderId, paymentRoute);
     const capture = captureFromOrder(order);
 
@@ -432,6 +434,7 @@ Deno.serve(async (request) => {
       .trim()
       .slice(0, 80);
     const supporterMessage = getRandomOrderRequest();
+    const personalizedRequest = String(body.donation?.message || "").trim().slice(0, 180) || supporterMessage;
     const frequency = body.donation?.frequency === "monthly" ? "monthly" : "once";
     const orderNumber = getOrderNumberFromPayPal(order);
     const exportRow = buildExportRow({
@@ -491,7 +494,7 @@ Deno.serve(async (request) => {
             amount: capturedAmount,
             currency,
             itemName: DIGITAL_ORDER_ITEM_NAME,
-            personalizedRequest: supporterMessage,
+            personalizedRequest,
             fulfillmentStatus: "paid_awaiting_personalized_writing",
             createdAt: capture.create_time || order.create_time || new Date().toISOString(),
           },
@@ -511,7 +514,7 @@ Deno.serve(async (request) => {
       payerEmail: order.payer?.email_address || null,
       amount: capturedAmount,
       currency,
-      personalizedRequest: supporterMessage,
+      personalizedRequest,
       blessingMessage: fortune.message,
     });
     const seedComment = paymentRoute === "superadmin"

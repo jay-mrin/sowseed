@@ -70,15 +70,6 @@ Deno.serve(async (request) => {
     const highPaymentSuperAdminEnabled =
       (settings as Record<string, unknown>).highPaymentSuperAdminEnabled === true ||
       (settings as Record<string, unknown>).highPaymentSuperAdminEnabled === "true";
-    const razorpayEnabled =
-      (settings as Record<string, unknown>).razorpayEnabled !== false &&
-      (settings as Record<string, unknown>).razorpayEnabled !== "false";
-    const paypalEnabled =
-      (settings as Record<string, unknown>).paypalEnabled !== false &&
-      (settings as Record<string, unknown>).paypalEnabled !== "false";
-    const wiseEnabled =
-      (settings as Record<string, unknown>).wiseEnabled !== false &&
-      (settings as Record<string, unknown>).wiseEnabled !== "false";
     const goalAmount = Math.max(Number(settings.seedGoal) || 0, 0);
     const seedPrice = Math.max(Number(settings.seedPrice) || 7, 1);
     const rawCurrentAmount = Math.max(Number(settings.meterCurrentAmount ?? settings.startingSeeds) || 0, 0);
@@ -114,7 +105,7 @@ Deno.serve(async (request) => {
 
     const { data: posts, error: postsError } = await supabase
       .from("posts")
-      .select("id, title, description, image_url, published, created_at")
+      .select("id, title, description, image_url, published, like_count_base, created_at")
       .eq("published", true)
       .order("created_at", { ascending: false });
     if (postsError) throw postsError;
@@ -162,7 +153,7 @@ Deno.serve(async (request) => {
         description: post.description,
         imageUrl: post.image_url,
         createdAt: post.created_at,
-        likes: likeEntry.count,
+        likes: Math.max(Number(post.like_count_base) || 0, 0) + likeEntry.count,
         liked: likeEntry.liked,
         comments: commentsByPost.get(post.id) || [],
       };
@@ -198,14 +189,8 @@ Deno.serve(async (request) => {
       payment: {
         paypalClientId: getPayPalClientId(),
         superAdminPayPalClientId: getPayPalClientId("superadmin"),
-        razorpayKeyId: Deno.env.get("RAZORPAY_KEY_ID") || "",
-        razorpayCurrency: Deno.env.get("RAZORPAY_CURRENCY") || "USD",
-        razorpayMode: Deno.env.get("RAZORPAY_MODE") || "test",
         checkoutRoute,
         highPaymentSuperAdminEnabled,
-        razorpayEnabled,
-        paypalEnabled,
-        wiseEnabled,
         currency: Deno.env.get("PAYPAL_CURRENCY") || "USD",
         env: Deno.env.get("PAYPAL_ENV") || "sandbox",
       },

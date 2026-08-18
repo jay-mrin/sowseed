@@ -9,12 +9,6 @@ verify_jwt = false
 [functions.capture-paypal-order]
 verify_jwt = false
 
-[functions.create-razorpay-order]
-verify_jwt = false
-
-[functions.capture-razorpay-order]
-verify_jwt = false
-
 [functions.paypal-webhook]
 verify_jwt = false
 

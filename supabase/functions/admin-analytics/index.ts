@@ -90,7 +90,7 @@ Deno.serve(async (request) => {
     const uniqueVisitors = new Set(rows.map((row) => row.visitor_key_hash).filter(Boolean));
     const checkoutButtonClicks = events.filter((event) => event.event_name === "checkout_button_clicked").length;
     const paypalCheckoutStarts = events.filter((event) =>
-      event.event_name === "paypal_checkout_started" || event.event_name === "razorpay_checkout_started"
+      event.event_name === "paypal_checkout_started"
     ).length;
     const topPaths = Array.from(
       rows.reduce((paths, row) => {

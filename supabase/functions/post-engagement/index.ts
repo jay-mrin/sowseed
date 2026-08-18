@@ -11,10 +11,13 @@ type EngagementBody = {
 };
 
 async function getLikeState(supabase: ReturnType<typeof getSupabaseAdmin>, postId: string, visitorKeyHash: string) {
-  const { count } = await supabase
+  const [{ count }, { data: post }] = await Promise.all([
+    supabase
     .from("post_likes")
     .select("id", { count: "exact", head: true })
-    .eq("post_id", postId);
+    .eq("post_id", postId),
+    supabase.from("posts").select("like_count_base").eq("id", postId).maybeSingle(),
+  ]);
 
   const { data: liked } = visitorKeyHash
     ? await supabase
@@ -26,7 +29,7 @@ async function getLikeState(supabase: ReturnType<typeof getSupabaseAdmin>, postI
     : { data: null };
 
   return {
-    likes: count || 0,
+    likes: Math.max(Number(post?.like_count_base) || 0, 0) + (count || 0),
     liked: Boolean(liked),
   };
 }

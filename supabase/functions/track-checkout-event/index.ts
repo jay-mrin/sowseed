@@ -10,7 +10,7 @@ type CheckoutEventBody = {
   visitorKey?: string;
 };
 
-const ALLOWED_EVENTS = new Set(["checkout_button_clicked", "paypal_checkout_started", "razorpay_checkout_started", "wise_payment_link_opened"]);
+const ALLOWED_EVENTS = new Set(["checkout_button_clicked", "paypal_checkout_started"]);
 const MIN_AMOUNT_CENTS = 700;
 
 function sanitizePath(value: unknown) {
