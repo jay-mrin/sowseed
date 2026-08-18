@@ -274,6 +274,8 @@ const elements = {
   inlinePaypalCheckout: document.querySelector("#inlinePaypalCheckout"),
   paymentEmailInput: document.querySelector("#paymentEmailInput"),
   paymentStatus: document.querySelector("#paymentStatus"),
+  paypalCheckoutLoader: document.querySelector("#paypalCheckoutLoader"),
+  paypalCheckoutRetry: document.querySelector("#paypalCheckoutRetry"),
   paypalButton: document.querySelector("#paypalButton"),
   paypalButtonContainer: document.querySelector("#paypalButtonContainer"),
   cardButton: document.querySelector("#cardButton"),
@@ -2307,16 +2309,26 @@ function setPaymentStatus(message, isError = false) {
   if (!elements.paymentStatus) return;
   elements.paymentStatus.textContent = message;
   elements.paymentStatus.classList.toggle("is-error", isError);
+  elements.paymentStatus.hidden = !message;
+}
+
+function setPayPalCheckoutLoading(isLoading) {
+  elements.inlinePaypalCheckout.classList.toggle("is-loading", isLoading);
+  if (elements.paypalCheckoutLoader) elements.paypalCheckoutLoader.hidden = !isLoading;
+
+  if (isLoading) {
+    elements.paypalButton.hidden = false;
+    elements.cardButton.hidden = false;
+    if (elements.paypalCheckoutRetry) elements.paypalCheckoutRetry.hidden = true;
+  }
 }
 
 function updatePayPalVisibility() {
   const showPayPal = isPayPalConfigured();
 
-  if (elements.paypalButton) {
-    elements.paypalButton.hidden = !showPayPal;
-  }
-  if (elements.cardButton) {
-    elements.cardButton.hidden = !showPayPal;
+  if (!showPayPal) {
+    elements.paypalButton.hidden = true;
+    elements.cardButton.hidden = true;
   }
 
   return showPayPal;
@@ -2473,6 +2485,10 @@ function clearPayPalButtons() {
   if (elements.cardButtonContainer) elements.cardButtonContainer.innerHTML = "";
 }
 
+function hasRenderedPayPalButton(container) {
+  return Boolean(container?.firstElementChild);
+}
+
 function buildPayPalButtonOptions(paypal, fundingSource) {
   return {
     fundingSource,
@@ -2523,61 +2539,96 @@ function buildPayPalButtonOptions(paypal, fundingSource) {
   };
 }
 
-function renderPayPalButtons() {
+function renderPayPalButtons(options = {}) {
   if (paypalRenderPromise) return paypalRenderPromise;
 
-  paypalRenderPromise = renderSinglePayPalButton().finally(() => {
+  paypalRenderPromise = renderSinglePayPalButton(options).finally(() => {
     paypalRenderPromise = null;
   });
 
   return paypalRenderPromise;
 }
 
-async function renderSinglePayPalButton() {
+async function renderPayPalButtonAttempt(forceReload = false) {
+  const route = getCheckoutRoute();
+  const namespace = getPayPalSdkNamespace(route);
+
+  if (forceReload) resetPayPalSdk(namespace);
   clearPayPalButtons();
 
+  if (pendingDonation) {
+    pendingDonation = { ...pendingDonation, paymentRoute: route };
+  }
+
+  const paypal = await loadPayPalSdk(route);
+  if (route !== getCheckoutRoute()) {
+    throw new Error("The payment route changed while PayPal was loading.");
+  }
+
+  const paypalButtons = paypal.Buttons(buildPayPalButtonOptions(paypal, paypal.FUNDING.PAYPAL));
+  const cardButtons = paypal.Buttons(buildPayPalButtonOptions(paypal, paypal.FUNDING.CARD));
+  const paypalEligible = paypalButtons.isEligible();
+  const cardEligible = cardButtons.isEligible();
+
+  if (!paypalEligible && !cardEligible) {
+    throw new Error("PayPal did not return an eligible checkout option.");
+  }
+
+  if (paypalEligible) await paypalButtons.render(elements.paypalButtonContainer);
+  if (cardEligible) await cardButtons.render(elements.cardButtonContainer);
+
+  if (paypalEligible && !hasRenderedPayPalButton(elements.paypalButtonContainer)) {
+    throw new Error("The PayPal button did not finish rendering.");
+  }
+  if (cardEligible && !hasRenderedPayPalButton(elements.cardButtonContainer)) {
+    throw new Error("The card button did not finish rendering.");
+  }
+
+  return { cardEligible, paypalEligible };
+}
+
+async function renderSinglePayPalButton(options = {}) {
+  clearPayPalButtons();
+  setPaymentStatus("");
+  setPayPalCheckoutLoading(true);
+
   if (!isPayPalConfigured()) {
-    setPaymentStatus("PayPal checkout is currently unavailable.");
+    elements.paypalButton.hidden = true;
+    elements.cardButton.hidden = true;
+    setPaymentStatus("PayPal checkout is currently unavailable.", true);
+    setPayPalCheckoutLoading(false);
     return;
   }
 
   if (!isBackendConfigured() || !backendReady) {
+    elements.paypalButton.hidden = true;
+    elements.cardButton.hidden = true;
     setPaymentStatus("Backend is not configured yet. Fill src/config.js and deploy Supabase functions before live checkout.", true);
+    setPayPalCheckoutLoading(false);
     return;
   }
 
-  try {
-    if (pendingDonation) {
-      pendingDonation = { ...pendingDonation, paymentRoute: getCheckoutRoute() };
-    }
-
-    const paypal = await loadPayPalSdk(getCheckoutRoute());
-    let renderedButtonCount = 0;
-    const paypalButtons = paypal.Buttons(buildPayPalButtonOptions(paypal, paypal.FUNDING.PAYPAL));
-    if (paypalButtons.isEligible()) {
-      await paypalButtons.render(elements.paypalButtonContainer);
-      renderedButtonCount += 1;
-    } else {
-      elements.paypalButton.hidden = true;
-    }
-
-    const cardButtons = paypal.Buttons(buildPayPalButtonOptions(paypal, paypal.FUNDING.CARD));
-    if (cardButtons.isEligible()) {
-      await cardButtons.render(elements.cardButtonContainer);
-      renderedButtonCount += 1;
-    } else {
-      elements.cardButton.hidden = true;
-    }
-
-    if (renderedButtonCount) {
+  let lastError = null;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const result = await renderPayPalButtonAttempt(Boolean(options.forceReload) || attempt > 0);
+      elements.paypalButton.hidden = !result.paypalEligible;
+      elements.cardButton.hidden = !result.cardEligible;
+      if (elements.paypalCheckoutRetry) elements.paypalCheckoutRetry.hidden = true;
       setPaymentStatus("Continue With Paypal for your Seed");
-    } else {
-      elements.paypalButtonContainer.innerHTML = `<small>PayPal checkout could not render. Please try again.</small>`;
-      setPaymentStatus("PayPal checkout could not render. Please try again.", true);
+      setPayPalCheckoutLoading(false);
+      return;
+    } catch (error) {
+      lastError = error;
+      clearPayPalButtons();
     }
-  } catch (error) {
-    setPaymentStatus(error.message || "Payment buttons could not load.", true);
   }
+
+  elements.paypalButton.hidden = true;
+  elements.cardButton.hidden = true;
+  if (elements.paypalCheckoutRetry) elements.paypalCheckoutRetry.hidden = false;
+  setPaymentStatus(lastError?.message || "Payment buttons could not load. Please try again.", true);
+  setPayPalCheckoutLoading(false);
 }
 
 async function finishVerifiedDonation(payload) {
@@ -2643,21 +2694,27 @@ async function finishVerifiedDonation(payload) {
 }
 
 function openInlinePayPalCheckout() {
-  setPaymentStatus("Loading secure checkout...");
+  setPaymentStatus("");
   const showPayPal = updatePayPalVisibility();
   elements.inlinePaypalCheckout.hidden = false;
   elements.checkoutButton.classList.add("is-checkout-open");
   elements.checkoutButton.setAttribute("aria-expanded", "true");
 
   if (showPayPal) {
-    renderPayPalButtons();
+    setPayPalCheckoutLoading(true);
+    void renderPayPalButtons();
     return;
   }
+  setPayPalCheckoutLoading(false);
   setPaymentStatus("PayPal checkout is currently unavailable.", true);
 }
 
 function closeInlinePayPalCheckout() {
   clearPayPalButtons();
+  setPayPalCheckoutLoading(false);
+  elements.paypalButton.hidden = true;
+  elements.cardButton.hidden = true;
+  if (elements.paypalCheckoutRetry) elements.paypalCheckoutRetry.hidden = true;
   elements.inlinePaypalCheckout.hidden = true;
   elements.checkoutButton.classList.remove("is-checkout-open");
   elements.checkoutButton.setAttribute("aria-expanded", "false");
@@ -3353,6 +3410,11 @@ elements.checkoutButton.addEventListener("pointerenter", () => {
   void preloadPayPalSdk(getCheckoutRoute());
 });
 elements.supportForm.addEventListener("submit", submitDonation);
+elements.paypalCheckoutRetry?.addEventListener("click", () => {
+  setPaymentStatus("");
+  setPayPalCheckoutLoading(true);
+  void renderPayPalButtons({ forceReload: true });
+});
 elements.paymentEmailInput?.addEventListener("input", () => {
   if (elements.emailError && isValidEmailAddress(getPaymentEmail())) {
     elements.emailError.textContent = "";

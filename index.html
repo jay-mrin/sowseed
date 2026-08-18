@@ -18,7 +18,7 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="src/styles.css?v=73" />
+    <link rel="stylesheet" href="src/styles.css?v=74" />
   </head>
   <body class="app-loading">
     <div class="app-loader" id="appLoader" role="status" aria-live="polite" aria-label="Loading Seed garden">
@@ -460,7 +460,11 @@
               </button>
 
               <section class="inline-paypal-checkout" id="inlinePaypalCheckout" aria-label="PayPal checkout" hidden>
-                <p class="payment-status" id="paymentStatus" role="status" aria-live="polite"></p>
+                <p class="payment-status" id="paymentStatus" role="status" aria-live="polite" hidden></p>
+                <div class="paypal-checkout-loader" id="paypalCheckoutLoader" role="status" aria-live="polite" aria-label="Loading secure PayPal checkout" hidden>
+                  <span class="paypal-checkout-loader-seed" aria-hidden="true">🌱</span>
+                  <span>Preparing secure checkout…</span>
+                </div>
                 <div class="payment-choice paypal-choice" id="paypalButton">
                   <span>PayPal</span>
                   <div class="paypal-button-slot" id="paypalButtonContainer"></div>
@@ -469,6 +473,7 @@
                   <span>Debit or credit card</span>
                   <div class="paypal-button-slot" id="cardButtonContainer"></div>
                 </div>
+                <button class="paypal-checkout-retry" id="paypalCheckoutRetry" type="button" hidden>Try loading PayPal again</button>
               </section>
             </form>
           </section>
@@ -542,6 +547,6 @@
     </footer>
 
     <script src="src/config.js?v=2"></script>
-    <script src="src/app.js?v=80" defer></script>
+    <script src="src/app.js?v=81" defer></script>
   </body>
 </html>

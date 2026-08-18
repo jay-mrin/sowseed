@@ -3450,6 +3450,7 @@ legend::after {
 }
 
 .inline-paypal-checkout {
+  position: relative;
   margin-top: -8px;
   padding: 24px 12px 10px;
   border: 2px solid #f832b8;
@@ -3457,6 +3458,68 @@ legend::after {
   border-radius: 0 0 30px 30px;
   background: linear-gradient(180deg, rgba(255, 241, 250, 0.84), rgba(255, 255, 255, 0.98));
   box-shadow: 0 16px 30px rgba(248, 50, 184, 0.14);
+}
+
+.inline-paypal-checkout.is-loading {
+  min-height: 170px;
+}
+
+.inline-paypal-checkout.is-loading .payment-status,
+.inline-paypal-checkout.is-loading .payment-choice,
+.inline-paypal-checkout.is-loading .paypal-checkout-retry {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.paypal-checkout-loader {
+  position: absolute;
+  inset: 12px;
+  z-index: 2;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 14px;
+  color: #167640;
+  font-size: 14px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.paypal-checkout-loader-seed {
+  display: grid;
+  width: 62px;
+  height: 62px;
+  place-items: center;
+  border: 1px solid rgba(65, 190, 91, 0.3);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 25%, rgba(255, 255, 255, 0.98), transparent 42%),
+    linear-gradient(135deg, rgba(255, 243, 180, 0.98), rgba(65, 190, 91, 0.18));
+  box-shadow:
+    0 0 0 10px rgba(65, 190, 91, 0.08),
+    0 14px 32px rgba(65, 190, 91, 0.2);
+  font-size: 30px;
+  animation: app-loader-spin 950ms cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+.paypal-checkout-retry {
+  display: block;
+  width: 100%;
+  min-height: 46px;
+  margin-top: 10px;
+  border: 1px solid rgba(248, 50, 184, 0.32);
+  border-radius: var(--button-radius);
+  color: #a41463;
+  background: #fff7fc;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.paypal-checkout-retry:hover {
+  border-color: rgba(248, 50, 184, 0.62);
+  background: #fff0f9;
 }
 
 .inline-paypal-checkout[hidden] {

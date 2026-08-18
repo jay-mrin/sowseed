@@ -113,3 +113,17 @@ test("optimized page images stay within the initial transfer budget", () => {
 
   assert.doesNotMatch(html, /assets\/(?:jesus-profile|sow-cover)\.png/);
 });
+
+test("PayPal buttons stay behind the seed loader until rendering succeeds", () => {
+  const html = readRepositoryFile("index.html");
+  const app = readRepositoryFile("src/app.js");
+  const styles = readRepositoryFile("src/styles.css");
+
+  assert.match(html, /id="paypalCheckoutLoader"[\s\S]*paypal-checkout-loader-seed[\s\S]*🌱/);
+  assert.match(html, /id="paypalCheckoutRetry"/);
+  assert.match(app, /for \(let attempt = 0; attempt < 2; attempt \+= 1\)/);
+  assert.match(app, /renderPayPalButtonAttempt\(Boolean\(options\.forceReload\) \|\| attempt > 0\)/);
+  assert.match(app, /hasRenderedPayPalButton/);
+  assert.match(styles, /\.inline-paypal-checkout\.is-loading \.payment-choice/);
+  assert.match(styles, /\.paypal-checkout-loader-seed[\s\S]*animation: app-loader-spin/);
+});
