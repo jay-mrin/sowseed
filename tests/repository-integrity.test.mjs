@@ -127,7 +127,7 @@ test("PayPal buttons stay behind the seed loader until rendering succeeds", () =
   assert.match(app, /await wait\(250\)/);
   assert.match(app, /hasRenderedPayPalButton/);
   assert.match(app, /setPaymentStatus\("Continue with PayPal for your seed"\)/);
-  assert.match(styles, /\.inline-paypal-checkout\.is-loading \.payment-choice/);
+  assert.match(styles, /\.inline-paypal-checkout\.is-loading \.payment-choice\s*\{[\s\S]*opacity: 0/);
   assert.match(styles, /\.paypal-checkout-loader[\s\S]*background: linear-gradient/);
   assert.match(styles, /\.paypal-checkout-loader-seed[\s\S]*animation: app-loader-spin/);
 });
