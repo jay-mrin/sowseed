@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -84,4 +84,32 @@ test("frontend ID selectors and static asset paths resolve", () => {
   for (const assetPath of assetPaths) {
     assert.ok(existsSync(path.join(repositoryRoot, assetPath)), `frontend references missing asset ${assetPath}`);
   }
+});
+
+test("public startup prioritizes checkout before deferred community content", () => {
+  const app = readRepositoryFile("src/app.js");
+  const bootstrap = readRepositoryFile("supabase/functions/public-bootstrap/index.ts");
+
+  assert.match(app, /loadBackendData\(\{ mode: "critical" \}\)/);
+  assert.match(app, /preloadPayPalSdk\(getCheckoutRoute\(\)\)/);
+  assert.match(app, /Promise\.race\(\[paypalWarmup, wait\(900\)\]\)/);
+  assert.match(app, /loadBackendData\(\{ mode: "content" \}\)/);
+  assert.doesNotMatch(app, /waitForInitialAssets/);
+  assert.match(bootstrap, /requestedMode === "critical" \|\| requestedMode === "content"/);
+  assert.match(bootstrap, /Promise\.all\(\[\s*supabase[\s\S]*\.from\("donations"\)[\s\S]*\.from\("seed_comments"\)[\s\S]*\.from\("posts"\)/);
+});
+
+test("optimized page images stay within the initial transfer budget", () => {
+  const html = readRepositoryFile("index.html");
+  const imageBudgets = {
+    "assets/jesus-profile.jpg": 80 * 1024,
+    "assets/sow-cover.jpg": 260 * 1024,
+  };
+
+  for (const [assetPath, byteBudget] of Object.entries(imageBudgets)) {
+    assert.match(html, new RegExp(assetPath.replace(".", "\\.")));
+    assert.ok(statSync(path.join(repositoryRoot, assetPath)).size <= byteBudget, `${assetPath} exceeds its byte budget`);
+  }
+
+  assert.doesNotMatch(html, /assets\/(?:jesus-profile|sow-cover)\.png/);
 });

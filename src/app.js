@@ -11,6 +11,7 @@ const ADMIN_PASSWORD = "sowseed";
 const SEED_DOLLAR_VALUE = 7;
 const MIN_DONATION_AMOUNT = 7;
 const HIGH_PAYMENT_THRESHOLD_CENTS = 2100;
+const PAYPAL_SDK_LOAD_TIMEOUT_MS = 8000;
 const TOP_BRAND_TITLE = "Seed garden";
 const MINIMAL_SUPPORT_TITLE = "Buy a Seed to Sow for the Love You’ve Been Waiting For 💗💕";
 const LEGACY_SUPPORT_TITLES = new Set([
@@ -204,7 +205,7 @@ const defaultPosts = [
     id: "post-default-1",
     title: DEFAULT_SETTINGS.postTitle,
     description: DEFAULT_SETTINGS.postBody,
-    imageUrl: "assets/sow-cover.png",
+    imageUrl: "assets/sow-cover.jpg",
     createdAt: "2026-07-27T12:00:00.000Z",
     likes: 3734,
   },
@@ -317,6 +318,7 @@ const elements = {
 
 let pendingFulfillmentAction = null;
 let backendReady = false;
+let publicContentLoading = isBackendConfigured();
 const paypalSdkPromises = new Map();
 const paypalSdkKeysByNamespace = new Map();
 let paypalRenderPromise = null;
@@ -450,7 +452,8 @@ function normalizePosts(posts) {
         .map((post, index) => {
           const title = String(post?.title || "").trim();
           const description = String(post?.description || post?.body || "").trim();
-          const imageUrl = String(post?.imageUrl || post?.image || "").trim();
+          const rawImageUrl = String(post?.imageUrl || post?.image || "").trim();
+          const imageUrl = rawImageUrl === "assets/sow-cover.png" ? "assets/sow-cover.jpg" : rawImageUrl;
           const createdAt = toSafeIsoDate(post?.createdAt);
           const liked = Boolean(post?.liked);
           const likes = Math.max(Number.parseInt(post?.likes, 10) || 0, liked ? 1 : 0);
@@ -461,7 +464,7 @@ function normalizePosts(posts) {
             id: String(post?.id || `post-${Date.now()}-${index}`),
             title: title || "Untitled post",
             description,
-            imageUrl: imageUrl || "assets/sow-cover.png",
+            imageUrl: imageUrl || "assets/sow-cover.jpg",
             createdAt,
             likes,
             liked,
@@ -697,40 +700,57 @@ async function loadAdminProfile() {
 function applyBootstrap(payload) {
   if (!payload) return;
 
-  state.settings = normalizeSettings({
-    ...(payload.settings || {}),
-    checkoutRoute: payload.payment?.checkoutRoute || payload.settings?.checkoutRoute,
-    highPaymentSuperAdminEnabled:
-      payload.payment?.highPaymentSuperAdminEnabled ?? payload.settings?.highPaymentSuperAdminEnabled,
-  });
-  state.donations = Array.isArray(payload.donations) ? payload.donations : [];
-  state.seedComments = normalizeSeedComments(payload.seedComments);
-  state.posts = normalizePosts(payload.posts);
-  state.totals = normalizeTotals(payload.totals);
-  paymentConfig = {
-    paypalClientId: payload.payment?.paypalClientId || PUBLIC_CONFIG.paypalClientId || "",
-    superAdminPayPalClientId: payload.payment?.superAdminPayPalClientId || "",
-    currency: payload.payment?.currency || PUBLIC_CONFIG.paypalCurrency || CONFIG.currency,
-  };
-  backendReady = true;
+  if (payload.settings || payload.payment) {
+    state.settings = normalizeSettings({
+      ...state.settings,
+      ...(payload.settings || {}),
+      checkoutRoute: payload.payment?.checkoutRoute || payload.settings?.checkoutRoute,
+      highPaymentSuperAdminEnabled:
+        payload.payment?.highPaymentSuperAdminEnabled ?? payload.settings?.highPaymentSuperAdminEnabled,
+    });
+    backendReady = true;
+  }
+
+  if (Array.isArray(payload.donations)) state.donations = payload.donations;
+  if (Array.isArray(payload.seedComments)) state.seedComments = normalizeSeedComments(payload.seedComments);
+  if (Array.isArray(payload.posts)) state.posts = normalizePosts(payload.posts);
+  if (payload.totals) state.totals = normalizeTotals(payload.totals);
+
+  if (payload.payment) {
+    paymentConfig = {
+      paypalClientId: payload.payment.paypalClientId || PUBLIC_CONFIG.paypalClientId || "",
+      superAdminPayPalClientId: payload.payment.superAdminPayPalClientId || "",
+      currency: payload.payment.currency || PUBLIC_CONFIG.paypalCurrency || CONFIG.currency,
+    };
+  }
+
+  if (Array.isArray(payload.donations) || Array.isArray(payload.seedComments) || Array.isArray(payload.posts)) {
+    publicContentLoading = false;
+  }
 }
 
 async function loadBackendData(options = {}) {
   if (!isBackendConfigured()) return;
+
+  const mode = options.mode === "critical" || options.mode === "content" ? options.mode : "full";
 
   try {
     const params = new URLSearchParams({
       path: window.location.pathname || "/",
       visitorKey: getVisitorKey(),
     });
+    if (mode !== "full") params.set("mode", mode);
     const payload = await callEdge(`public-bootstrap?${params.toString()}`, { method: "GET" });
     applyBootstrap(payload);
+    return payload;
   } catch (error) {
-    backendReady = false;
+    if (mode !== "content") backendReady = false;
+    publicContentLoading = false;
     if (options.throwOnError) {
       throw error;
     }
     showToast(error.message || "Backend data could not load.");
+    return null;
   }
 }
 
@@ -738,22 +758,6 @@ function wait(ms) {
   return new Promise((resolve) => {
     window.setTimeout(resolve, ms);
   });
-}
-
-function waitForInitialAssets() {
-  const imagePromises = Array.from(document.querySelectorAll(".brand-avatar, .cover-image, .profile-photo")).map(
-    (image) => {
-      if (image.complete) return Promise.resolve();
-
-      return new Promise((resolve) => {
-        image.addEventListener("load", resolve, { once: true });
-        image.addEventListener("error", resolve, { once: true });
-      });
-    },
-  );
-  const fontPromise = document.fonts?.ready?.catch?.(() => undefined) || Promise.resolve();
-
-  return Promise.race([Promise.all([...imagePromises, fontPromise]), wait(1800)]);
 }
 
 function finishInitialLoading() {
@@ -774,19 +778,32 @@ function getInitialDonationAmount() {
 
 async function initializeApp() {
   try {
-    await loadBackendData();
+    await loadBackendData({ mode: "critical" });
     setAmount(getInitialDonationAmount());
     renderApp();
     setActiveView(getViewIdFromHash());
-    await waitForInitialAssets();
   } finally {
     finishInitialLoading();
-    schedulePayPalSdkPreload();
+    const paypalWarmup = preloadPayPalSdk(getCheckoutRoute());
 
     if (window.location.hash === "#admin") {
       openAdminLogin();
     }
+
+    window.requestAnimationFrame(() => {
+      void loadDeferredBackendData(paypalWarmup);
+    });
   }
+}
+
+async function loadDeferredBackendData(paypalWarmup = Promise.resolve(null)) {
+  if (!isBackendConfigured() || !backendReady || !publicContentLoading) return;
+
+  await Promise.race([paypalWarmup, wait(900)]);
+  if (!publicContentLoading) return;
+
+  await loadBackendData({ mode: "content" });
+  renderApp();
 }
 
 function money(value) {
@@ -1765,6 +1782,12 @@ function renderTotals() {
 function renderRecentDonations() {
   if (!elements.recentDonationList) return;
 
+  elements.recentDonationList.setAttribute("aria-busy", String(publicContentLoading));
+  if (publicContentLoading) {
+    elements.recentDonationList.innerHTML = `<p class="empty-state">Loading recent orders…</p>`;
+    return;
+  }
+
   const donations = state.donations
     .slice()
     .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
@@ -1793,6 +1816,12 @@ function renderRecentDonations() {
 
 function renderSeedComments() {
   if (!elements.seedCommentsList) return;
+
+  elements.seedCommentsList.setAttribute("aria-busy", String(publicContentLoading));
+  if (publicContentLoading) {
+    elements.seedCommentsList.innerHTML = `<p class="empty-state">Loading community comments…</p>`;
+    return;
+  }
 
   const comments = normalizeSeedComments(state.seedComments);
 
@@ -1823,7 +1852,7 @@ function renderSeedComments() {
 
 function renderPostCard(post, compact = false) {
   const image = post.imageUrl
-    ? `<img class="post-image" src="${escapeHtml(post.imageUrl)}" alt="${escapeHtml(post.title)}" />`
+    ? `<img class="post-image" src="${escapeHtml(post.imageUrl)}" loading="lazy" decoding="async" alt="${escapeHtml(post.title)}" />`
     : "";
   const comments = Array.isArray(post.comments) ? post.comments : [];
   const likeCount = Math.max(Number.parseInt(post.likes, 10) || 0, 0);
@@ -1881,6 +1910,16 @@ function renderPostCard(post, compact = false) {
 }
 
 function renderPublicPosts() {
+  const loadingMarkup = `<p class="empty-state">Loading posts…</p>`;
+
+  elements.sidebarPostList?.setAttribute("aria-busy", String(publicContentLoading));
+  elements.postsPageList?.setAttribute("aria-busy", String(publicContentLoading));
+  if (publicContentLoading) {
+    if (elements.sidebarPostList) elements.sidebarPostList.innerHTML = loadingMarkup;
+    if (elements.postsPageList) elements.postsPageList.innerHTML = loadingMarkup;
+    return;
+  }
+
   const posts = getSortedPosts();
 
   if (elements.sidebarPostList) {
@@ -1906,7 +1945,7 @@ function renderAdminPosts() {
         .map(
           (post) => `
             <article class="admin-post-item">
-              <img src="${escapeHtml(post.imageUrl || "assets/sow-cover.png")}" alt="" />
+              <img src="${escapeHtml(post.imageUrl || "assets/sow-cover.jpg")}" loading="lazy" decoding="async" alt="" />
               <div>
                 <strong>${escapeHtml(post.title)}</strong>
                 <span>${readableDate(post.createdAt)}</span>
@@ -2376,6 +2415,8 @@ function loadPayPalSdk(paymentRoute = getCheckoutRoute()) {
 
   const sdkPromise = new Promise((resolve, reject) => {
     const script = document.createElement("script");
+    let settled = false;
+    let loadTimeout = 0;
     const params = new URLSearchParams({
       "client-id": clientId,
       currency: paymentConfig.currency || CONFIG.currency,
@@ -2384,22 +2425,32 @@ function loadPayPalSdk(paymentRoute = getCheckoutRoute()) {
       "enable-funding": "card",
       "disable-funding": "credit,paylater,venmo",
     });
+    const finish = (callback, value) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(loadTimeout);
+      callback(value);
+    };
+    const fail = (error) => {
+      if (settled) return;
+      resetPayPalSdk(namespace);
+      finish(reject, error);
+    };
 
     script.dataset.sysPaypalSdk = "true";
     script.setAttribute("data-namespace", namespace);
+    script.setAttribute("fetchpriority", "high");
+    script.async = true;
     script.src = `https://www.paypal.com/sdk/js?${params.toString()}`;
     script.onload = () => {
       waitForPayPalSdk(namespace)
-        .then(resolve)
-        .catch((error) => {
-          resetPayPalSdk(namespace);
-          reject(error);
-        });
+        .then((paypal) => finish(resolve, paypal))
+        .catch(fail);
     };
-    script.onerror = () => {
-      resetPayPalSdk(namespace);
-      reject(new Error("PayPal checkout could not load."));
-    };
+    script.onerror = () => fail(new Error("PayPal checkout could not load."));
+    loadTimeout = window.setTimeout(() => {
+      fail(new Error("PayPal checkout took too long to load. Please try again."));
+    }, PAYPAL_SDK_LOAD_TIMEOUT_MS);
     document.head.append(script);
   });
 
@@ -2415,19 +2466,6 @@ function preloadPayPalSdk(paymentRoute = getCheckoutRoute()) {
   }
 
   return loadPayPalSdk(paymentRoute).catch(() => null);
-}
-
-function schedulePayPalSdkPreload() {
-  const preload = () => {
-    void preloadPayPalSdk(getCheckoutRoute());
-  };
-
-  if (typeof window.requestIdleCallback === "function") {
-    window.requestIdleCallback(preload, { timeout: 1200 });
-    return;
-  }
-
-  window.setTimeout(preload, 250);
 }
 
 function clearPayPalButtons() {
@@ -2885,7 +2923,7 @@ async function publishAdminPost() {
       errorMessage: "Could not publish post.",
     },
     async () => {
-      let imageUrl = "assets/sow-cover.png";
+      let imageUrl = "assets/sow-cover.jpg";
 
       if (imageFile) {
         imageUrl = await readImageFileAsDataUrl(imageFile);

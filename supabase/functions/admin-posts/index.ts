@@ -40,7 +40,7 @@ Deno.serve(async (request) => {
     }
 
     let imagePath: string | null = null;
-    let imageUrl = "assets/sow-cover.png";
+    let imageUrl = "assets/sow-cover.jpg";
 
     if (file instanceof File && file.size > 0) {
       if (file.size > MAX_IMAGE_BYTES) {
