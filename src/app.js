@@ -29,8 +29,6 @@ const CUSTOM_ORDER_STRING_KEYS = new Set([
   "meterCollapsed",
   "meterExpanded",
   "meterHeadline",
-  "paymentCopy",
-  "paymentNote",
   "postAuthorName",
   "postBody",
   "postTitle",
@@ -165,9 +163,6 @@ const DEFAULT_SETTINGS = {
   postTitle: "༺💗༻ A Divine Invitation: Sow Your Seed 🌱💫🌹",
   postBody:
     "Each seed is a small act of trust, a prayerful step toward the love your heart has been waiting for.",
-  paymentCopy: "Complete your custom writing order securely with PayPal.",
-  paymentNote:
-    "By proceeding, you are purchasing a personalised digital writing created from your submitted prayer or intention. Your order is prepared directly for you.",
   blessingWallEnabled: true,
   checkoutRoute: "standard",
   highPaymentSuperAdminEnabled: false,
@@ -261,10 +256,8 @@ const elements = {
   checkoutLabel: document.querySelector("#checkoutLabel"),
   closeAdminButton: document.querySelector("#closeAdminButton"),
   closeReceiptButton: document.querySelector("#closeReceiptButton"),
-  copyReceiptButton: document.querySelector("#copyReceiptButton"),
   doneButton: document.querySelector("#doneButton"),
   decreaseSeedButton: document.querySelector("#decreaseSeedButton"),
-  feedList: document.querySelector("#feedList"),
   followersText: document.querySelector("#followersText"),
   fulfillmentCancelButton: document.querySelector("#cancelFulfillmentButton"),
   fulfillmentDateInput: document.querySelector("#fulfillmentDateInput"),
@@ -278,9 +271,7 @@ const elements = {
   nameInput: document.querySelector("#nameInput"),
   emailError: document.querySelector("#emailError"),
   inlinePaypalCheckout: document.querySelector("#inlinePaypalCheckout"),
-  paymentCopy: document.querySelector("#paymentCopy"),
   paymentEmailInput: document.querySelector("#paymentEmailInput"),
-  paymentNote: document.querySelector("#paymentNote"),
   paymentStatus: document.querySelector("#paymentStatus"),
   paypalButton: document.querySelector("#paypalButton"),
   paypalButtonContainer: document.querySelector("#paypalButtonContainer"),
@@ -309,7 +300,6 @@ const elements = {
   supportForm: document.querySelector("#supportForm"),
   supportTitle: document.querySelector("#supportTitle"),
   toast: document.querySelector("#toast"),
-  topSupporters: document.querySelector("#topSupporters"),
   topicPill: document.querySelector("#topicPill"),
   checkoutRouteOptions: document.querySelectorAll("[data-checkout-route]"),
   superAdminHighPaymentEnabled: document.querySelector("#superAdminHighPaymentEnabled"),
@@ -325,8 +315,6 @@ const elements = {
   },
 };
 
-let currentFrequency = "once";
-let currentReceiptText = "";
 let pendingFulfillmentAction = null;
 let backendReady = false;
 const paypalSdkPromises = new Map();
@@ -336,10 +324,8 @@ let paymentConfig = {
   paypalClientId: PUBLIC_CONFIG.paypalClientId || "",
   superAdminPayPalClientId: "",
   currency: PUBLIC_CONFIG.paypalCurrency || CONFIG.currency,
-  env: "sandbox",
 };
 let pendingDonation = null;
-let quantity = 1;
 const initialAdminCalendarDate = getLatestDonationDateKey();
 let adminCalendarCursor = fromDateKey(initialAdminCalendarDate);
 let selectedAdminCalendarDate = initialAdminCalendarDate;
@@ -495,7 +481,6 @@ function createEmptyAnalytics() {
     generatedAt: null,
     pageViewsLast24h: 0,
     paypalCheckoutStartsLast24h: 0,
-    resetAt: null,
     topPaths: [],
     uniqueVisitorsLast24h: 0,
   };
@@ -518,7 +503,6 @@ function normalizeAnalytics(analytics) {
     generatedAt: analytics?.generatedAt || defaults.generatedAt,
     pageViewsLast24h: Math.max(Number.parseInt(analytics?.pageViewsLast24h, 10) || 0, 0),
     paypalCheckoutStartsLast24h: Math.max(Number.parseInt(analytics?.paypalCheckoutStartsLast24h, 10) || 0, 0),
-    resetAt: analytics?.resetAt || defaults.resetAt,
     topPaths,
     uniqueVisitorsLast24h: Math.max(Number.parseInt(analytics?.uniqueVisitorsLast24h, 10) || 0, 0),
   };
@@ -727,7 +711,6 @@ function applyBootstrap(payload) {
     paypalClientId: payload.payment?.paypalClientId || PUBLIC_CONFIG.paypalClientId || "",
     superAdminPayPalClientId: payload.payment?.superAdminPayPalClientId || "",
     currency: payload.payment?.currency || PUBLIC_CONFIG.paypalCurrency || CONFIG.currency,
-    env: payload.payment?.env || "sandbox",
   };
   backendReady = true;
 }
@@ -1144,7 +1127,6 @@ function getProofPdfData(donation) {
     amount: Number(donation.amount || order.amount || 0),
     currency: order.currency || getDonationRawValue(donation, "Currency", CONFIG.currency),
     provider,
-    providerKey,
     paymentStatus: donation.status || "COMPLETED",
     fulfillmentStatus: status,
     fulfilledAt: getDigitalOrderValue(donation, "fulfilledAt", ""),
@@ -1596,30 +1578,6 @@ function getMonthKey(date) {
   return `${safeDate.getFullYear()}-${String(safeDate.getMonth() + 1).padStart(2, "0")}`;
 }
 
-async function approveSuperAdminDonation(donationId, button) {
-  if (!donationId) return;
-
-  const prevText = button.textContent;
-  button.disabled = true;
-  button.textContent = "Approving...";
-
-  try {
-    await callEdge("admin-donations", {
-      admin: true,
-      method: "PATCH",
-      body: { donationId, superApproved: true },
-    });
-    const donation = state.donations.find((d) => d.id === donationId);
-    if (donation) donation.superApproved = true;
-    renderAdminCalendarDetails();
-    showToast("SuperAdmin order approved.");
-  } catch (error) {
-    button.disabled = false;
-    button.textContent = prevText;
-    showToast(error.message || "Could not approve order.");
-  }
-}
-
 async function loadAdminDonations(options = {}) {
   if (!isBackendConfigured() || !getAdminAccessToken()) return;
 
@@ -1641,8 +1599,6 @@ async function loadAdminDonations(options = {}) {
       renderAdminCalendar();
       if (state.adminProfile?.role !== "super_admin") {
         renderRecentDonations();
-        renderFeed();
-        renderTopSupporters();
         renderTotals();
       }
     }
@@ -1783,8 +1739,6 @@ function renderSettings() {
   elements.topicPill.textContent = settings.topicLabel;
   elements.supportTitle.textContent = settings.supportTitle;
   elements.postAuthorName.textContent = settings.postAuthorName;
-  elements.paymentCopy.textContent = settings.paymentCopy;
-  elements.paymentNote.textContent = settings.paymentNote;
   if (elements.seedCommentsPanel) {
     elements.seedCommentsPanel.hidden = !settings.blessingWallEnabled;
   }
@@ -1805,34 +1759,6 @@ function renderTotals() {
 
   elements.progressPercent.textContent = `${displayPercent}% Fulfilled`;
   elements.progressFill.style.width = `${boundedPercent}%`;
-}
-
-function renderFeed() {
-  if (!elements.feedList) return;
-
-  elements.feedList.innerHTML = state.donations
-    .slice()
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .slice(0, 8)
-    .map((item) => {
-      const name = item.anonymous ? "Private customer" : item.name;
-      const seedCount = getSeedCountFromAmount(item.amount);
-      const cadence = item.frequency === "monthly" ? "monthly writing order" : "writing order";
-
-      return `
-        <article class="feed-card">
-          <div class="feed-meta">
-            <span class="avatar">${initials(name)}</span>
-            <div class="feed-title">
-              ${escapeHtml(name)} placed a ${cadence} for ${seedCount} seed${seedCount === 1 ? "" : "s"}
-              <small>${relativeTime(item.createdAt)}</small>
-            </div>
-          </div>
-          ${item.message ? `<p class="feed-message">${escapeHtml(item.message)}</p>` : ""}
-        </article>
-      `;
-    })
-    .join("");
 }
 
 function renderRecentDonations() {
@@ -1993,32 +1919,6 @@ function renderAdminPosts() {
     : `<p class="empty-state">No posts published yet.</p>`;
 }
 
-function renderTopSupporters() {
-  if (!elements.topSupporters) return;
-
-  const totals = state.donations.reduce((acc, item) => {
-    const name = item.anonymous ? "Private customer" : item.name;
-    acc[name] = (acc[name] || 0) + getSeedCountFromAmount(item.amount);
-    return acc;
-  }, {});
-
-  elements.topSupporters.innerHTML = Object.entries(totals)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 4)
-    .map(
-      ([name, seeds], index) => `
-        <div class="supporter-row">
-          <div>
-            <strong>${index + 1}. ${escapeHtml(name)}</strong>
-            <span>${index === 0 ? "Leading customer" : "Christ Garden customer"}</span>
-          </div>
-          <div class="total">${seeds} seed${seeds === 1 ? "" : "s"}</div>
-        </div>
-      `,
-    )
-    .join("");
-}
-
 function renderAdminForm() {
   const settings = state.settings;
   const inputs = elements.adminInputs;
@@ -2175,10 +2075,6 @@ function renderCalendarDetails(context) {
   `;
 }
 
-function renderAdminCalendarDetails() {
-  renderCalendarDetails(getPrimaryAdminCalendarContext());
-}
-
 function getCalendarMonthDonations(context) {
   const year = context.cursor.getFullYear();
   const month = context.cursor.getMonth();
@@ -2210,10 +2106,6 @@ function renderCalendarSummary(context) {
       <small>${monthDonations.length} order${monthDonations.length === 1 ? "" : "s"} this month</small>
     </article>
   `;
-}
-
-function renderAdminCalendarSummary() {
-  renderCalendarSummary(getPrimaryAdminCalendarContext());
 }
 
 function renderCalendarGrid(context) {
@@ -2293,11 +2185,10 @@ function renderAdminCalendar() {
 
 function updateCheckoutLabel() {
   const amount = Math.max(getAmount(), 0);
-  const cadence = currentFrequency === "monthly" ? "/mo" : "";
   const seedUnits = getSeedUnitsFromAmount(amount, state.settings.seedPrice);
 
   elements.checkoutLabel.textContent = "Sow Your Seed";
-  elements.checkoutButton.setAttribute("aria-label", `Sow Your Seed ${money(amount)}${cadence}`);
+  elements.checkoutButton.setAttribute("aria-label", `Sow Your Seed ${money(amount)}`);
   elements.seedPriceLabel.textContent = formatSeedUnits(seedUnits);
 }
 
@@ -2331,7 +2222,7 @@ function requirePaymentEmail() {
 }
 
 function stepSeedAmount(direction) {
-  const seedPrice = Math.max(Number.parseFloat(state.settings.seedPrice) || CONFIG.seedPrice || 7, 1);
+  const seedPrice = Math.max(Number.parseFloat(state.settings.seedPrice) || SEED_DOLLAR_VALUE, 1);
   const currentSeeds = Math.max(Math.round(getAmount() / seedPrice) || 1, 1);
   const nextSeeds = Math.max(currentSeeds + direction, 1);
   setAmount(nextSeeds * seedPrice);
@@ -2401,10 +2292,8 @@ function submitDonation(event) {
     name: elements.nameInput.value.trim(),
     email: getPaymentEmail(),
     amount: getAmount(),
-    frequency: currentFrequency,
+    frequency: "once",
     message: elements.messageInput.value.trim(),
-    privateMessage: false,
-    anonymous: false,
     paymentRoute: getCheckoutRoute(),
     createdAt: new Date().toISOString(),
   };
@@ -2543,7 +2432,10 @@ function buildPayPalButtonOptions(paypal, fundingSource) {
       setPaymentStatus("Opening secure international PayPal checkout...");
       const payload = await callEdge("create-paypal-order", {
         body: {
-          ...pendingDonation,
+          amount: pendingDonation.amount,
+          name: pendingDonation.name,
+          message: pendingDonation.message,
+          email: pendingDonation.email,
           paymentRoute: getCheckoutRoute(),
         },
       });
@@ -2554,10 +2446,7 @@ function buildPayPalButtonOptions(paypal, fundingSource) {
     onApprove: async (data) => {
       setPaymentStatus("Confirming your custom order with PayPal...");
       const payload = await callEdge("capture-paypal-order", {
-        body: {
-          orderId: data.orderID,
-          donation: pendingDonation,
-        },
+        body: { orderId: data.orderID },
       });
       await finishVerifiedDonation(payload);
     },
@@ -2677,7 +2566,6 @@ async function finishVerifiedDonation(payload) {
   }
 
   renderApp();
-  currentReceiptText = `Your fortune for today\n\n${fortuneMessage}`;
   elements.receiptTitle.textContent = "Your fortune for today";
   elements.receiptSummary.textContent = fortuneMessage;
   elements.supportForm.reset();
@@ -2685,7 +2573,6 @@ async function finishVerifiedDonation(payload) {
     elements.paymentEmailInput.value = "";
   }
   setAmount(getInitialDonationAmount());
-  currentFrequency = "once";
   updateCheckoutLabel();
   pendingDonation = null;
   closeInlinePayPalCheckout();
@@ -2695,13 +2582,6 @@ async function finishVerifiedDonation(payload) {
 function openInlinePayPalCheckout() {
   setPaymentStatus("Loading secure checkout...");
   const showPayPal = updatePayPalVisibility();
-  if (elements.paymentCopy) {
-    if (showPayPal) {
-      elements.paymentCopy.textContent = "PayPal checkout is ready for this session.";
-    } else {
-      elements.paymentCopy.textContent = "PayPal checkout is currently unavailable. Please try again later.";
-    }
-  }
   elements.inlinePaypalCheckout.hidden = false;
   elements.checkoutButton.classList.add("is-checkout-open");
   elements.checkoutButton.setAttribute("aria-expanded", "true");
@@ -3248,15 +3128,6 @@ async function runAdminAction({ button, busyText, loadingMessage, successMessage
   }
 }
 
-async function copyText(text, successMessage) {
-  try {
-    await navigator.clipboard.writeText(text);
-    showToast(successMessage);
-  } catch {
-    showToast(text);
-  }
-}
-
 function showToast(message) {
   const toast = elements.toast;
   toast.textContent = message;
@@ -3277,12 +3148,10 @@ function escapeHtml(value) {
 function renderApp() {
   renderSettings();
   renderTotals();
-  renderFeed();
   renderRecentDonations();
   renderSeedComments();
   renderPublicPosts();
   renderAdminPosts();
-  renderTopSupporters();
   renderAdminCalendar();
   renderAdminAnalytics();
   updateCheckoutLabel();
@@ -3420,12 +3289,6 @@ elements.paymentEmailInput?.addEventListener("input", () => {
   if (!isValidEmailAddress(getPaymentEmail())) return;
   setPaymentStatus("Continue With Paypal for your Seed");
 });
-
-if (elements.copyReceiptButton) {
-  elements.copyReceiptButton.addEventListener("click", () => {
-    copyText(currentReceiptText, "Fortune copied.");
-  });
-}
 
 elements.adminMenuButton.addEventListener("click", openAdminLogin);
 elements.adminLoginForm.addEventListener("submit", async (event) => {

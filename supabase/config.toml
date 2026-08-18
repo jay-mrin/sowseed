@@ -24,5 +24,11 @@ verify_jwt = true
 [functions.admin-donations]
 verify_jwt = true
 
+[functions.admin-analytics]
+verify_jwt = true
+
+[functions.track-checkout-event]
+verify_jwt = false
+
 [functions.post-engagement]
 verify_jwt = false

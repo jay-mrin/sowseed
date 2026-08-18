@@ -1,33 +1,78 @@
-import { errorResponse, handleOptions, jsonResponse, readJson } from "../_shared/http.ts";
+import {
+  errorResponse,
+  handleOptions,
+  jsonResponse,
+  readJson,
+} from "../_shared/http.ts";
 import { requireAdmin } from "../_shared/supabase.ts";
 
-function withoutRemovedSettings(settings: Record<string, unknown>) {
-  const {
-    wiseEnabled: _wiseEnabled,
-    razorpayEnabled: _razorpayEnabled,
-    amountOptions: _amountOptions,
-    fortuneNumberEnabled: _fortuneNumberEnabled,
-    footerText: _footerText,
-    paypalEnabled: _paypalEnabled,
-    ...activeSettings
-  } = settings;
+const ACTIVE_SETTING_KEYS = [
+  "profileTitle",
+  "followersText",
+  "meterHeadline",
+  "meterCollapsed",
+  "meterExpanded",
+  "aboutTitle",
+  "aboutCollapsed",
+  "aboutExpanded",
+  "topicLabel",
+  "supportTitle",
+  "postAuthorName",
+  "postTitle",
+  "postBody",
+  "seedGoal",
+  "meterCurrentAmount",
+  "seedPrice",
+  "blessingWallEnabled",
+  "checkoutRoute",
+  "highPaymentSuperAdminEnabled",
+] as const;
+
+function keepActiveSettings(settings: Record<string, unknown>) {
+  const activeSettings: Record<string, unknown> = {};
+
+  for (const key of ACTIVE_SETTING_KEYS) {
+    if (Object.hasOwn(settings, key)) activeSettings[key] = settings[key];
+  }
+
   return activeSettings;
 }
 
-function applyGoalSettings(existing: Record<string, unknown>, submitted: Record<string, unknown>) {
+function isEnabled(value: unknown) {
+  return value === true || value === "true";
+}
+
+function normalizeCheckoutRoute(value: unknown) {
+  return value === "superadmin" ? "superadmin" : "standard";
+}
+
+function applyGoalSettings(
+  existing: Record<string, unknown>,
+  submitted: Record<string, unknown>,
+) {
   const next = { ...existing };
 
   if (Object.hasOwn(submitted, "seedGoal")) {
-    next.seedGoal = Math.max(Number.parseInt(String(submitted.seedGoal), 10) || 1, 1);
+    next.seedGoal = Math.max(
+      Number.parseInt(String(submitted.seedGoal), 10) || 1,
+      1,
+    );
   }
   if (Object.hasOwn(submitted, "meterCurrentAmount")) {
-    next.meterCurrentAmount = Math.max(Number.parseFloat(String(submitted.meterCurrentAmount)) || 0, 0);
+    next.meterCurrentAmount = Math.max(
+      Number.parseFloat(String(submitted.meterCurrentAmount)) || 0,
+      0,
+    );
   }
   if (Object.hasOwn(submitted, "seedPrice")) {
-    next.seedPrice = Math.max(Number.parseInt(String(submitted.seedPrice), 10) || 7, 7);
+    next.seedPrice = Math.max(
+      Number.parseInt(String(submitted.seedPrice), 10) || 7,
+      7,
+    );
   }
   if (Object.hasOwn(submitted, "blessingWallEnabled")) {
-    next.blessingWallEnabled = submitted.blessingWallEnabled !== false && submitted.blessingWallEnabled !== "false";
+    next.blessingWallEnabled = submitted.blessingWallEnabled !== false &&
+      submitted.blessingWallEnabled !== "false";
   }
 
   return next;
@@ -38,19 +83,27 @@ Deno.serve(async (request) => {
   if (options) return options;
 
   try {
-    const { supabase, adminProfile } = await requireAdmin(request, { allowedRoles: ["admin", "super_admin"] });
+    const { supabase, adminProfile } = await requireAdmin(request, {
+      allowedRoles: ["admin", "super_admin"],
+    });
 
     if (request.method === "GET") {
-      const { data, error } = await supabase.from("site_settings").select("settings").eq("id", true).single();
+      const { data, error } = await supabase.from("site_settings").select(
+        "settings",
+      ).eq("id", true).single();
       if (error) throw error;
-      return jsonResponse({ settings: withoutRemovedSettings(data.settings as Record<string, unknown>) });
+      return jsonResponse({
+        settings: keepActiveSettings(data.settings as Record<string, unknown>),
+      });
     }
 
     if (request.method !== "POST" && request.method !== "PUT") {
       return errorResponse("Method not allowed.", 405);
     }
 
-    const body = await readJson<{ settings?: Record<string, unknown> }>(request);
+    const body = await readJson<{ settings?: Record<string, unknown> }>(
+      request,
+    );
     if (!body.settings || typeof body.settings !== "object") {
       return errorResponse("Settings payload is required.", 422);
     }
@@ -62,17 +115,22 @@ Deno.serve(async (request) => {
       .maybeSingle();
     if (currentError) throw currentError;
 
-    const currentSettings = (current?.settings && typeof current.settings === "object"
-      ? current.settings
-      : {}) as Record<string, unknown>;
-    const submittedSettings = withoutRemovedSettings(body.settings);
-    const existingSettings = withoutRemovedSettings(currentSettings);
+    const currentSettings =
+      (current?.settings && typeof current.settings === "object"
+        ? current.settings
+        : {}) as Record<string, unknown>;
+    const submittedSettings = keepActiveSettings(body.settings);
+    const existingSettings = keepActiveSettings(currentSettings);
     let settingsToSave = applyGoalSettings(existingSettings, submittedSettings);
 
     if (adminProfile.role === "super_admin") {
-      const checkoutRoute = submittedSettings.checkoutRoute === "superadmin" ? "superadmin" : "standard";
+      const checkoutRoute = Object.hasOwn(submittedSettings, "checkoutRoute")
+        ? normalizeCheckoutRoute(submittedSettings.checkoutRoute)
+        : normalizeCheckoutRoute(existingSettings.checkoutRoute);
       const highPaymentSuperAdminEnabled =
-        submittedSettings.highPaymentSuperAdminEnabled === true || submittedSettings.highPaymentSuperAdminEnabled === "true";
+        Object.hasOwn(submittedSettings, "highPaymentSuperAdminEnabled")
+          ? isEnabled(submittedSettings.highPaymentSuperAdminEnabled)
+          : isEnabled(existingSettings.highPaymentSuperAdminEnabled);
       settingsToSave = {
         ...settingsToSave,
         checkoutRoute,
@@ -81,9 +139,10 @@ Deno.serve(async (request) => {
     } else {
       settingsToSave = {
         ...settingsToSave,
-        checkoutRoute: existingSettings.checkoutRoute === "superadmin" ? "superadmin" : "standard",
-        highPaymentSuperAdminEnabled:
-          existingSettings.highPaymentSuperAdminEnabled === true || existingSettings.highPaymentSuperAdminEnabled === "true",
+        checkoutRoute: normalizeCheckoutRoute(existingSettings.checkoutRoute),
+        highPaymentSuperAdminEnabled: isEnabled(
+          existingSettings.highPaymentSuperAdminEnabled,
+        ),
       };
     }
 

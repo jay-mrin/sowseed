@@ -1,0 +1,87 @@
+import assert from "node:assert/strict";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import path from "node:path";
+import test from "node:test";
+import { fileURLToPath } from "node:url";
+
+const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+function readRepositoryFile(relativePath) {
+  return readFileSync(path.join(repositoryRoot, relativePath), "utf8");
+}
+
+function sorted(values) {
+  return [...values].sort((left, right) => left.localeCompare(right));
+}
+
+test("every Edge Function is deployed and has explicit JWT configuration", () => {
+  const functionsRoot = path.join(repositoryRoot, "supabase/functions");
+  const functionNames = readdirSync(functionsRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && !entry.name.startsWith("_") && existsSync(path.join(functionsRoot, entry.name, "index.ts")))
+    .map((entry) => entry.name);
+  const packageJson = JSON.parse(readRepositoryFile("package.json"));
+  const deployCommand = packageJson.scripts?.["supabase:deploy"] || "";
+  const deployPrefix = "supabase functions deploy ";
+
+  assert.ok(deployCommand.startsWith(deployPrefix), "supabase:deploy must use `supabase functions deploy`");
+
+  const deployedFunctions = deployCommand.slice(deployPrefix.length).trim().split(/\s+/).filter(Boolean);
+  const configuredFunctions = [...readRepositoryFile("supabase/config.toml").matchAll(/^\[functions\.([^\]]+)\]$/gm)]
+    .map((match) => match[1]);
+
+  assert.deepEqual(sorted(deployedFunctions), sorted(functionNames), "supabase:deploy must include every function directory exactly once");
+  assert.deepEqual(sorted(configuredFunctions), sorted(functionNames), "supabase/config.toml must configure every function explicitly");
+  assert.equal(new Set(deployedFunctions).size, deployedFunctions.length, "supabase:deploy must not contain duplicates");
+  assert.equal(new Set(configuredFunctions).size, configuredFunctions.length, "Supabase function config must not contain duplicates");
+});
+
+test("HTML files have unique IDs and valid local file references", () => {
+  const htmlFiles = readdirSync(repositoryRoot).filter((name) => name.endsWith(".html"));
+
+  for (const htmlFile of htmlFiles) {
+    const html = readRepositoryFile(htmlFile);
+    const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
+    const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
+
+    assert.deepEqual([...new Set(duplicateIds)], [], `${htmlFile} contains duplicate IDs`);
+
+    for (const match of html.matchAll(/\b(?:src|href)="([^"]+)"/g)) {
+      const reference = match[1];
+      if (/^(?:#|[a-z][a-z0-9+.-]*:|\/\/)/i.test(reference)) continue;
+
+      const cleanReference = decodeURIComponent(reference.split(/[?#]/, 1)[0]);
+      if (!cleanReference) continue;
+
+      assert.ok(
+        existsSync(path.resolve(repositoryRoot, path.dirname(htmlFile), cleanReference)),
+        `${htmlFile} references missing local file ${cleanReference}`,
+      );
+    }
+
+    const idSet = new Set(ids);
+    for (const match of html.matchAll(/\b(?:aria-controls|aria-describedby|aria-labelledby)="([^"]+)"/g)) {
+      for (const referencedId of match[1].trim().split(/\s+/)) {
+        assert.ok(idSet.has(referencedId), `${htmlFile} references missing ARIA target #${referencedId}`);
+      }
+    }
+  }
+});
+
+test("frontend ID selectors and static asset paths resolve", () => {
+  const html = readRepositoryFile("index.html");
+  const app = readRepositoryFile("src/app.js");
+  const htmlIds = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]));
+  const selectedIds = [...app.matchAll(/querySelector\("#([A-Za-z0-9_-]+)"\)/g)].map((match) => match[1]);
+
+  for (const selectedId of selectedIds) {
+    assert.ok(htmlIds.has(selectedId), `src/app.js selects missing element #${selectedId}`);
+  }
+
+  const frontendSource = `${html}\n${app}`;
+  const assetPaths = [...frontendSource.matchAll(/["'](assets\/[A-Za-z0-9._/-]+)(?:\?[^"']*)?["']/g)]
+    .map((match) => match[1]);
+
+  for (const assetPath of assetPaths) {
+    assert.ok(existsSync(path.join(repositoryRoot, assetPath)), `frontend references missing asset ${assetPath}`);
+  }
+});

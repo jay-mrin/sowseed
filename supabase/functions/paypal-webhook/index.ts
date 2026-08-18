@@ -6,42 +6,144 @@ Deno.serve(async (request) => {
   const options = handleOptions(request);
   if (options) return options;
 
+  if (request.method !== "POST") {
+    return errorResponse("Method not allowed.", 405);
+  }
+
+  let event: Record<string, any>;
+  let verification: Record<string, any>;
+
   try {
     const rawBody = await request.text();
-    const verification = await verifyPayPalWebhook(request.headers, rawBody);
+    verification = await verifyPayPalWebhook(request.headers, rawBody);
+    event = JSON.parse(rawBody);
+  } catch (error) {
+    return errorResponse("PayPal webhook rejected.", 400, String(error));
+  }
 
-    const event = JSON.parse(rawBody);
+  try {
+    const eventType = String(event.event_type || "");
+    if (!eventType.startsWith("PAYMENT.CAPTURE.")) {
+      return jsonResponse({ received: true, ignored: true });
+    }
+
     const resource = event.resource || {};
     const captureId = resource.id;
     const status = resource.status;
 
-    if (captureId && status) {
-      const supabase = getSupabaseAdmin();
-      const { data: existing } = await supabase
+    if (!captureId || !status) {
+      return errorResponse(
+        "PayPal capture event is missing its capture id or status.",
+        422,
+      );
+    }
+
+    const supabase = getSupabaseAdmin();
+    const { data: existingDonation, error: existingError } = await supabase
+      .from("donations")
+      .select("id, payment_route, raw_payment")
+      .eq("paypal_capture_id", captureId)
+      .maybeSingle();
+    if (existingError) throw existingError;
+
+    const verifiedRoute = verification.paymentRoute === "superadmin"
+      ? "superadmin"
+      : "standard";
+    let existing = existingDonation;
+
+    if (!existing && eventType === "PAYMENT.CAPTURE.COMPLETED") {
+      const orderId = String(
+        resource.supplementary_data?.related_ids?.order_id || "",
+      ).trim();
+      if (!orderId) {
+        return errorResponse(
+          "PayPal capture is missing its related order id.",
+          503,
+        );
+      }
+
+      const { data: paymentAttempt, error: attemptError } = await supabase
+        .from("payment_attempts")
+        .select("id, payment_route")
+        .eq("paypal_order_id", orderId)
+        .maybeSingle();
+      if (attemptError) throw attemptError;
+      if (!paymentAttempt) {
+        return errorResponse("PayPal checkout attempt is not ready.", 503);
+      }
+
+      const attemptRoute = paymentAttempt.payment_route === "superadmin"
+        ? "superadmin"
+        : "standard";
+      if (attemptRoute !== verifiedRoute) {
+        return errorResponse(
+          "PayPal webhook route does not match the checkout attempt route.",
+          409,
+        );
+      }
+
+      const { error: recoveryError } = await supabase.functions.invoke(
+        "capture-paypal-order",
+        {
+          body: { orderId },
+        },
+      );
+      if (recoveryError) throw recoveryError;
+
+      const { data: recoveredDonation, error: recoveredError } = await supabase
         .from("donations")
-        .select("raw_payment")
+        .select("id, payment_route, raw_payment")
         .eq("paypal_capture_id", captureId)
         .maybeSingle();
-      const existingRawPayment =
-        existing?.raw_payment && typeof existing.raw_payment === "object" && !Array.isArray(existing.raw_payment)
-          ? existing.raw_payment
-          : {};
+      if (recoveredError) throw recoveredError;
+      existing = recoveredDonation;
+    }
 
-      await supabase
-        .from("donations")
-        .update({
-          paypal_status: status,
-          raw_payment: {
-            ...existingRawPayment,
-            webhook: event,
-            webhookRoute: verification.paymentRoute || "standard",
-          },
-        })
-        .eq("paypal_capture_id", captureId);
+    if (!existing) {
+      return errorResponse("PayPal capture record is not ready.", 503);
+    }
+
+    const storedRoute = existing.payment_route === "superadmin"
+      ? "superadmin"
+      : "standard";
+    if (storedRoute !== verifiedRoute) {
+      return errorResponse(
+        "PayPal webhook route does not match the stored payment route.",
+        409,
+      );
+    }
+
+    const existingRawPayment =
+      existing?.raw_payment && typeof existing.raw_payment === "object" &&
+        !Array.isArray(existing.raw_payment)
+        ? existing.raw_payment
+        : {};
+
+    const { data: updated, error: updateError } = await supabase
+      .from("donations")
+      .update({
+        paypal_status: status,
+        raw_payment: {
+          ...existingRawPayment,
+          webhook: event,
+          webhookRoute: verification.paymentRoute || "standard",
+        },
+      })
+      .eq("id", existing.id)
+      .eq("payment_route", storedRoute)
+      .select("id")
+      .maybeSingle();
+    if (updateError) throw updateError;
+    if (!updated) {
+      return errorResponse("PayPal capture record could not be updated.", 503);
     }
 
     return jsonResponse({ received: true });
   } catch (error) {
-    return errorResponse("PayPal webhook rejected.", 400, String(error));
+    console.error("Could not persist verified PayPal webhook.", error);
+    return errorResponse(
+      "Verified PayPal webhook could not be persisted.",
+      500,
+    );
   }
 });

@@ -1,4 +1,9 @@
-import { errorResponse, handleOptions, jsonResponse, readJson } from "../_shared/http.ts";
+import {
+  errorResponse,
+  handleOptions,
+  jsonResponse,
+  readJson,
+} from "../_shared/http.ts";
 import { requireAdmin } from "../_shared/supabase.ts";
 
 type UpdateOrderBody = {
@@ -36,9 +41,27 @@ function getUtcNextDayStart(value: string) {
 
 function applyDateRange(query: any, fromDate: string, toDate: string) {
   let nextQuery = query;
-  if (fromDate) nextQuery = nextQuery.gte("created_at", getUtcDayStart(fromDate).toISOString());
-  if (toDate) nextQuery = nextQuery.lt("created_at", getUtcNextDayStart(toDate).toISOString());
+  if (fromDate) {
+    nextQuery = nextQuery.gte(
+      "created_at",
+      getUtcDayStart(fromDate).toISOString(),
+    );
+  }
+  if (toDate) {
+    nextQuery = nextQuery.lt(
+      "created_at",
+      getUtcNextDayStart(toDate).toISOString(),
+    );
+  }
   return nextQuery;
+}
+
+function applyAdminDonationScope(query: any, role: "admin" | "super_admin") {
+  if (role === "super_admin") {
+    return query.eq("visibility_scope", "superadmin_private");
+  }
+
+  return query.eq("visibility_scope", "public").eq("payment_method", "paypal");
 }
 
 function mapDigitalOrder(value: any) {
@@ -73,63 +96,70 @@ Deno.serve(async (request) => {
   if (options) return options;
 
   try {
-    const { supabase, adminProfile } = await requireAdmin(request, { allowedRoles: ["admin", "super_admin"] });
+    const { supabase, adminProfile } = await requireAdmin(request, {
+      allowedRoles: ["admin", "super_admin"],
+    });
     const url = new URL(request.url);
-
-    if (request.method === "PATCH") {
-      if (adminProfile.role !== "super_admin") {
-        return errorResponse("Only superadmins can approve private orders.", 403);
-      }
-      const body = await readJson<{ donationId?: string; superApproved?: boolean }>(request);
-      const donationId = String(body.donationId || "").trim();
-      const superApproved = Boolean(body.superApproved);
-
-      if (!donationId) return errorResponse("Order id is required.", 422);
-
-      const { data, error } = await supabase
-        .from("donations")
-        .update({ super_approved: superApproved })
-        .eq("id", donationId)
-        .eq("visibility_scope", "superadmin_private")
-        .select("id")
-        .maybeSingle();
-
-      if (error) throw error;
-      if (!data) return errorResponse("SuperAdmin private order not found.", 404);
-
-      return jsonResponse({ success: true });
-    }
 
     if (request.method === "PUT") {
       const body = await readJson<UpdateOrderBody>(request);
       if (body.purgeAll) {
         if (adminProfile.role !== "super_admin") {
-          return errorResponse("Only superadmins can erase all payment records.", 403);
+          return errorResponse(
+            "Only superadmins can erase all payment records.",
+            403,
+          );
         }
         const purgePassword = Deno.env.get("SUPERADMIN_PURGE_PASSWORD");
-        if (!purgePassword) return errorResponse("Global purge is not configured. Set SUPERADMIN_PURGE_PASSWORD first.", 503);
-        if (String(body.password || "") !== purgePassword) return errorResponse("Incorrect purge password.", 403);
+        if (!purgePassword) {
+          return errorResponse(
+            "Global purge is not configured. Set SUPERADMIN_PURGE_PASSWORD first.",
+            503,
+          );
+        }
+        if (String(body.password || "") !== purgePassword) {
+          return errorResponse("Incorrect purge password.", 403);
+        }
 
         const fromDate = String(body.fromDate || "").trim();
         const toDate = String(body.toDate || "").trim();
         const includePublicComments = body.includePublicComments === true;
 
-        if (fromDate && !isDateOnly(fromDate)) return errorResponse("From date must use YYYY-MM-DD.", 422);
-        if (toDate && !isDateOnly(toDate)) return errorResponse("To date must use YYYY-MM-DD.", 422);
-        if (fromDate && toDate && getUtcDayStart(fromDate).getTime() > getUtcDayStart(toDate).getTime()) {
+        if (fromDate && !isDateOnly(fromDate)) {
+          return errorResponse("From date must use YYYY-MM-DD.", 422);
+        }
+        if (toDate && !isDateOnly(toDate)) {
+          return errorResponse("To date must use YYYY-MM-DD.", 422);
+        }
+        if (
+          fromDate && toDate &&
+          getUtcDayStart(fromDate).getTime() > getUtcDayStart(toDate).getTime()
+        ) {
           return errorResponse("From date cannot be after to date.", 422);
         }
 
-        const { data: donationsToPurge, error: donationsToPurgeError } = await applyDateRange(
-          supabase.from("donations").select("id, donor_token_id"),
-          fromDate,
-          toDate,
-        );
+        const { data: donationsToPurge, error: donationsToPurgeError } =
+          await applyDateRange(
+            supabase.from("donations").select(
+              "id, donor_token_id, paypal_order_id",
+            ),
+            fromDate,
+            toDate,
+          );
         if (donationsToPurgeError) throw donationsToPurgeError;
 
-        const donationIds = (donationsToPurge || []).map((donation: { id: string }) => donation.id).filter(Boolean);
+        const donationIds = (donationsToPurge || []).map((
+          donation: { id: string },
+        ) => donation.id).filter(Boolean);
         const donorTokenIds = (donationsToPurge || [])
-          .map((donation: { donor_token_id?: string | null }) => donation.donor_token_id)
+          .map((donation: { donor_token_id?: string | null }) =>
+            donation.donor_token_id
+          )
+          .filter(Boolean);
+        const paypalOrderIds = (donationsToPurge || [])
+          .map((donation: { paypal_order_id?: string | null }) =>
+            donation.paypal_order_id
+          )
           .filter(Boolean);
 
         if (!includePublicComments) {
@@ -156,7 +186,11 @@ Deno.serve(async (request) => {
           ).not("id", "is", null);
           if (seedCommentsError) throw seedCommentsError;
 
-          const { error: commentsError } = await applyDateRange(supabase.from("comments").delete(), fromDate, toDate).not(
+          const { error: commentsError } = await applyDateRange(
+            supabase.from("comments").delete(),
+            fromDate,
+            toDate,
+          ).not(
             "id",
             "is",
             null,
@@ -165,19 +199,35 @@ Deno.serve(async (request) => {
         }
 
         if (donationIds.length) {
-          const { error: orderError } = await supabase.from("digital_orders").delete().in("donation_id", donationIds);
+          const { error: orderError } = await supabase.from("digital_orders")
+            .delete().in("donation_id", donationIds);
           if (orderError) throw orderError;
 
-          const { error: donationError } = await supabase.from("donations").delete().in("id", donationIds);
+          if (paypalOrderIds.length) {
+            const { error: paymentAttemptError } = await supabase
+              .from("payment_attempts")
+              .delete()
+              .in("paypal_order_id", paypalOrderIds);
+            if (paymentAttemptError) throw paymentAttemptError;
+          }
+
+          const { error: donationError } = await supabase.from("donations")
+            .delete().in("id", donationIds);
           if (donationError) throw donationError;
         }
 
         if (includePublicComments && donorTokenIds.length) {
-          const { error: donorTokensError } = await supabase.from("donor_tokens").delete().in("id", donorTokenIds);
+          const { error: donorTokensError } = await supabase.from(
+            "donor_tokens",
+          ).delete().in("id", donorTokenIds);
           if (donorTokensError) throw donorTokensError;
         }
 
-        const { error: eventsError } = await applyDateRange(supabase.from("checkout_events").delete(), fromDate, toDate).not(
+        const { error: eventsError } = await applyDateRange(
+          supabase.from("checkout_events").delete(),
+          fromDate,
+          toDate,
+        ).not(
           "id",
           "is",
           null,
@@ -194,21 +244,36 @@ Deno.serve(async (request) => {
       }
 
       const donationId = String(body.donationId || "").trim();
-      const fulfillmentStatus =
-        body.fulfillmentStatus === "fulfilled" ? "fulfilled" : "paid_awaiting_personalized_writing";
-      const fulfillmentNote = String(body.fulfillmentNote || "").trim().slice(0, 1200);
+      const fulfillmentStatus = body.fulfillmentStatus === "fulfilled"
+        ? "fulfilled"
+        : "paid_awaiting_personalized_writing";
+      const fulfillmentNote = String(body.fulfillmentNote || "").trim().slice(
+        0,
+        1200,
+      );
       const requestedFulfilledAt = String(body.fulfilledAt || "").trim();
 
-      if (fulfillmentStatus === "fulfilled" && (!requestedFulfilledAt || Number.isNaN(Date.parse(requestedFulfilledAt)))) {
-        return errorResponse("A valid fulfillment date and time is required.", 422);
+      if (
+        fulfillmentStatus === "fulfilled" &&
+        (!requestedFulfilledAt ||
+          Number.isNaN(Date.parse(requestedFulfilledAt)))
+      ) {
+        return errorResponse(
+          "A valid fulfillment date and time is required.",
+          422,
+        );
       }
 
       if (!donationId) return errorResponse("Order id is required.", 422);
 
-      const { data: donation, error: donationError } = await supabase
+      let donationQuery = supabase
         .from("donations")
         .select("id")
-        .eq("id", donationId)
+        .eq("id", donationId);
+
+      donationQuery = applyAdminDonationScope(donationQuery, adminProfile.role);
+
+      const { data: donation, error: donationError } = await donationQuery
         .maybeSingle();
 
       if (donationError) throw donationError;
@@ -219,7 +284,9 @@ Deno.serve(async (request) => {
         .update({
           fulfillment_status: fulfillmentStatus,
           fulfillment_note: fulfillmentNote || null,
-          fulfilled_at: fulfillmentStatus === "fulfilled" ? new Date(requestedFulfilledAt).toISOString() : null,
+          fulfilled_at: fulfillmentStatus === "fulfilled"
+            ? new Date(requestedFulfilledAt).toISOString()
+            : null,
         })
         .eq("donation_id", donationId)
         .select(
@@ -228,7 +295,12 @@ Deno.serve(async (request) => {
         .maybeSingle();
 
       if (error) throw error;
-      if (!data) return errorResponse("Digital order not found for this payment record.", 404);
+      if (!data) {
+        return errorResponse(
+          "Digital order not found for this payment record.",
+          404,
+        );
+      }
 
       return jsonResponse({ order: mapDigitalOrder(data) });
     }
@@ -241,28 +313,42 @@ Deno.serve(async (request) => {
 
       let donationQuery = supabase
         .from("donations")
-        .select("id")
+        .select("id, paypal_order_id")
         .eq("id", donationId);
 
-      if (adminProfile.role === "admin") {
-        donationQuery = donationQuery.eq("visibility_scope", "public").eq("payment_method", "paypal");
-      }
+      donationQuery = applyAdminDonationScope(donationQuery, adminProfile.role);
 
-      const { data: donation, error: donationError } = await donationQuery.maybeSingle();
+      const { data: donation, error: donationError } = await donationQuery
+        .maybeSingle();
 
       if (donationError) throw donationError;
       if (!donation) return errorResponse("Order record not found.", 404);
 
-      const { error: commentDeleteError } = await supabase.from("seed_comments").delete().eq("donation_id", donationId);
+      const { error: commentDeleteError } = await supabase.from("seed_comments")
+        .delete().eq("donation_id", donationId);
       if (commentDeleteError) throw commentDeleteError;
 
-      const { error: orderDeleteError } = await supabase.from("digital_orders").delete().eq("donation_id", donationId);
+      const { error: orderDeleteError } = await supabase.from("digital_orders")
+        .delete().eq("donation_id", donationId);
       if (orderDeleteError) throw orderDeleteError;
 
-      const { error: deleteError } = await supabase.from("donations").delete().eq("id", donationId);
+      if (donation.paypal_order_id) {
+        const { error: paymentAttemptDeleteError } = await supabase
+          .from("payment_attempts")
+          .delete()
+          .eq("paypal_order_id", donation.paypal_order_id);
+        if (paymentAttemptDeleteError) throw paymentAttemptDeleteError;
+      }
+
+      const { error: deleteError } = await supabase.from("donations").delete()
+        .eq("id", donationId);
       if (deleteError) throw deleteError;
 
       return jsonResponse({ success: true, donationId });
+    }
+
+    if (request.method !== "GET") {
+      return errorResponse("Method not allowed.", 405);
     }
 
     const month = url.searchParams.get("month");
@@ -283,8 +369,6 @@ Deno.serve(async (request) => {
           "paypal_payer_email",
           "payment_route",
           "visibility_scope",
-          "super_approved",
-          "receiver_identifier",
           "fortune_message",
           "raw_payment",
           "created_at",
@@ -293,24 +377,24 @@ Deno.serve(async (request) => {
       )
       .order("created_at", { ascending: false });
 
-    if (adminProfile.role === "admin") {
-      query = query.eq("visibility_scope", "public").eq("payment_method", "paypal");
-    } else if (adminProfile.role === "super_admin") {
-      query = query.eq("visibility_scope", "superadmin_private");
-    }
+    query = applyAdminDonationScope(query, adminProfile.role);
 
     if (month && /^\d{4}-\d{2}$/.test(month)) {
       const [year, monthIndex] = month.split("-").map(Number);
       const start = new Date(Date.UTC(year, monthIndex - 1, 1));
       const end = new Date(Date.UTC(year, monthIndex, 1));
-      query = query.gte("created_at", start.toISOString()).lt("created_at", end.toISOString());
+      query = query.gte("created_at", start.toISOString()).lt(
+        "created_at",
+        end.toISOString(),
+      );
     }
 
     const { data, error } = await query.limit(500);
     if (error) throw error;
+    const donations = (data || []) as Array<Record<string, any>>;
 
     return jsonResponse({
-      donations: (data || []).map((donation) => ({
+      donations: donations.map((donation) => ({
         id: donation.id,
         name: donation.display_name,
         amount: Number(donation.amount),
@@ -324,8 +408,6 @@ Deno.serve(async (request) => {
         payerEmail: donation.paypal_payer_email,
         paymentRoute: donation.payment_route || "standard",
         visibilityScope: donation.visibility_scope || "public",
-        superApproved: donation.super_approved,
-        receiverIdentifier: donation.receiver_identifier,
         fortuneMessage: donation.fortune_message,
         rawPayment: donation.raw_payment,
         digitalOrder: mapDigitalOrder(donation.digital_orders),

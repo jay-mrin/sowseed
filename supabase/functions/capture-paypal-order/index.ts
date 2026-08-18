@@ -1,56 +1,32 @@
-import { errorResponse, handleOptions, jsonResponse, readJson } from "../_shared/http.ts";
-import { getRandomOrderRequest } from "../_shared/order-requests.ts";
+import {
+  errorResponse,
+  handleOptions,
+  jsonResponse,
+  readJson,
+} from "../_shared/http.ts";
 import {
   capturePayPalOrder,
   centsToMoney,
   createDigitalOrderNumber,
   DIGITAL_ORDER_ITEM_NAME,
   getPayPalCurrency,
-  getReceiverIdentifierFromPayPalOrder,
+  getPayPalOrder,
   parseMoneyToCents,
 } from "../_shared/paypal.ts";
-import { resolvePaymentRoute } from "../_shared/payment-routing.ts";
-import { createRandomToken, getSupabaseAdmin, hashText } from "../_shared/supabase.ts";
+import {
+  createRandomToken,
+  getSupabaseAdmin,
+  hashText,
+} from "../_shared/supabase.ts";
 
 const MIN_AMOUNT_CENTS = 700;
 
 type CaptureBody = {
   orderId?: string;
-  donation?: {
-    amount?: number;
-    name?: string;
-    frequency?: string;
-    message?: string;
-    email?: string;
-    paymentRoute?: string;
-  };
 };
-
-function isValidEmail(value: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
 
 function seedCountFromAmount(amount: number) {
   return Math.max(1, Math.round(amount / 7));
-}
-
-function padDatePart(value: number) {
-  return String(value).padStart(2, "0");
-}
-
-function formatCsvDateTime(dateValue?: string) {
-  const date = new Date(dateValue || Date.now());
-  const safeDate = Number.isNaN(date.getTime()) ? new Date() : date;
-
-  return [
-    padDatePart(safeDate.getUTCMonth() + 1),
-    padDatePart(safeDate.getUTCDate()),
-    safeDate.getUTCFullYear(),
-  ].join("/") + ` ${padDatePart(safeDate.getUTCHours())}:${padDatePart(safeDate.getUTCMinutes())}`;
-}
-
-function formatCsvAmount(value: number) {
-  return (Number(value) || 0).toFixed(2);
 }
 
 function captureFromOrder(order: Record<string, any>) {
@@ -63,44 +39,6 @@ function getOrderNumberFromPayPal(order: Record<string, any>) {
   if (/^SYS-\d{8}-[A-Z0-9]{6,12}$/.test(customId)) return customId;
 
   return createDigitalOrderNumber();
-}
-
-function getBuyerAddress(order: Record<string, any>) {
-  return order.payer?.address || order.purchase_units?.[0]?.shipping?.address || {};
-}
-
-function getSalesTax(order: Record<string, any>) {
-  const taxValue = order.purchase_units?.[0]?.amount?.breakdown?.tax_total?.value;
-  return taxValue === undefined || taxValue === null ? "" : String(taxValue);
-}
-
-function buildExportRow(input: {
-  order: Record<string, any>;
-  capture: Record<string, any>;
-  displayName: string;
-  amount: number;
-  currency: string;
-}) {
-  const address = getBuyerAddress(input.order);
-
-  return {
-    "DateTime (UTC)": formatCsvDateTime(input.capture.create_time || input.order.create_time),
-    From: input.displayName,
-    Item: "Personalised Digital Writing - Custom Order Made Writing",
-    Received: formatCsvAmount(input.amount),
-    Given: "0",
-    Currency: input.currency,
-    TransactionType: "Custom order payment",
-    TransactionId: input.capture.id || "",
-    Reference: input.order.id || input.order.purchase_units?.[0]?.custom_id || "",
-    SalesTax: getSalesTax(input.order),
-    SalesTaxPercentage: "",
-    SalesTaxIncludesShipping: "",
-    BuyerCountry: address.country_code || "",
-    BuyerStateOrProvince: address.admin_area_1 || "",
-    BuyerEmail: input.order.payer?.email_address || "",
-    PaymentProvider: "PayPal",
-  };
 }
 
 function mapDigitalOrder(order: Record<string, any> | null) {
@@ -169,8 +107,7 @@ async function ensureDigitalOrder(
   if (existing) {
     const contactEmail = input.contactEmail || existing.contact_email || null;
     const payerEmail = input.payerEmail || existing.payer_email || null;
-    const shouldRefresh =
-      contactEmail !== existing.contact_email ||
+    const shouldRefresh = contactEmail !== existing.contact_email ||
       payerEmail !== existing.payer_email ||
       input.paypalOrderId !== existing.paypal_order_id ||
       input.paypalCaptureId !== existing.paypal_capture_id;
@@ -180,8 +117,10 @@ async function ensureDigitalOrder(
     const { data: refreshed, error: refreshError } = await supabase
       .from("digital_orders")
       .update({
-        paypal_order_id: input.paypalOrderId || existing.paypal_order_id || null,
-        paypal_capture_id: input.paypalCaptureId || existing.paypal_capture_id || null,
+        paypal_order_id: input.paypalOrderId || existing.paypal_order_id ||
+          null,
+        paypal_capture_id: input.paypalCaptureId ||
+          existing.paypal_capture_id || null,
         contact_email: contactEmail,
         payer_email: payerEmail,
       })
@@ -266,49 +205,22 @@ async function ensureSeedComment(
   return created;
 }
 
-function getCurrentGoalCycleAmount(totalAmount: number, goalAmount: number) {
-  const numericTotal = Math.max(Number(totalAmount) || 0, 0);
-  const numericGoal = Math.max(Number(goalAmount) || 0, 0);
-
-  if (!numericGoal) return numericTotal;
-
-  return numericTotal % numericGoal;
-}
-
-async function advanceMeterCycle(supabase: ReturnType<typeof getSupabaseAdmin>, amount: number) {
-  const { data: settingsRow, error } = await supabase
-    .from("site_settings")
-    .select("settings")
-    .eq("id", true)
-    .maybeSingle();
+async function applyDonationToMeter(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  donationId: string,
+  amount: number,
+) {
+  const { data, error } = await supabase.rpc(
+    "apply_standard_donation_to_meter",
+    {
+      p_donation_id: donationId,
+      p_amount: amount,
+    },
+  );
 
   if (error) throw error;
 
-  const settings =
-    settingsRow?.settings && typeof settingsRow.settings === "object" && !Array.isArray(settingsRow.settings)
-      ? settingsRow.settings
-      : {};
-  const goalAmount = Math.max(Number(settings.seedGoal) || 0, 0);
-  const currentAmount = Math.max(Number(settings.meterCurrentAmount ?? settings.startingSeeds) || 0, 0);
-  const nextCurrentAmount = getCurrentGoalCycleAmount(currentAmount + amount, goalAmount);
-
-  const { error: updateError } = await supabase
-    .from("site_settings")
-    .upsert(
-      {
-        id: true,
-        settings: {
-          ...settings,
-          meterCurrentAmount: Number(nextCurrentAmount.toFixed(2)),
-          startingSeeds: 0,
-        },
-      },
-      { onConflict: "id" },
-    );
-
-  if (updateError) throw updateError;
-
-  return nextCurrentAmount;
+  return Number(data) || 0;
 }
 
 Deno.serve(async (request) => {
@@ -318,90 +230,147 @@ Deno.serve(async (request) => {
   try {
     const body = await readJson<CaptureBody>(request);
     const orderId = String(body.orderId || "").trim();
-    const contactEmail = String(body.donation?.email || "").trim().slice(0, 160);
 
     if (!orderId) return errorResponse("PayPal order id is required.", 422);
-    if (!isValidEmail(contactEmail)) return errorResponse("A valid email is required for the order detail.", 422);
 
     const supabase = getSupabaseAdmin();
-    const { data: settingsRow, error: settingsError } = await supabase
-      .from("site_settings")
-      .select("settings")
-      .eq("id", true)
-      .maybeSingle();
-    if (settingsError) throw settingsError;
-
-    const settings =
-      settingsRow?.settings && typeof settingsRow.settings === "object" && !Array.isArray(settingsRow.settings)
-        ? settingsRow.settings as Record<string, unknown>
-        : {};
-    const highPaymentSuperAdminEnabled =
-      settings.highPaymentSuperAdminEnabled === true || settings.highPaymentSuperAdminEnabled === "true";
-
-    const { data: existing } = await supabase
+    const { data: existing, error: existingError } = await supabase
       .from("donations")
       .select(
-        "id, fortune_message, display_name, amount, seed_count, frequency, supporter_message, paypal_order_id, paypal_capture_id, paypal_payer_email, payment_route, receiver_identifier, raw_payment, created_at",
+        "id, fortune_message, display_name, amount, seed_count, frequency, supporter_message, paypal_order_id, paypal_capture_id, paypal_payer_email, payment_route, raw_payment, created_at",
       )
       .eq("paypal_order_id", orderId)
       .maybeSingle();
+    if (existingError) throw existingError;
 
     if (existing) {
-      const paymentRoute = existing.payment_route === "superadmin" ? "superadmin" : "standard";
+      const paymentRoute = existing.payment_route === "superadmin"
+        ? "superadmin"
+        : "standard";
       const rawPayment =
-        existing.raw_payment && typeof existing.raw_payment === "object" && !Array.isArray(existing.raw_payment)
+        existing.raw_payment && typeof existing.raw_payment === "object" &&
+          !Array.isArray(existing.raw_payment)
           ? existing.raw_payment
           : {};
-      const rawOrder = rawPayment.order && typeof rawPayment.order === "object" ? rawPayment.order : {};
-      const rawRow = rawPayment.row && typeof rawPayment.row === "object" ? rawPayment.row : {};
+      const rawOrder = rawPayment.order && typeof rawPayment.order === "object"
+        ? rawPayment.order
+        : {};
+      const rawRow = rawPayment.row && typeof rawPayment.row === "object"
+        ? rawPayment.row
+        : {};
+      const contactEmail = String(
+        rawPayment.digitalOrder?.contactEmail ||
+          existing.paypal_payer_email || "",
+      ).trim() || null;
       const digitalOrder = await ensureDigitalOrder(supabase, {
         donationId: existing.id,
-        orderNumber: rawPayment.digitalOrder?.orderNumber || getOrderNumberFromPayPal(rawOrder),
+        orderNumber: rawPayment.digitalOrder?.orderNumber ||
+          getOrderNumberFromPayPal(rawOrder),
         paypalOrderId: existing.paypal_order_id,
         paypalCaptureId: existing.paypal_capture_id,
         customerName: existing.display_name,
-        contactEmail: contactEmail || rawPayment.digitalOrder?.contactEmail || null,
+        contactEmail,
         payerEmail: existing.paypal_payer_email,
         amount: Number(existing.amount) || 0,
-        currency: rawRow.Currency || getPayPalCurrency(),
-        personalizedRequest: rawPayment.digitalOrder?.personalizedRequest || existing.supporter_message,
+        currency: rawPayment.digitalOrder?.currency || rawRow.Currency ||
+          getPayPalCurrency(),
+        personalizedRequest: rawPayment.digitalOrder?.personalizedRequest ||
+          existing.supporter_message,
         blessingMessage: existing.fortune_message,
       });
       const seedComment = paymentRoute === "superadmin"
         ? null
         : await ensureSeedComment(supabase, {
-            donationId: existing.id,
-            displayName: existing.display_name,
-            body: existing.supporter_message,
-            amount: Number(existing.amount) || 0,
-            seedCount: Number(existing.seed_count) || seedCountFromAmount(Number(existing.amount) || 0),
-            createdAt: existing.created_at,
-          });
+          donationId: existing.id,
+          displayName: existing.display_name,
+          body: existing.supporter_message,
+          amount: Number(existing.amount) || 0,
+          seedCount: Number(existing.seed_count) ||
+            seedCountFromAmount(Number(existing.amount) || 0),
+          createdAt: existing.created_at,
+        });
+      const meterCurrentAmount = paymentRoute === "superadmin"
+        ? undefined
+        : await applyDonationToMeter(
+          supabase,
+          existing.id,
+          Number(existing.amount) || 0,
+        );
+      const { error: attemptUpdateError } = await supabase
+        .from("payment_attempts")
+        .update({
+          status: "confirmed",
+          paypal_capture_id: existing.paypal_capture_id,
+          confirmed_at: existing.created_at,
+          failure_reason: null,
+        })
+        .eq("paypal_order_id", orderId);
+      if (attemptUpdateError) throw attemptUpdateError;
 
       return jsonResponse({
         donation: {
           ...existing,
           paymentRoute,
-          receiverIdentifier: existing.receiver_identifier || null,
         },
         fortune: existing.fortune_message,
         digitalOrder: mapDigitalOrder(digitalOrder),
         seedComment: seedComment ? mapSeedComment(seedComment) : null,
         donorAccessToken: null,
+        meterCurrentAmount,
         paymentRoute,
         duplicate: true,
       });
     }
 
-    const requestedPaymentRoute = body.donation?.paymentRoute === "superadmin" ? "superadmin" : "standard";
-    const requestedAmountCents = parseMoneyToCents(body.donation?.amount);
-    const paymentRoute = resolvePaymentRoute(
-      requestedPaymentRoute,
-      highPaymentSuperAdminEnabled,
-      requestedAmountCents,
-    );
-    const order = await capturePayPalOrder(orderId, paymentRoute);
-    const capture = captureFromOrder(order);
+    const { data: paymentAttempt, error: attemptError } = await supabase
+      .from("payment_attempts")
+      .select(
+        "id, paypal_order_id, payment_route, amount, currency, display_name, contact_email, customer_request, supporter_message, status, expires_at",
+      )
+      .eq("paypal_order_id", orderId)
+      .maybeSingle();
+    if (attemptError) throw attemptError;
+    if (!paymentAttempt) {
+      return errorResponse(
+        "PayPal checkout attempt was not found. Please start again.",
+        422,
+      );
+    }
+    if (paymentAttempt.status === "failed") {
+      return errorResponse(
+        "This PayPal checkout attempt is closed. Please start again.",
+        409,
+      );
+    }
+
+    const { data: fortunes, error: fortuneError } = await supabase
+      .from("fortunes")
+      .select("id, message")
+      .eq("active", true)
+      .limit(200);
+
+    if (fortuneError || !fortunes?.length) {
+      throw fortuneError || new Error("No active fortune messages found.");
+    }
+
+    const fortune = fortunes[Math.floor(Math.random() * fortunes.length)];
+
+    const paymentRoute = paymentAttempt.payment_route === "superadmin"
+      ? "superadmin"
+      : "standard";
+    let order = await getPayPalOrder(orderId, paymentRoute);
+    let capture = captureFromOrder(order);
+
+    if (!capture || capture.status !== "COMPLETED") {
+      if (new Date(paymentAttempt.expires_at).getTime() <= Date.now()) {
+        return errorResponse(
+          "PayPal checkout attempt expired. Please start again.",
+          410,
+        );
+      }
+      order = await capturePayPalOrder(orderId, paymentRoute);
+      capture = captureFromOrder(order);
+    }
 
     if (!capture || capture.status !== "COMPLETED") {
       return errorResponse("PayPal payment was not completed.", 422, order);
@@ -411,39 +380,40 @@ Deno.serve(async (request) => {
     const capturedAmount = centsToMoney(capturedAmountCents);
     const currency = capture.amount?.currency_code || getPayPalCurrency();
 
-    if (!capturedAmountCents || currency !== getPayPalCurrency()) {
-      return errorResponse("PayPal captured amount or currency is invalid.", 422, order);
+    if (
+      !capturedAmountCents ||
+      capturedAmountCents !== parseMoneyToCents(paymentAttempt.amount) ||
+      currency !== String(paymentAttempt.currency || "").toUpperCase() ||
+      currency !== getPayPalCurrency()
+    ) {
+      return errorResponse(
+        "PayPal captured amount or currency is invalid.",
+        422,
+        order,
+      );
     }
     if (capturedAmountCents < MIN_AMOUNT_CENTS) {
-      return errorResponse("PayPal captured amount is below the $7 minimum.", 422, order);
+      return errorResponse(
+        "PayPal captured amount is below the $7 minimum.",
+        422,
+        order,
+      );
     }
 
-    const receiverIdentifier = getReceiverIdentifierFromPayPalOrder(order);
-
-    const { data: fortunes, error: fortuneError } = await supabase
-      .from("fortunes")
-      .select("id, message")
-      .eq("active", true)
-      .limit(200);
-
-    if (fortuneError || !fortunes?.length) throw fortuneError || new Error("No active fortune messages found.");
-
-    const fortune = fortunes[Math.floor(Math.random() * fortunes.length)];
-
-    const displayName = String(body.donation?.name || order.payer?.name?.given_name || "Customer")
+    const displayName = String(
+      paymentAttempt.display_name || order.payer?.name?.given_name ||
+        "Customer",
+    )
       .trim()
       .slice(0, 80);
-    const supporterMessage = getRandomOrderRequest();
-    const personalizedRequest = String(body.donation?.message || "").trim().slice(0, 180) || supporterMessage;
-    const frequency = body.donation?.frequency === "monthly" ? "monthly" : "once";
+    const contactEmail = String(paymentAttempt.contact_email || "").trim();
+    const supporterMessage = String(paymentAttempt.supporter_message || "")
+      .trim();
+    const personalizedRequest = String(
+      paymentAttempt.customer_request || supporterMessage,
+    ).trim();
+    const frequency = "once";
     const orderNumber = getOrderNumberFromPayPal(order);
-    const exportRow = buildExportRow({
-      order,
-      capture,
-      displayName,
-      amount: capturedAmount,
-      currency,
-    });
     const rawDonorToken = createRandomToken();
     const donorTokenHash = await hashText(rawDonorToken);
 
@@ -451,7 +421,8 @@ Deno.serve(async (request) => {
       .from("donor_tokens")
       .insert({
         token_hash: donorTokenHash,
-        expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+        expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+          .toISOString(),
       })
       .select("id")
       .single();
@@ -471,8 +442,9 @@ Deno.serve(async (request) => {
         paypal_payer_email: order.payer?.email_address || null,
         paypal_status: capture.status,
         payment_route: paymentRoute,
-        visibility_scope: paymentRoute === "superadmin" ? "superadmin_private" : "public",
-        receiver_identifier: receiverIdentifier,
+        visibility_scope: paymentRoute === "superadmin"
+          ? "superadmin_private"
+          : "public",
         fortune_id: fortune.id,
         fortune_message: fortune.message,
         donor_token_id: donorToken.id,
@@ -480,9 +452,7 @@ Deno.serve(async (request) => {
           provider: "PayPal",
           routing: {
             route: paymentRoute,
-            receiverIdentifier,
           },
-          row: exportRow,
           order,
           digitalOrder: {
             orderNumber,
@@ -496,11 +466,14 @@ Deno.serve(async (request) => {
             itemName: DIGITAL_ORDER_ITEM_NAME,
             personalizedRequest,
             fulfillmentStatus: "paid_awaiting_personalized_writing",
-            createdAt: capture.create_time || order.create_time || new Date().toISOString(),
+            createdAt: capture.create_time || order.create_time ||
+              new Date().toISOString(),
           },
         },
       })
-      .select("id, display_name, amount, seed_count, frequency, supporter_message, fortune_message, created_at")
+      .select(
+        "id, display_name, amount, seed_count, frequency, supporter_message, fortune_message, created_at",
+      )
       .single();
     if (donationError) throw donationError;
 
@@ -520,26 +493,45 @@ Deno.serve(async (request) => {
     const seedComment = paymentRoute === "superadmin"
       ? null
       : await ensureSeedComment(supabase, {
-          donationId: donation.id,
-          displayName,
-          body: supporterMessage,
-          amount: capturedAmount,
-          seedCount: seedCountFromAmount(capturedAmount),
-          createdAt: donation.created_at,
-        });
+        donationId: donation.id,
+        displayName,
+        body: supporterMessage,
+        amount: capturedAmount,
+        seedCount: seedCountFromAmount(capturedAmount),
+        createdAt: donation.created_at,
+      });
 
-    await supabase.from("donor_tokens").update({ donation_id: donation.id }).eq("id", donorToken.id);
-    
+    const { error: donorTokenLinkError } = await supabase
+      .from("donor_tokens")
+      .update({ donation_id: donation.id })
+      .eq("id", donorToken.id);
+    if (donorTokenLinkError) throw donorTokenLinkError;
+
+    const { error: attemptConfirmError } = await supabase
+      .from("payment_attempts")
+      .update({
+        status: "confirmed",
+        paypal_capture_id: capture.id,
+        failure_reason: null,
+        raw_payment: { order, capture },
+        confirmed_at: new Date().toISOString(),
+      })
+      .eq("paypal_order_id", orderId);
+    if (attemptConfirmError) throw attemptConfirmError;
+
     let meterCurrentAmount = undefined;
     if (paymentRoute !== "superadmin") {
-      meterCurrentAmount = await advanceMeterCycle(supabase, capturedAmount);
+      meterCurrentAmount = await applyDonationToMeter(
+        supabase,
+        donation.id,
+        capturedAmount,
+      );
     }
 
     return jsonResponse({
       donation: {
         ...donation,
         paymentRoute,
-        receiverIdentifier,
       },
       fortune: fortune.message,
       digitalOrder: mapDigitalOrder(digitalOrder),

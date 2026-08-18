@@ -25,7 +25,12 @@ function sanitizePath(value: string | null) {
   return path.slice(0, 180);
 }
 
-async function recordPageView(supabase: ReturnType<typeof getSupabaseAdmin>, request: Request, visitorKeyHash: string, path: string) {
+async function recordPageView(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  request: Request,
+  visitorKeyHash: string,
+  path: string,
+) {
   if (!visitorKeyHash) return;
 
   const { error } = await supabase.from("page_views").upsert(
@@ -65,47 +70,81 @@ Deno.serve(async (request) => {
       .eq("id", true)
       .maybeSingle();
     if (settingsError) throw settingsError;
-    const settings = settingsRow?.settings && typeof settingsRow.settings === "object" ? settingsRow.settings : {};
-    const checkoutRoute = (settings as Record<string, unknown>).checkoutRoute === "superadmin" ? "superadmin" : "standard";
+    const settings =
+      settingsRow?.settings && typeof settingsRow.settings === "object"
+        ? settingsRow.settings
+        : {};
+    const checkoutRoute =
+      (settings as Record<string, unknown>).checkoutRoute === "superadmin"
+        ? "superadmin"
+        : "standard";
     const highPaymentSuperAdminEnabled =
-      (settings as Record<string, unknown>).highPaymentSuperAdminEnabled === true ||
-      (settings as Record<string, unknown>).highPaymentSuperAdminEnabled === "true";
+      (settings as Record<string, unknown>).highPaymentSuperAdminEnabled ===
+        true ||
+      (settings as Record<string, unknown>).highPaymentSuperAdminEnabled ===
+        "true";
     const goalAmount = Math.max(Number(settings.seedGoal) || 0, 0);
     const seedPrice = Math.max(Number(settings.seedPrice) || 7, 1);
-    const rawCurrentAmount = Math.max(Number(settings.meterCurrentAmount ?? settings.startingSeeds) || 0, 0);
+    const rawCurrentAmount = Math.max(
+      Number(settings.meterCurrentAmount ?? settings.startingSeeds) || 0,
+      0,
+    );
 
     const { data: allDonations, error: donationsError } = await supabase
       .from("donations")
-      .select("id, display_name, amount, seed_count, frequency, supporter_message, paypal_status, created_at, payment_route, visibility_scope, super_approved, payment_method, raw_payment")
+      .select(
+        "id, display_name, amount, seed_count, frequency, supporter_message, paypal_status, created_at, payment_route, visibility_scope, payment_method, raw_payment",
+      )
       .eq("paypal_status", "COMPLETED")
       .order("created_at", { ascending: false })
       .limit(100);
     if (donationsError) throw donationsError;
     const donations = (allDonations || [])
       .filter((donation) => {
-        if (donation.visibility_scope !== "public" || donation.payment_method !== "paypal") return false;
-        const rawPayment = donation.raw_payment && typeof donation.raw_payment === "object" ? donation.raw_payment : {};
+        if (
+          donation.visibility_scope !== "public" ||
+          donation.payment_method !== "paypal"
+        ) return false;
+        const rawPayment =
+          donation.raw_payment && typeof donation.raw_payment === "object"
+            ? donation.raw_payment
+            : {};
         return rawPayment.mode !== "test";
       })
       .slice(0, 50);
 
     const { data: allSeedComments, error: seedCommentsError } = await supabase
       .from("seed_comments")
-      .select("id, display_name, body, amount, seed_count, source, created_at, donations(payment_route, visibility_scope, super_approved, payment_method, raw_payment)")
+      .select(
+        "id, display_name, body, amount, seed_count, source, created_at, donations(payment_route, visibility_scope, payment_method, raw_payment)",
+      )
       .order("created_at", { ascending: false })
       .limit(1000);
     if (seedCommentsError) throw seedCommentsError;
-    const seedComments = (allSeedComments || []).filter(c => {
-      if (c.source === "legacy") return true;
-      if (!c.donations) return true;
-      if (c.donations.visibility_scope !== "public" || c.donations.payment_method !== "paypal") return false;
-      const rawPayment = c.donations.raw_payment && typeof c.donations.raw_payment === "object" ? c.donations.raw_payment : {};
-      return rawPayment.mode !== "test";
-    }).slice(0, 520);
+    const seedComments = (allSeedComments || []).filter(
+      (comment: Record<string, any>) => {
+        if (comment.source === "legacy") return true;
+        const donation = Array.isArray(comment.donations)
+          ? comment.donations[0]
+          : comment.donations;
+        if (!donation) return true;
+        if (
+          donation.visibility_scope !== "public" ||
+          donation.payment_method !== "paypal"
+        ) return false;
+        const rawPayment =
+          donation.raw_payment && typeof donation.raw_payment === "object"
+            ? donation.raw_payment
+            : {};
+        return rawPayment.mode !== "test";
+      },
+    ).slice(0, 520);
 
     const { data: posts, error: postsError } = await supabase
       .from("posts")
-      .select("id, title, description, image_url, published, like_count_base, created_at")
+      .select(
+        "id, title, description, image_url, published, like_count_base, created_at",
+      )
       .eq("published", true)
       .order("created_at", { ascending: false });
     if (postsError) throw postsError;
@@ -113,15 +152,16 @@ Deno.serve(async (request) => {
     const postIds = (posts || []).map((post) => post.id);
     const { data: comments, error: commentsError } = postIds.length
       ? await supabase
-          .from("comments")
-          .select("id, post_id, display_name, body, created_at")
-          .in("post_id", postIds)
-          .order("created_at", { ascending: true })
+        .from("comments")
+        .select("id, post_id, display_name, body, created_at")
+        .in("post_id", postIds)
+        .order("created_at", { ascending: true })
       : { data: [], error: null };
     if (commentsError) throw commentsError;
 
     const { data: likes, error: likesError } = postIds.length
-      ? await supabase.from("post_likes").select("post_id, visitor_key_hash").in("post_id", postIds)
+      ? await supabase.from("post_likes").select("post_id, visitor_key_hash")
+        .in("post_id", postIds)
       : { data: [], error: null };
     if (likesError) throw likesError;
 
@@ -129,7 +169,8 @@ Deno.serve(async (request) => {
     for (const like of likes || []) {
       const entry = likesByPost.get(like.post_id) || { count: 0, liked: false };
       entry.count += 1;
-      entry.liked = entry.liked || Boolean(visitorKeyHash && like.visitor_key_hash === visitorKeyHash);
+      entry.liked = entry.liked ||
+        Boolean(visitorKeyHash && like.visitor_key_hash === visitorKeyHash);
       likesByPost.set(like.post_id, entry);
     }
 
@@ -159,7 +200,9 @@ Deno.serve(async (request) => {
       };
     });
 
-    const donationAmount = goalAmount ? getCurrentGoalCycleAmount(rawCurrentAmount, goalAmount) : rawCurrentAmount;
+    const donationAmount = goalAmount
+      ? getCurrentGoalCycleAmount(rawCurrentAmount, goalAmount)
+      : rawCurrentAmount;
     const donationSeeds = Math.floor(donationAmount / seedPrice);
 
     return jsonResponse({

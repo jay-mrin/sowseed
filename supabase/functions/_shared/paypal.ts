@@ -3,7 +3,8 @@ const PAYPAL_API_BASE = {
   live: "https://api-m.paypal.com",
 };
 
-export const DIGITAL_ORDER_ITEM_NAME = "Personalised Digital Writing - Custom Order Made Writing";
+export const DIGITAL_ORDER_ITEM_NAME =
+  "Personalised Digital Writing - Custom Order Made Writing";
 
 function padDatePart(value: number) {
   return String(value).padStart(2, "0");
@@ -15,7 +16,8 @@ export function createDigitalOrderNumber(date = new Date()) {
     padDatePart(date.getUTCMonth() + 1),
     padDatePart(date.getUTCDate()),
   ].join("");
-  const randomPart = crypto.randomUUID().replaceAll("-", "").slice(0, 8).toUpperCase();
+  const randomPart = crypto.randomUUID().replaceAll("-", "").slice(0, 8)
+    .toUpperCase();
 
   return `SYS-${datePart}-${randomPart}`;
 }
@@ -26,7 +28,7 @@ export function getPayPalBaseUrl() {
 }
 
 export function getPayPalCurrency() {
-  return Deno.env.get("PAYPAL_CURRENCY") || "USD";
+  return (Deno.env.get("PAYPAL_CURRENCY") || "USD").trim().toUpperCase();
 }
 
 export function parseMoneyToCents(value: unknown) {
@@ -51,12 +53,6 @@ export function formatMoneyFromCents(cents: number) {
   return centsToMoney(cents).toFixed(2);
 }
 
-export function getReceiverIdentifierFromPayPalOrder(order: Record<string, any>) {
-  const payee = order.purchase_units?.[0]?.payee || {};
-
-  return String(payee.merchant_id || payee.email_address || "").trim() || null;
-}
-
 export function getPayPalClientId(paymentRoute?: string) {
   if (paymentRoute === "superadmin") {
     return Deno.env.get("SUPER_ADMIN_PAYPAL_CLIENT_ID") || "";
@@ -76,7 +72,9 @@ function assertPayPalCredentials(paymentRoute?: string) {
   const clientSecret = getPayPalClientSecret(paymentRoute);
 
   if (!clientId || !clientSecret) {
-    throw new Error(`Missing PayPal credentials for route ${paymentRoute || "standard"}.`);
+    throw new Error(
+      `Missing PayPal credentials for route ${paymentRoute || "standard"}.`,
+    );
   }
 
   return { clientId, clientSecret };
@@ -105,9 +103,6 @@ export async function getPayPalAccessToken(paymentRoute?: string) {
 
 export async function createPayPalOrder(input: {
   amountCents: number;
-  displayName: string;
-  frequency: string;
-  supporterMessage?: string;
   paymentRoute?: string;
 }) {
   const accessToken = await getPayPalAccessToken(input.paymentRoute);
@@ -145,21 +140,48 @@ export async function createPayPalOrder(input: {
   return payload;
 }
 
-export async function capturePayPalOrder(orderId: string, paymentRoute?: string) {
+export async function capturePayPalOrder(
+  orderId: string,
+  paymentRoute?: string,
+) {
   const accessToken = await getPayPalAccessToken(paymentRoute);
-  const response = await fetch(`${getPayPalBaseUrl()}/v2/checkout/orders/${orderId}/capture`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-      "PayPal-Request-Id": orderId,
+  const response = await fetch(
+    `${getPayPalBaseUrl()}/v2/checkout/orders/${orderId}/capture`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        "PayPal-Request-Id": orderId,
+      },
     },
-  });
+  );
 
   const payload = await response.json();
 
   if (!response.ok) {
     throw new Error(`PayPal capture failed: ${JSON.stringify(payload)}`);
+  }
+
+  return payload;
+}
+
+export async function getPayPalOrder(orderId: string, paymentRoute?: string) {
+  const accessToken = await getPayPalAccessToken(paymentRoute);
+  const response = await fetch(
+    `${getPayPalBaseUrl()}/v2/checkout/orders/${orderId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+    },
+  );
+
+  const payload = await response.json();
+
+  if (!response.ok) {
+    throw new Error(`PayPal order lookup failed: ${JSON.stringify(payload)}`);
   }
 
   return payload;
@@ -172,28 +194,35 @@ function getWebhookId(paymentRoute?: string) {
   return Deno.env.get("PAYPAL_WEBHOOK_ID") || "";
 }
 
-async function tryVerifyWebhook(headers: Headers, body: string, paymentRoute: string) {
+async function tryVerifyWebhook(
+  headers: Headers,
+  body: string,
+  paymentRoute: string,
+) {
   const webhookId = getWebhookId(paymentRoute);
 
   if (!webhookId) return null;
 
   const accessToken = await getPayPalAccessToken(paymentRoute);
-  const response = await fetch(`${getPayPalBaseUrl()}/v1/notifications/verify-webhook-signature`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
+  const response = await fetch(
+    `${getPayPalBaseUrl()}/v1/notifications/verify-webhook-signature`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        auth_algo: headers.get("paypal-auth-algo"),
+        cert_url: headers.get("paypal-cert-url"),
+        transmission_id: headers.get("paypal-transmission-id"),
+        transmission_sig: headers.get("paypal-transmission-sig"),
+        transmission_time: headers.get("paypal-transmission-time"),
+        webhook_id: webhookId,
+        webhook_event: JSON.parse(body),
+      }),
     },
-    body: JSON.stringify({
-      auth_algo: headers.get("paypal-auth-algo"),
-      cert_url: headers.get("paypal-cert-url"),
-      transmission_id: headers.get("paypal-transmission-id"),
-      transmission_sig: headers.get("paypal-transmission-sig"),
-      transmission_time: headers.get("paypal-transmission-time"),
-      webhook_id: webhookId,
-      webhook_event: JSON.parse(body),
-    }),
-  });
+  );
 
   const payload = await response.json();
 
@@ -208,15 +237,22 @@ async function tryVerifyWebhook(headers: Headers, body: string, paymentRoute: st
 }
 
 export async function verifyPayPalWebhook(headers: Headers, body: string) {
-  let result = await tryVerifyWebhook(headers, body, "standard");
-  
-  if (!result) {
-    result = await tryVerifyWebhook(headers, body, "superadmin");
+  const routes = ["standard", "superadmin"];
+
+  for (const paymentRoute of routes) {
+    try {
+      const result = await tryVerifyWebhook(headers, body, paymentRoute);
+
+      if (result) return result;
+    } catch (error) {
+      // One PayPal account being unavailable must not prevent verification
+      // against the other independently configured collection account.
+      console.error(
+        `PayPal webhook verification failed for route ${paymentRoute}.`,
+        error,
+      );
+    }
   }
 
-  if (!result) {
-    throw new Error("PayPal webhook verification failed for all known routes.");
-  }
-
-  return result;
+  throw new Error("PayPal webhook verification failed for all known routes.");
 }

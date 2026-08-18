@@ -1,7 +1,6 @@
 :root {
   --red: #e62727;
   --red-dark: #b91f1f;
-  --cream: #f3f2ec;
   --silver: #dcdcdc;
   --teal: #1e93ab;
   --teal-dark: #126a7d;
@@ -9,21 +8,13 @@
   --muted: #636361;
   --line: #d9d7cf;
   --white: #ffffff;
-  --lavender: #f3efff;
-  --soft: #fbfaf6;
-  --success: #16884a;
   --shadow: 0 16px 40px rgba(25, 25, 25, 0.1);
-  --shadow-soft: 0 8px 24px rgba(25, 25, 25, 0.08);
   --button-radius: 999px;
-  --control-radius: 18px;
   --gradient-border: linear-gradient(135deg, rgba(230, 39, 39, 0.42), rgba(30, 147, 171, 0.46));
   --button-shadow: 0 14px 28px rgba(230, 39, 39, 0.18), 0 10px 22px rgba(30, 147, 171, 0.11);
   --button-shadow-soft: 0 10px 22px rgba(25, 25, 25, 0.08), 0 8px 18px rgba(30, 147, 171, 0.08);
   --card-radius: 30px;
   --inner-radius: 20px;
-  --radius: 8px;
-  --radius-sm: 6px;
-  --topbar-height: 72px;
 }
 
 @keyframes admin-spin {
@@ -69,8 +60,7 @@ body.app-loading > .toast {
 
 body.app-ready > .topbar,
 body.app-ready > main,
-body.app-ready > .footer,
-body.app-ready > .toast {
+body.app-ready > .footer {
   opacity: 1;
   visibility: visible;
   transition:
@@ -149,8 +139,7 @@ body.app-ready .app-loader {
 }
 
 body.admin-open,
-body.receipt-open,
-body.payment-open {
+body.receipt-open {
   overflow: hidden;
 }
 
@@ -208,14 +197,9 @@ a {
 }
 
 .brand,
-.desktop-nav,
 .profile-actions,
 .button,
 .secure-pill,
-.goal-line,
-.goal-details,
-.feed-meta,
-.supporter-row,
 .receipt-actions {
   display: flex;
   align-items: center;
@@ -1384,28 +1368,6 @@ a {
   line-height: 1;
 }
 
-.desktop-nav {
-  gap: 6px;
-  padding: 5px;
-  border: 1px solid rgba(217, 215, 207, 0.75);
-  border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.46);
-}
-
-.desktop-nav a {
-  padding: 9px 13px;
-  border-radius: var(--radius-sm);
-  color: var(--muted);
-  font-size: 14px;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.desktop-nav a:hover {
-  color: var(--ink);
-  background: var(--white);
-}
-
 .icon-button {
   display: grid;
   width: 42px;
@@ -1471,7 +1433,6 @@ main {
   object-position: center;
 }
 
-.eyebrow,
 .section-kicker {
   margin: 0;
   color: var(--teal-dark);
@@ -1604,14 +1565,6 @@ main {
 .button-primary:hover {
   background: #e925a8;
   box-shadow: 0 18px 34px rgba(248, 50, 184, 0.24);
-}
-
-.button-approve {
-  background: var(--success);
-}
-
-.button-approve:hover {
-  filter: brightness(0.9);
 }
 
 .button-secondary {
@@ -1767,27 +1720,6 @@ main {
   background: var(--white);
 }
 
-.goal-line,
-.goal-details {
-  justify-content: space-between;
-  gap: 14px;
-}
-
-.goal-line {
-  margin-bottom: 12px;
-  font-weight: 800;
-}
-
-.goal-line span:first-child {
-  color: var(--red);
-  font-size: 24px;
-}
-
-.goal-line span:last-child,
-.goal-details {
-  color: var(--muted);
-}
-
 .progress-track {
   height: 12px;
   overflow: hidden;
@@ -1909,64 +1841,6 @@ main {
   font-weight: 800;
 }
 
-.goal-details {
-  margin-top: 10px;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.impact-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-top: 14px;
-}
-
-.impact-grid article {
-  min-height: 110px;
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: var(--inner-radius);
-  background: rgba(255, 255, 255, 0.72);
-}
-
-.metric {
-  display: block;
-  color: var(--teal);
-  font-size: 30px;
-  font-weight: 800;
-}
-
-.impact-grid article span:last-child {
-  display: block;
-  margin-top: 4px;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.feed-list,
-.top-list {
-  display: grid;
-  gap: 12px;
-}
-
-.feed-card,
-.supporter-row {
-  border: 1px solid rgba(217, 215, 207, 0.78);
-  border-radius: var(--inner-radius);
-  background: var(--white);
-  box-shadow: 0 8px 22px rgba(25, 25, 25, 0.045);
-}
-
-.feed-card {
-  padding: 16px;
-}
-
-.feed-meta {
-  gap: 12px;
-}
-
 .avatar {
   display: grid;
   width: 42px;
@@ -1980,27 +1854,6 @@ main {
   font-weight: 800;
 }
 
-.feed-title {
-  min-width: 0;
-  font-weight: 800;
-}
-
-.feed-title small {
-  display: block;
-  margin-top: 1px;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.feed-message {
-  margin: 12px 0 0 54px;
-  padding: 12px;
-  border-radius: 16px;
-  color: #3c3c38;
-  background: var(--cream);
-}
-
 fieldset {
   min-width: 0;
   margin: 24px 0 0;
@@ -2008,8 +1861,7 @@ fieldset {
   border: 0;
 }
 
-legend,
-.field-label {
+legend {
   display: block;
   width: 100%;
   margin-bottom: 14px;
@@ -2036,8 +1888,7 @@ legend::after {
 }
 
 .field input,
-.field textarea,
-.money-input {
+.field textarea {
   width: 100%;
   border: 1px solid rgba(248, 50, 184, 0.18);
   border-radius: 10px;
@@ -2058,89 +1909,11 @@ legend::after {
 }
 
 .field input:focus,
-.field textarea:focus,
-.money-input:focus-within {
+.field textarea:focus {
   border-color: rgba(248, 50, 184, 0.46);
   box-shadow:
     0 0 0 4px rgba(248, 50, 184, 0.08),
     0 10px 24px rgba(248, 50, 184, 0.08);
-}
-
-.money-input {
-  display: flex;
-  align-items: center;
-  overflow: hidden;
-  min-height: 50px;
-}
-
-.money-input span {
-  display: flex;
-  width: 54px;
-  min-height: 50px;
-  align-self: stretch;
-  align-items: center;
-  justify-content: center;
-  margin: 0;
-  color: #f83291;
-  border-right: 1px solid rgba(248, 50, 184, 0.13);
-  background: rgba(255, 224, 242, 0.64);
-  font-size: 20px;
-  font-weight: 900;
-}
-
-.money-input input {
-  min-height: 50px;
-  padding: 0 16px;
-  border: 0;
-  border-radius: 0;
-}
-
-.money-input input:focus {
-  box-shadow: none;
-}
-
-.icon-field {
-  display: grid;
-  grid-template-columns: 54px minmax(0, 1fr);
-  overflow: hidden;
-  border: 1px solid rgba(248, 50, 184, 0.18);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.82);
-}
-
-.icon-field > span {
-  display: grid;
-  min-height: 50px;
-  place-items: center;
-  color: #f83291;
-  border-right: 1px solid rgba(248, 50, 184, 0.13);
-  background: rgba(255, 224, 242, 0.64);
-  font-size: 20px;
-  font-weight: 900;
-}
-
-.icon-field input,
-.icon-field textarea {
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-}
-
-.icon-field:focus-within {
-  border-color: rgba(248, 50, 184, 0.46);
-  box-shadow:
-    0 0 0 4px rgba(248, 50, 184, 0.08),
-    0 10px 24px rgba(248, 50, 184, 0.08);
-}
-
-.icon-field:focus-within input,
-.icon-field:focus-within textarea {
-  box-shadow: none;
-}
-
-.icon-field .error-message {
-  grid-column: 1 / -1;
-  padding-left: 54px;
 }
 
 .textarea-field > span {
@@ -2154,22 +1927,6 @@ legend::after {
   color: var(--red-dark);
   font-size: 12px;
   font-weight: 700;
-}
-
-.check-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 14px 0 0;
-  color: var(--muted);
-  font-size: 16px;
-  font-weight: 700;
-}
-
-.check-row input {
-  width: 20px;
-  height: 20px;
-  accent-color: var(--red);
 }
 
 .checkout-button {
@@ -2188,23 +1945,6 @@ legend::after {
   font-weight: 950;
   text-transform: uppercase;
   letter-spacing: 0;
-}
-
-.checkout-button span[aria-hidden="true"] {
-  font-size: 26px;
-  line-height: 1;
-}
-
-.donate-fortune-note {
-  margin: 10px 0 0;
-  color: #f832b8;
-  font-size: 15px;
-  font-weight: 800;
-  line-height: 1.25;
-  text-align: center;
-  text-shadow:
-    0 0 10px rgba(248, 50, 184, 0.34),
-    0 0 18px rgba(230, 39, 39, 0.16);
 }
 
 .seed-quantity-row {
@@ -2651,165 +2391,6 @@ legend::after {
   object-fit: cover;
 }
 
-.supporters-panel .section-heading {
-  margin-bottom: 14px;
-}
-
-.supporter-row {
-  justify-content: space-between;
-  gap: 12px;
-  padding: 13px;
-}
-
-.supporter-row strong {
-  display: block;
-  font-size: 14px;
-}
-
-.supporter-row span {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.supporter-row .total {
-  color: var(--red);
-  font-size: 15px;
-  font-weight: 800;
-}
-
-.payment-dialog {
-  width: min(720px, calc(100% - 40px));
-  max-width: calc(100% - 32px);
-  max-height: calc(100dvh - 48px);
-  padding: 0;
-  border: 0;
-  border-radius: 26px;
-  background: transparent;
-  opacity: 0;
-  overflow: visible;
-  transform: translateY(14px) scale(0.96);
-  transition:
-    opacity 220ms ease,
-    transform 220ms ease;
-  outline: none;
-}
-
-.payment-dialog::backdrop {
-  background: rgba(247, 234, 241, 0);
-  backdrop-filter: blur(0);
-  transition:
-    background 220ms ease,
-    backdrop-filter 220ms ease;
-}
-
-.payment-dialog.is-open {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-}
-
-.payment-dialog.is-open::backdrop {
-  background: rgba(247, 234, 241, 0.68);
-  backdrop-filter: blur(6px);
-}
-
-.payment-dialog.is-closing {
-  opacity: 0;
-  transform: translateY(12px) scale(0.97);
-}
-
-.payment-dialog.is-closing::backdrop {
-  background: rgba(247, 234, 241, 0);
-  backdrop-filter: blur(0);
-}
-
-.payment-card {
-  max-height: calc(100dvh - 48px);
-  overflow: auto;
-  padding: clamp(30px, 4.5vw, 58px);
-  border: 1px solid rgba(217, 215, 207, 0.72);
-  border-radius: 34px;
-  color: #1d232c;
-  background:
-    radial-gradient(circle at 15% 8%, rgba(255, 239, 249, 0.68), transparent 34%),
-    radial-gradient(circle at 88% 18%, rgba(237, 253, 255, 0.72), transparent 38%),
-    #ffffff;
-  box-shadow:
-    0 26px 72px rgba(25, 25, 25, 0.13),
-    0 0 60px rgba(248, 50, 184, 0.1);
-}
-
-.payment-card h2,
-.payment-card h3 {
-  margin: 0;
-  color: #1d232c;
-  font-weight: 800;
-  letter-spacing: 0;
-}
-
-.payment-card h2 {
-  font-size: clamp(28px, 2.2vw, 42px);
-  line-height: 1.15;
-}
-
-.payment-card h3 {
-  margin-top: 34px;
-  font-size: clamp(26px, 2vw, 36px);
-}
-
-.payment-email-field {
-  margin-top: 40px;
-}
-
-.payment-email-field span {
-  display: block;
-  margin-bottom: 18px;
-  color: #1d232c;
-  font-size: 18px;
-  font-weight: 800;
-}
-
-.payment-email-field input {
-  width: 100%;
-  min-height: 70px;
-  padding: 0 22px;
-  border: 3px solid #1466ff;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.86);
-  color: #1d232c;
-  font-size: 23px;
-  box-shadow: 0 8px 18px rgba(20, 102, 255, 0.1);
-}
-
-.payment-email-field input::placeholder,
-.payment-card input::placeholder,
-.payment-card textarea::placeholder {
-  color: #7f879e;
-}
-
-.fortune-message {
-  margin: 10px 0 20px;
-  color: #f832b8;
-  font-size: 16px;
-  font-weight: 800;
-  line-height: 1.35;
-  text-align: center;
-  text-shadow:
-    0 0 10px rgba(248, 50, 184, 0.4),
-    0 0 22px rgba(230, 39, 39, 0.18);
-}
-
-.payment-copy,
-.payment-note {
-  color: #788199;
-  font-size: 18px;
-  line-height: 1.45;
-}
-
-.payment-copy {
-  margin: 20px 0 10px;
-}
-
 .superadmin-purge {
   display: grid;
   gap: 8px;
@@ -2943,31 +2524,6 @@ legend::after {
   font-weight: 800;
   line-height: 1.35;
   text-align: center;
-}
-
-.payment-back-button {
-  margin-top: 0;
-}
-
-.payment-note {
-  margin-top: 28px;
-}
-
-.payment-back-button {
-  padding: 0;
-  border: 0;
-  color: #1d232c;
-  background: transparent;
-  font-size: 18px;
-  cursor: pointer;
-}
-
-.payment-back-button:hover {
-  text-decoration: underline;
-}
-
-.payment-note {
-  margin: 28px 0 0;
 }
 
 .receipt-dialog {
@@ -3193,10 +2749,6 @@ legend::after {
 }
 
 @media (max-width: 680px) {
-  :root {
-    --topbar-height: 64px;
-  }
-
   .topbar {
     height: 64px;
     padding: 0 16px;
@@ -3475,32 +3027,6 @@ legend::after {
     min-height: 100px;
   }
 
-  .money-input {
-    min-height: 56px;
-  }
-
-  .money-input span {
-    width: 48px;
-    min-height: 56px;
-    font-size: 18px;
-  }
-
-  .money-input input {
-    min-height: 56px;
-    padding: 0 18px;
-  }
-
-  .check-row {
-    gap: 10px;
-    margin: 16px 0 18px;
-    font-size: 15px;
-  }
-
-  .check-row input {
-    width: 20px;
-    height: 20px;
-  }
-
   .checkout-button {
     min-height: 60px;
     font-size: 18px;
@@ -3575,10 +3101,6 @@ legend::after {
     width: 100%;
   }
 
-  .impact-grid {
-    grid-template-columns: 1fr;
-  }
-
   .donation-meter-card {
     padding: 22px;
     border-radius: 26px;
@@ -3613,55 +3135,9 @@ legend::after {
     font-size: 17px;
   }
 
-  .payment-dialog {
-    width: min(370px, calc(100% - 20px));
-  }
-
-  .payment-card {
-    padding: 26px 22px;
-    border-radius: 26px;
-  }
-
-  .payment-card h2 {
-    font-size: 26px;
-  }
-
-  .payment-card h3 {
-    margin-top: 26px;
-    font-size: 24px;
-  }
-
-  .payment-email-field {
-    margin-top: 22px;
-  }
-
-  .payment-email-field input {
-    min-height: 66px;
-    padding: 0 18px;
-    font-size: 22px;
-  }
-
-  .payment-copy,
-  .payment-note {
-    font-size: 18px;
-    line-height: 1.42;
-  }
-
-  .payment-copy {
-    margin: 22px 0 18px;
-  }
-
   .payment-choice {
     min-height: 44px;
     border-radius: var(--button-radius);
-  }
-
-  .payment-back-button {
-    font-size: 24px;
-  }
-
-  .feed-message {
-    margin-left: 0;
   }
 }
 
@@ -3726,45 +3202,12 @@ legend::after {
   margin-top: 24px;
 }
 
-.minimal-offering .money-input,
 .minimal-offering .minimal-text-field input,
 .minimal-offering .minimal-text-field textarea {
   border: 1px solid rgba(153, 137, 143, 0.2);
   border-radius: 14px;
   color: #171717;
   background: rgba(246, 243, 243, 0.9);
-}
-
-.minimal-offering .money-input {
-  min-height: 72px;
-}
-
-.minimal-offering .money-input > span {
-  width: auto;
-  min-height: 72px;
-  padding-left: 22px;
-  color: #555154;
-  border: 0;
-  background: transparent;
-  font-size: 24px;
-  font-weight: 600;
-}
-
-.minimal-offering .money-input input {
-  min-width: 0;
-  min-height: 72px;
-  padding: 0 22px 0 14px;
-  color: #171717;
-  background: transparent;
-  font-size: 24px;
-  font-weight: 500;
-  appearance: textfield;
-}
-
-.minimal-offering .money-input input::-webkit-inner-spin-button,
-.minimal-offering .money-input input::-webkit-outer-spin-button {
-  margin: 0;
-  appearance: none;
 }
 
 .minimal-offering .minimal-text-field input,
@@ -3789,7 +3232,6 @@ legend::after {
   opacity: 1;
 }
 
-.minimal-offering .money-input:focus-within,
 .minimal-offering .minimal-text-field input:focus,
 .minimal-offering .minimal-text-field textarea:focus {
   border-color: rgba(248, 50, 184, 0.5);
@@ -3845,15 +3287,10 @@ legend::after {
     font-size: 22px;
   }
 
-  .minimal-offering .money-input,
-  .minimal-offering .money-input > span,
-  .minimal-offering .money-input input,
   .minimal-offering .minimal-text-field input {
     min-height: 64px;
   }
 
-  .minimal-offering .money-input > span,
-  .minimal-offering .money-input input,
   .minimal-offering .minimal-text-field input,
   .minimal-offering .minimal-text-field textarea {
     font-size: 20px;
