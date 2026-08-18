@@ -3464,10 +3464,11 @@ legend::after {
   min-height: 170px;
 }
 
-.inline-paypal-checkout.is-loading .payment-status,
-.inline-paypal-checkout.is-loading .payment-choice,
-.inline-paypal-checkout.is-loading .paypal-checkout-retry {
+.inline-paypal-checkout.is-loading .payment-status {
   visibility: hidden;
+}
+
+.inline-paypal-checkout.is-loading .payment-choice {
   pointer-events: none;
 }
 
@@ -3483,6 +3484,8 @@ legend::after {
   font-size: 14px;
   font-weight: 900;
   text-align: center;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fff1fa, #fff);
 }
 
 .paypal-checkout-loader-seed {
@@ -3500,26 +3503,6 @@ legend::after {
     0 14px 32px rgba(65, 190, 91, 0.2);
   font-size: 30px;
   animation: app-loader-spin 950ms cubic-bezier(0.65, 0, 0.35, 1) infinite;
-}
-
-.paypal-checkout-retry {
-  display: block;
-  width: 100%;
-  min-height: 46px;
-  margin-top: 10px;
-  border: 1px solid rgba(248, 50, 184, 0.32);
-  border-radius: var(--button-radius);
-  color: #a41463;
-  background: #fff7fc;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 900;
-  cursor: pointer;
-}
-
-.paypal-checkout-retry:hover {
-  border-color: rgba(248, 50, 184, 0.62);
-  background: #fff0f9;
 }
 
 .inline-paypal-checkout[hidden] {

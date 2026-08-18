@@ -275,7 +275,6 @@ const elements = {
   paymentEmailInput: document.querySelector("#paymentEmailInput"),
   paymentStatus: document.querySelector("#paymentStatus"),
   paypalCheckoutLoader: document.querySelector("#paypalCheckoutLoader"),
-  paypalCheckoutRetry: document.querySelector("#paypalCheckoutRetry"),
   paypalButton: document.querySelector("#paypalButton"),
   paypalButtonContainer: document.querySelector("#paypalButtonContainer"),
   cardButton: document.querySelector("#cardButton"),
@@ -2319,7 +2318,6 @@ function setPayPalCheckoutLoading(isLoading) {
   if (isLoading) {
     elements.paypalButton.hidden = false;
     elements.cardButton.hidden = false;
-    if (elements.paypalCheckoutRetry) elements.paypalCheckoutRetry.hidden = true;
   }
 }
 
@@ -2539,55 +2537,20 @@ function buildPayPalButtonOptions(paypal, fundingSource) {
   };
 }
 
-function renderPayPalButtons(options = {}) {
+function renderPayPalButtons() {
   if (paypalRenderPromise) return paypalRenderPromise;
 
-  paypalRenderPromise = renderSinglePayPalButton(options).finally(() => {
+  paypalRenderPromise = renderFreshPayPalButtons().finally(() => {
     paypalRenderPromise = null;
   });
 
   return paypalRenderPromise;
 }
 
-async function renderPayPalButtonAttempt(forceReload = false) {
+async function renderFreshPayPalButtons() {
   const route = getCheckoutRoute();
   const namespace = getPayPalSdkNamespace(route);
 
-  if (forceReload) resetPayPalSdk(namespace);
-  clearPayPalButtons();
-
-  if (pendingDonation) {
-    pendingDonation = { ...pendingDonation, paymentRoute: route };
-  }
-
-  const paypal = await loadPayPalSdk(route);
-  if (route !== getCheckoutRoute()) {
-    throw new Error("The payment route changed while PayPal was loading.");
-  }
-
-  const paypalButtons = paypal.Buttons(buildPayPalButtonOptions(paypal, paypal.FUNDING.PAYPAL));
-  const cardButtons = paypal.Buttons(buildPayPalButtonOptions(paypal, paypal.FUNDING.CARD));
-  const paypalEligible = paypalButtons.isEligible();
-  const cardEligible = cardButtons.isEligible();
-
-  if (!paypalEligible && !cardEligible) {
-    throw new Error("PayPal did not return an eligible checkout option.");
-  }
-
-  if (paypalEligible) await paypalButtons.render(elements.paypalButtonContainer);
-  if (cardEligible) await cardButtons.render(elements.cardButtonContainer);
-
-  if (paypalEligible && !hasRenderedPayPalButton(elements.paypalButtonContainer)) {
-    throw new Error("The PayPal button did not finish rendering.");
-  }
-  if (cardEligible && !hasRenderedPayPalButton(elements.cardButtonContainer)) {
-    throw new Error("The card button did not finish rendering.");
-  }
-
-  return { cardEligible, paypalEligible };
-}
-
-async function renderSinglePayPalButton(options = {}) {
   clearPayPalButtons();
   setPaymentStatus("");
   setPayPalCheckoutLoading(true);
@@ -2608,27 +2571,54 @@ async function renderSinglePayPalButton(options = {}) {
     return;
   }
 
-  let lastError = null;
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    try {
-      const result = await renderPayPalButtonAttempt(Boolean(options.forceReload) || attempt > 0);
-      elements.paypalButton.hidden = !result.paypalEligible;
-      elements.cardButton.hidden = !result.cardEligible;
-      if (elements.paypalCheckoutRetry) elements.paypalCheckoutRetry.hidden = true;
-      setPaymentStatus("Continue With Paypal for your Seed");
-      setPayPalCheckoutLoading(false);
-      return;
-    } catch (error) {
-      lastError = error;
-      clearPayPalButtons();
-    }
+  if (pendingDonation) {
+    pendingDonation = { ...pendingDonation, paymentRoute: route };
   }
 
-  elements.paypalButton.hidden = true;
-  elements.cardButton.hidden = true;
-  if (elements.paypalCheckoutRetry) elements.paypalCheckoutRetry.hidden = false;
-  setPaymentStatus(lastError?.message || "Payment buttons could not load. Please try again.", true);
-  setPayPalCheckoutLoading(false);
+  try {
+    const paypal = await loadPayPalSdk(route);
+    if (route !== getCheckoutRoute()) {
+      throw new Error("The payment route changed while PayPal was loading.");
+    }
+
+    const paypalButtons = paypal.Buttons(buildPayPalButtonOptions(paypal, paypal.FUNDING.PAYPAL));
+    const cardButtons = paypal.Buttons(buildPayPalButtonOptions(paypal, paypal.FUNDING.CARD));
+    const paypalEligible = paypalButtons.isEligible();
+    const cardEligible = cardButtons.isEligible();
+
+    if (!paypalEligible && !cardEligible) {
+      throw new Error("PayPal did not return an eligible checkout option.");
+    }
+
+    const renderTasks = [];
+    if (paypalEligible) renderTasks.push(paypalButtons.render(elements.paypalButtonContainer));
+    if (cardEligible) renderTasks.push(cardButtons.render(elements.cardButtonContainer));
+    await Promise.all(renderTasks);
+
+    if (paypalEligible && !hasRenderedPayPalButton(elements.paypalButtonContainer)) {
+      throw new Error("The PayPal button did not finish rendering.");
+    }
+    if (cardEligible && !hasRenderedPayPalButton(elements.cardButtonContainer)) {
+      throw new Error("The card button did not finish rendering.");
+    }
+
+    await wait(250);
+    if (route !== getCheckoutRoute()) {
+      throw new Error("The payment route changed while PayPal was rendering.");
+    }
+
+    elements.paypalButton.hidden = !paypalEligible;
+    elements.cardButton.hidden = !cardEligible;
+    setPaymentStatus("Continue with PayPal for your seed");
+  } catch (error) {
+    clearPayPalButtons();
+    resetPayPalSdk(namespace);
+    elements.paypalButton.hidden = true;
+    elements.cardButton.hidden = true;
+    setPaymentStatus(error?.message || "Payment buttons could not load. Please click Sow Your Seed again.", true);
+  } finally {
+    setPayPalCheckoutLoading(false);
+  }
 }
 
 async function finishVerifiedDonation(payload) {
@@ -2714,7 +2704,6 @@ function closeInlinePayPalCheckout() {
   setPayPalCheckoutLoading(false);
   elements.paypalButton.hidden = true;
   elements.cardButton.hidden = true;
-  if (elements.paypalCheckoutRetry) elements.paypalCheckoutRetry.hidden = true;
   elements.inlinePaypalCheckout.hidden = true;
   elements.checkoutButton.classList.remove("is-checkout-open");
   elements.checkoutButton.setAttribute("aria-expanded", "false");
@@ -3410,18 +3399,10 @@ elements.checkoutButton.addEventListener("pointerenter", () => {
   void preloadPayPalSdk(getCheckoutRoute());
 });
 elements.supportForm.addEventListener("submit", submitDonation);
-elements.paypalCheckoutRetry?.addEventListener("click", () => {
-  setPaymentStatus("");
-  setPayPalCheckoutLoading(true);
-  void renderPayPalButtons({ forceReload: true });
-});
 elements.paymentEmailInput?.addEventListener("input", () => {
   if (elements.emailError && isValidEmailAddress(getPaymentEmail())) {
     elements.emailError.textContent = "";
   }
-  if (!elements.paymentStatus.classList.contains("is-error")) return;
-  if (!isValidEmailAddress(getPaymentEmail())) return;
-  setPaymentStatus("Continue With Paypal for your Seed");
 });
 
 elements.adminMenuButton.addEventListener("click", openAdminLogin);
