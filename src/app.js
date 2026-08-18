@@ -318,7 +318,7 @@ const elements = {
 let pendingFulfillmentAction = null;
 let backendReady = false;
 const paypalSdkPromises = new Map();
-let paypalSdkKey = "";
+const paypalSdkKeysByNamespace = new Map();
 let paypalRenderPromise = null;
 let paymentConfig = {
   paypalClientId: PUBLIC_CONFIG.paypalClientId || "",
@@ -781,6 +781,7 @@ async function initializeApp() {
     await waitForInitialAssets();
   } finally {
     finishInitialLoading();
+    schedulePayPalSdkPreload();
 
     if (window.location.hash === "#admin") {
       openAdminLogin();
@@ -2196,11 +2197,14 @@ function getPaymentEmail() {
   return String(elements.paymentEmailInput?.value || "").trim();
 }
 
-function isPayPalConfigured() {
-  const route = getCheckoutRoute();
-  const clientId =
-    route === "superadmin" ? paymentConfig.superAdminPayPalClientId : paymentConfig.paypalClientId || PUBLIC_CONFIG.paypalClientId;
-  return Boolean(clientId);
+function getPayPalClientId(paymentRoute = getCheckoutRoute()) {
+  return paymentRoute === "superadmin"
+    ? paymentConfig.superAdminPayPalClientId
+    : paymentConfig.paypalClientId || PUBLIC_CONFIG.paypalClientId;
+}
+
+function isPayPalConfigured(paymentRoute = getCheckoutRoute()) {
+  return Boolean(getPayPalClientId(paymentRoute));
 }
 
 function isValidEmailAddress(value) {
@@ -2329,42 +2333,43 @@ function waitForPayPalSdk(namespace, timeoutMs = 5000) {
   });
 }
 
-function resetPayPalSdk() {
-  document.querySelectorAll("script[data-sys-paypal-sdk]").forEach((script) => script.remove());
+function getPayPalSdkNamespace(paymentRoute) {
+  return paymentRoute === "superadmin" ? "paypalSysSuperAdmin" : "paypalSysStandard";
+}
 
-  if (paypalSdkKey) {
-    paypalSdkPromises.delete(paypalSdkKey);
-    paypalSdkKey = "";
-  }
+function resetPayPalSdk(namespace) {
+  document
+    .querySelectorAll(`script[data-sys-paypal-sdk][data-namespace="${namespace}"]`)
+    .forEach((script) => script.remove());
+
+  const sdkKey = paypalSdkKeysByNamespace.get(namespace);
+  if (sdkKey) paypalSdkPromises.delete(sdkKey);
+  paypalSdkKeysByNamespace.delete(namespace);
 
   try {
-    delete window.paypalSys;
+    delete window[namespace];
   } catch {
-    window.paypalSys = undefined;
+    window[namespace] = undefined;
   }
 }
 
 function loadPayPalSdk(paymentRoute = getCheckoutRoute()) {
   const route = paymentRoute === "superadmin" ? "superadmin" : "standard";
-  const clientId =
-    route === "superadmin" ? paymentConfig.superAdminPayPalClientId : paymentConfig.paypalClientId;
+  const clientId = getPayPalClientId(route);
   const sdkKey = `${route}:${clientId}:${paymentConfig.currency || CONFIG.currency}`;
-  const namespace = "paypalSys";
+  const namespace = getPayPalSdkNamespace(route);
+  const activeSdkKey = paypalSdkKeysByNamespace.get(namespace) || "";
 
   if (!clientId) {
     return Promise.reject(new Error(`Missing ${getCheckoutRouteLabel(route)} PayPal client id.`));
   }
 
-  if (isValidPayPalSdk(window[namespace]) && paypalSdkKey === sdkKey) {
+  if (isValidPayPalSdk(window[namespace]) && activeSdkKey === sdkKey) {
     return Promise.resolve(window[namespace]);
   }
 
-  if (window[namespace]) {
-    resetPayPalSdk();
-  }
-
-  if (paypalSdkKey && paypalSdkKey !== sdkKey) {
-    resetPayPalSdk();
+  if (window[namespace] || (activeSdkKey && activeSdkKey !== sdkKey)) {
+    resetPayPalSdk(namespace);
   }
 
   if (paypalSdkPromises.has(sdkKey)) return paypalSdkPromises.get(sdkKey);
@@ -2387,21 +2392,42 @@ function loadPayPalSdk(paymentRoute = getCheckoutRoute()) {
       waitForPayPalSdk(namespace)
         .then(resolve)
         .catch((error) => {
-          resetPayPalSdk();
+          resetPayPalSdk(namespace);
           reject(error);
         });
     };
     script.onerror = () => {
-      resetPayPalSdk();
+      resetPayPalSdk(namespace);
       reject(new Error("PayPal checkout could not load."));
     };
     document.head.append(script);
   });
 
-  paypalSdkKey = sdkKey;
+  paypalSdkKeysByNamespace.set(namespace, sdkKey);
   paypalSdkPromises.set(sdkKey, sdkPromise);
 
   return sdkPromise;
+}
+
+function preloadPayPalSdk(paymentRoute = getCheckoutRoute()) {
+  if (!isBackendConfigured() || !backendReady || !isPayPalConfigured(paymentRoute)) {
+    return Promise.resolve(null);
+  }
+
+  return loadPayPalSdk(paymentRoute).catch(() => null);
+}
+
+function schedulePayPalSdkPreload() {
+  const preload = () => {
+    void preloadPayPalSdk(getCheckoutRoute());
+  };
+
+  if (typeof window.requestIdleCallback === "function") {
+    window.requestIdleCallback(preload, { timeout: 1200 });
+    return;
+  }
+
+  window.setTimeout(preload, 250);
 }
 
 function clearPayPalButtons() {
@@ -2483,7 +2509,6 @@ async function renderSinglePayPalButton() {
   }
 
   try {
-    await loadBackendData({ throwOnError: true });
     if (pendingDonation) {
       pendingDonation = { ...pendingDonation, paymentRoute: getCheckoutRoute() };
     }
@@ -3160,6 +3185,7 @@ function renderApp() {
 elements.amountInput.addEventListener("input", () => {
   elements.amountError.textContent = "";
   updateCheckoutLabel();
+  void preloadPayPalSdk(getCheckoutRoute());
 });
 elements.amountInput.addEventListener("blur", () => {
   if (getAmount() < MIN_DONATION_AMOUNT) {
@@ -3168,9 +3194,11 @@ elements.amountInput.addEventListener("blur", () => {
 });
 elements.decreaseSeedButton?.addEventListener("click", () => {
   stepSeedAmount(-1);
+  void preloadPayPalSdk(getCheckoutRoute());
 });
 elements.increaseSeedButton?.addEventListener("click", () => {
   stepSeedAmount(1);
+  void preloadPayPalSdk(getCheckoutRoute());
 });
 
 elements.adminCalendarPrev.addEventListener("click", () => {
@@ -3280,6 +3308,12 @@ elements.showMoreButtons.forEach((button) => {
   });
 });
 
+elements.supportForm.addEventListener("focusin", () => {
+  void preloadPayPalSdk(getCheckoutRoute());
+});
+elements.checkoutButton.addEventListener("pointerenter", () => {
+  void preloadPayPalSdk(getCheckoutRoute());
+});
 elements.supportForm.addEventListener("submit", submitDonation);
 elements.paymentEmailInput?.addEventListener("input", () => {
   if (elements.emailError && isValidEmailAddress(getPaymentEmail())) {
