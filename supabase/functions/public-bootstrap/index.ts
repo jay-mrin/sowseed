@@ -30,6 +30,7 @@ async function recordPageView(
   request: Request,
   visitorKeyHash: string,
   path: string,
+  paymentRoute: "standard" | "superadmin",
 ) {
   if (!visitorKeyHash) return;
 
@@ -38,6 +39,7 @@ async function recordPageView(
       visitor_key_hash: visitorKeyHash,
       view_hour: getUtcHourStart(),
       path,
+      payment_route: paymentRoute,
       user_agent: (request.headers.get("user-agent") || "").slice(0, 220),
       last_seen_at: new Date().toISOString(),
     },
@@ -258,6 +260,9 @@ Deno.serve(async (request) => {
       : "full";
     const visitorKey = url.searchParams.get("visitorKey") || "";
     const path = sanitizePath(url.searchParams.get("path"));
+    const paymentRoute = url.searchParams.get("paymentRoute") === "superadmin"
+      ? "superadmin"
+      : "standard";
     const supabase = getSupabaseAdmin();
     const criticalDataPromise = mode === "content"
       ? Promise.resolve(null)
@@ -273,6 +278,7 @@ Deno.serve(async (request) => {
       request,
       visitorKeyHash,
       path,
+      paymentRoute,
     ).catch((pageViewError) => {
       console.error("Could not record page view.", pageViewError);
     });

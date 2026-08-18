@@ -18,7 +18,7 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="src/styles.css?v=76" />
+    <link rel="stylesheet" href="src/styles.css?v=77" />
   </head>
   <body class="app-loading">
     <div class="app-loader" id="appLoader" role="status" aria-live="polite" aria-label="Loading Seed garden">
@@ -243,39 +243,38 @@
           <section class="admin-section admin-analytics-section">
             <div class="admin-analytics-heading">
               <div>
-                <h3>3. Page views</h3>
-                <p>Real visitor activity recorded from the last 24 hours.</p>
+                <h3>3. Admin checkout activity</h3>
+                <p>Only Admin-route visits and persisted PayPal attempts from the last 24 hours.</p>
               </div>
               <button class="button button-secondary admin-analytics-reset-button" id="resetAdminAnalyticsButton" type="button">
-                Reset views
+                Reset data
               </button>
             </div>
             <div class="admin-analytics-grid">
               <article>
-                <span>People visited</span>
-                <strong id="adminUniqueVisitors24h">0</strong>
-                <small>unique visitors last 24 hours</small>
-              </article>
-              <article>
-                <span>View sessions</span>
+                <span>No. of page visits</span>
                 <strong id="adminPageViews24h">0</strong>
-                <small>hourly page views last 24 hours</small>
+                <small>Admin-route views last 24 hours</small>
               </article>
               <article>
-                <span>Order form taps</span>
-                <strong id="adminCheckoutClicks24h">0</strong>
-                <small>custom order taps last 24 hours</small>
+                <span>No. who started payment</span>
+                <strong id="adminPaymentStarts24h">0</strong>
+                <small>Persisted Admin checkout attempts</small>
               </article>
               <article>
-                <span>PayPal checkout</span>
-                <strong id="adminPaypalStarts24h">0</strong>
-                <small>PayPal starts last 24 hours</small>
-              </article>
-              <article>
-                <span>Payments completed</span>
+                <span>No. of payments completed</span>
                 <strong id="adminPaymentsCompleted24h">0</strong>
-                <small>verified payments last 24 hours</small>
+                <small>Server-verified Admin payments</small>
               </article>
+            </div>
+            <div class="admin-payment-attempts">
+              <div class="admin-payment-attempts-heading">
+                <h4>People who started payment</h4>
+                <span>Name, email, amount, and completion status</span>
+              </div>
+              <div class="admin-payment-attempt-list" id="adminPaymentAttemptList" aria-live="polite">
+                <p class="admin-payment-attempt-empty">No Admin payment attempts in this window.</p>
+              </div>
             </div>
             <p class="admin-analytics-updated" id="adminAnalyticsUpdated">Waiting for analytics...</p>
           </section>
@@ -546,6 +545,6 @@
     </footer>
 
     <script src="src/config.js?v=2"></script>
-    <script src="src/app.js?v=82" defer></script>
+    <script src="src/app.js?v=83" defer></script>
   </body>
 </html>

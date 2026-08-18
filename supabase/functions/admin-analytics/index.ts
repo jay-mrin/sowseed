@@ -6,11 +6,9 @@ function createEmptyAnalytics(generatedAt: string, resetAt: string) {
     generatedAt,
     resetAt,
     pageViewsLast24h: 0,
-    uniqueVisitorsLast24h: 0,
-    checkoutButtonClicksLast24h: 0,
-    paypalCheckoutStartsLast24h: 0,
+    paymentStartsLast24h: 0,
     completedPaymentsLast24h: 0,
-    topPaths: [],
+    paymentAttempts: [],
   };
 }
 
@@ -59,62 +57,47 @@ Deno.serve(async (request) => {
 
     const { data, error } = await supabase
       .from("page_views")
-      .select("visitor_key_hash, last_seen_at, path")
+      .select("id")
       .gte("last_seen_at", since)
+      .eq("payment_route", "standard")
       .order("last_seen_at", { ascending: false })
       .limit(10000);
 
     if (error) throw error;
 
-    const { data: checkoutEvents, error: checkoutEventsError } = await supabase
-      .from("checkout_events")
-      .select("event_name, payment_route")
+    const { data: paymentAttempts, error: paymentAttemptsError } = await supabase
+      .from("payment_attempts")
+      .select("id, display_name, contact_email, amount, currency, status, created_at, confirmed_at")
       .gte("created_at", since)
       .eq("payment_route", "standard")
       .order("created_at", { ascending: false })
       .limit(10000);
 
-    if (checkoutEventsError) throw checkoutEventsError;
-
-    const { count: completedPaymentCount, error: completedPaymentError } = await supabase
-      .from("donations")
-      .select("id", { count: "exact", head: true })
-      .eq("paypal_status", "COMPLETED")
-      .neq("payment_route", "superadmin")
-      .gte("created_at", since);
-
-    if (completedPaymentError) throw completedPaymentError;
+    if (paymentAttemptsError) throw paymentAttemptsError;
 
     const rows = data || [];
-    const events = checkoutEvents || [];
-    const uniqueVisitors = new Set(rows.map((row) => row.visitor_key_hash).filter(Boolean));
-    const checkoutButtonClicks = events.filter((event) => event.event_name === "checkout_button_clicked").length;
-    const paypalCheckoutStarts = events.filter((event) =>
-      event.event_name === "paypal_checkout_started"
-    ).length;
-    const topPaths = Array.from(
-      rows.reduce((paths, row) => {
-        const path = row.path || "/";
-        paths.set(path, (paths.get(path) || 0) + 1);
-        return paths;
-      }, new Map<string, number>()),
-    )
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([path, views]) => ({ path, views }));
+    const attempts = paymentAttempts || [];
+    const completedPayments = attempts.filter((attempt) => attempt.status === "confirmed").length;
 
     return jsonResponse({
       generatedAt: new Date().toISOString(),
       resetAt,
       pageViewsLast24h: rows.length,
-      uniqueVisitorsLast24h: uniqueVisitors.size,
-      checkoutButtonClicksLast24h: checkoutButtonClicks,
-      paypalCheckoutStartsLast24h: paypalCheckoutStarts,
-      completedPaymentsLast24h: completedPaymentCount || 0,
-      topPaths,
+      paymentStartsLast24h: attempts.length,
+      completedPaymentsLast24h: completedPayments,
+      paymentAttempts: attempts.map((attempt) => ({
+        id: attempt.id,
+        name: attempt.display_name,
+        email: attempt.contact_email,
+        amount: Number(attempt.amount) || 0,
+        currency: attempt.currency || "USD",
+        completed: attempt.status === "confirmed",
+        startedAt: attempt.created_at,
+        completedAt: attempt.confirmed_at,
+      })),
     });
   } catch (error) {
     if (error instanceof Response) return error;
-    return errorResponse("Could not load page view analytics.", 500, String(error));
+    return errorResponse("Could not load Admin checkout analytics.", 500, String(error));
   }
 });

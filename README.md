@@ -14,7 +14,7 @@ Then open `http://127.0.0.1:5173`.
 
 When `src/config.js` has `backendEnabled: false`, the app stays in local demo mode. When Supabase values are filled and `backendEnabled: true`, public data, goal settings, posts, orders, likes, comments, and PayPal checkout are loaded through Supabase Edge Functions.
 
-The admin portal also shows real page-view analytics for the last 24 hours. A public page load records one view session per visitor per hour, then the admin-only analytics endpoint reports unique visitors, total hourly view sessions, checkout taps, PayPal starts, and completed payments. Admins can reset this dashboard so new activity starts counting from zero.
+The admin portal also shows Admin-checkout analytics for the last 24 hours. A public page load records one hourly view session tagged with the active checkout route. The admin-only analytics endpoint reports only Admin-route page visits and persisted PayPal payment attempts, including each customer's name, email, amount, and server-verified completion status. SuperAdmin-route traffic and payments are excluded. Admins can reset this dashboard so new activity starts counting from zero.
 
 The payment column includes a Blessing Wall loaded from `seed_comments`. Initial comments are imported from legacy data, and completed public Admin-routed orders can add a new comment with the captured payment timestamp.
 

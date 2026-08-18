@@ -910,6 +910,110 @@ a {
   white-space: nowrap;
 }
 
+.admin-payment-attempts {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.admin-payment-attempts-heading {
+  display: grid;
+  gap: 3px;
+}
+
+.admin-payment-attempts-heading h4,
+.admin-payment-attempts-heading span,
+.admin-payment-attempt-empty {
+  margin: 0;
+}
+
+.admin-payment-attempts-heading h4 {
+  color: #1d232c;
+  font-size: 14px;
+}
+
+.admin-payment-attempts-heading span,
+.admin-payment-attempt-empty {
+  color: #8f95a5;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.admin-payment-attempt-list {
+  display: grid;
+  gap: 8px;
+  max-height: 360px;
+  overflow: auto;
+}
+
+.admin-payment-attempt {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 12px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid rgba(217, 215, 207, 0.68);
+  border-radius: 14px;
+  background: var(--white);
+}
+
+.admin-payment-attempt-person,
+.admin-payment-attempt-meta {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.admin-payment-attempt-person strong,
+.admin-payment-attempt-meta strong {
+  color: #1d232c;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.admin-payment-attempt-person a,
+.admin-payment-attempt-meta span {
+  color: #777d8d;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.admin-payment-attempt-meta {
+  justify-items: end;
+  text-align: right;
+}
+
+.admin-payment-attempt-status {
+  grid-column: 1 / -1;
+  justify-self: start;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.admin-payment-attempt-status.is-completed {
+  color: #126936;
+  background: rgba(34, 226, 120, 0.14);
+}
+
+.admin-payment-attempt-status.is-incomplete {
+  color: #8f1616;
+  background: rgba(230, 39, 39, 0.1);
+}
+
+.admin-payment-attempt-empty {
+  padding: 12px;
+  border: 1px dashed rgba(217, 215, 207, 0.9);
+  border-radius: 14px;
+  text-align: center;
+}
+
 .admin-posts-section {
   grid-column: 1 / -1;
   max-height: none;

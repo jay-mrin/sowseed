@@ -227,7 +227,6 @@ const elements = {
   adminCalendarSummary: document.querySelector("#adminCalendarSummary"),
   adminCalendarTitle: document.querySelector("#adminCalendarTitle"),
   adminDonationHeading: document.querySelector("#adminDonationHeading"),
-  adminCheckoutClicks24h: document.querySelector("#adminCheckoutClicks24h"),
   adminEmailInput: document.querySelector("#adminEmailInput"),
   adminForm: document.querySelector("#adminForm"),
   adminLoginDialog: document.querySelector("#adminLoginDialog"),
@@ -237,18 +236,18 @@ const elements = {
   adminNewPostImage: document.querySelector("#adminNewPostImage"),
   adminNewPostTitle: document.querySelector("#adminNewPostTitle"),
   adminPanel: document.querySelector("#adminPanel"),
+  adminPaymentAttemptList: document.querySelector("#adminPaymentAttemptList"),
+  adminPaymentStarts24h: document.querySelector("#adminPaymentStarts24h"),
   adminPageViews24h: document.querySelector("#adminPageViews24h"),
   adminPasswordError: document.querySelector("#adminPasswordError"),
   adminPasswordInput: document.querySelector("#adminPasswordInput"),
   adminPaymentsCompleted24h: document.querySelector("#adminPaymentsCompleted24h"),
-  adminPaypalStarts24h: document.querySelector("#adminPaypalStarts24h"),
   adminPostList: document.querySelector("#adminPostList"),
   adminPublishPostButton: document.querySelector("#adminPublishPostButton"),
   resetAdminAnalyticsButton: document.querySelector("#resetAdminAnalyticsButton"),
   adminUploadFileName: document.querySelector("#adminUploadFileName"),
   adminUploadPreview: document.querySelector("#adminUploadPreview"),
   adminUploadPreviewImage: document.querySelector("#adminUploadPreviewImage"),
-  adminUniqueVisitors24h: document.querySelector("#adminUniqueVisitors24h"),
   amountError: document.querySelector("#amountError"),
   amountInput: document.querySelector("#amountInput"),
   brandTitle: document.querySelector("#brandTitle"),
@@ -480,35 +479,37 @@ function normalizePosts(posts) {
 
 function createEmptyAnalytics() {
   return {
-    checkoutButtonClicksLast24h: 0,
     completedPaymentsLast24h: 0,
     generatedAt: null,
     pageViewsLast24h: 0,
-    paypalCheckoutStartsLast24h: 0,
-    topPaths: [],
-    uniqueVisitorsLast24h: 0,
+    paymentAttempts: [],
+    paymentStartsLast24h: 0,
   };
 }
 
 function normalizeAnalytics(analytics) {
   const defaults = createEmptyAnalytics();
-  const topPaths = Array.isArray(analytics?.topPaths)
-    ? analytics.topPaths
-        .map((item) => ({
-          path: String(item?.path || "/").slice(0, 180),
-          views: Math.max(Number.parseInt(item?.views, 10) || 0, 0),
+  const paymentAttempts = Array.isArray(analytics?.paymentAttempts)
+    ? analytics.paymentAttempts
+        .map((attempt) => ({
+          id: String(attempt?.id || ""),
+          name: String(attempt?.name || "Customer").trim().slice(0, 80) || "Customer",
+          email: String(attempt?.email || "").trim().slice(0, 160),
+          amount: Math.max(Number(attempt?.amount) || 0, 0),
+          currency: String(attempt?.currency || "USD").trim().slice(0, 3).toUpperCase() || "USD",
+          completed: attempt?.completed === true,
+          startedAt: attempt?.startedAt || null,
+          completedAt: attempt?.completedAt || null,
         }))
-        .filter((item) => item.path)
+        .filter((attempt) => attempt.id && attempt.email)
     : [];
 
   return {
-    checkoutButtonClicksLast24h: Math.max(Number.parseInt(analytics?.checkoutButtonClicksLast24h, 10) || 0, 0),
     completedPaymentsLast24h: Math.max(Number.parseInt(analytics?.completedPaymentsLast24h, 10) || 0, 0),
     generatedAt: analytics?.generatedAt || defaults.generatedAt,
     pageViewsLast24h: Math.max(Number.parseInt(analytics?.pageViewsLast24h, 10) || 0, 0),
-    paypalCheckoutStartsLast24h: Math.max(Number.parseInt(analytics?.paypalCheckoutStartsLast24h, 10) || 0, 0),
-    topPaths,
-    uniqueVisitorsLast24h: Math.max(Number.parseInt(analytics?.uniqueVisitorsLast24h, 10) || 0, 0),
+    paymentAttempts,
+    paymentStartsLast24h: Math.max(Number.parseInt(analytics?.paymentStartsLast24h, 10) || 0, 0),
   };
 }
 
@@ -738,6 +739,7 @@ async function loadBackendData(options = {}) {
   try {
     const params = new URLSearchParams({
       path: window.location.pathname || "/",
+      paymentRoute: getConfiguredCheckoutRoute(),
       visitorKey: getVisitorKey(),
     });
     if (mode !== "full") params.set("mode", mode);
@@ -1644,7 +1646,7 @@ async function loadAdminAnalytics(options = {}) {
   const announce = Boolean(options.announce);
 
   if (announce) {
-    setAdminStatus("Loading page views from the last 24 hours...", "loading", { persist: true });
+    setAdminStatus("Loading Admin checkout activity from the last 24 hours...", "loading", { persist: true });
   }
 
   try {
@@ -1657,7 +1659,7 @@ async function loadAdminAnalytics(options = {}) {
     renderAdminAnalytics();
 
     if (announce) {
-      setAdminStatus("Page view analytics loaded for the last 24 hours.", "success");
+      setAdminStatus("Admin checkout activity loaded for the last 24 hours.", "success");
     }
   } catch (error) {
     const message = error.message || "Could not load page view analytics.";
@@ -1670,7 +1672,7 @@ async function resetAdminAnalytics() {
   if (!isBackendConfigured() || !getAdminAccessToken()) {
     state.analytics = createEmptyAnalytics();
     renderAdminAnalytics();
-    showToast("Page view analytics reset locally.");
+    showToast("Admin checkout analytics reset locally.");
     return;
   }
 
@@ -1678,9 +1680,9 @@ async function resetAdminAnalytics() {
     {
       button: elements.resetAdminAnalyticsButton,
       busyText: "Resetting...",
-      loadingMessage: "Resetting page view analytics...",
-      successMessage: "Page view analytics reset. New activity will count from now.",
-      errorMessage: "Could not reset page view analytics.",
+      loadingMessage: "Resetting Admin checkout analytics...",
+      successMessage: "Admin checkout analytics reset. New activity will count from now.",
+      errorMessage: "Could not reset Admin checkout analytics.",
     },
     async () => {
       const payload = await callEdge("admin-analytics", {
@@ -1705,7 +1707,7 @@ async function refreshAdminPortalData() {
   setButtonBusy(elements.refreshAdminButton, true, "Reloading...");
   if (elements.adminCalendarPrev) elements.adminCalendarPrev.disabled = true;
   if (elements.adminCalendarNext) elements.adminCalendarNext.disabled = true;
-  setAdminStatus("Reloading page content, order records, posts, and page views...", "loading", { persist: true });
+  setAdminStatus("Reloading page content, order records, posts, and Admin checkout activity...", "loading", { persist: true });
 
   try {
     await loadBackendData({ throwOnError: true });
@@ -2002,27 +2004,46 @@ function renderCheckoutRouteControls() {
 }
 
 function renderAdminAnalytics() {
-  if (!elements.adminUniqueVisitors24h || !elements.adminPageViews24h || !elements.adminAnalyticsUpdated) return;
+  if (!elements.adminPageViews24h || !elements.adminPaymentStarts24h || !elements.adminAnalyticsUpdated) return;
 
   const analytics = normalizeAnalytics(state.analytics);
   const generatedAt = analytics.generatedAt ? new Date(analytics.generatedAt) : null;
   const hasValidDate = generatedAt && !Number.isNaN(generatedAt.getTime());
-  const topPath = analytics.topPaths[0];
 
-  elements.adminUniqueVisitors24h.textContent = formatCompactNumber(analytics.uniqueVisitorsLast24h);
   elements.adminPageViews24h.textContent = formatCompactNumber(analytics.pageViewsLast24h);
-  if (elements.adminCheckoutClicks24h) {
-    elements.adminCheckoutClicks24h.textContent = formatCompactNumber(analytics.checkoutButtonClicksLast24h);
-  }
-  if (elements.adminPaypalStarts24h) {
-    elements.adminPaypalStarts24h.textContent = formatCompactNumber(analytics.paypalCheckoutStartsLast24h);
-  }
+  elements.adminPaymentStarts24h.textContent = formatCompactNumber(analytics.paymentStartsLast24h);
   if (elements.adminPaymentsCompleted24h) {
     elements.adminPaymentsCompleted24h.textContent = formatCompactNumber(analytics.completedPaymentsLast24h);
   }
+  if (elements.adminPaymentAttemptList) {
+    elements.adminPaymentAttemptList.innerHTML = analytics.paymentAttempts.length
+      ? analytics.paymentAttempts
+          .map((attempt) => {
+            const startedAt = attempt.startedAt ? new Date(attempt.startedAt) : null;
+            const hasValidStartedAt = startedAt && !Number.isNaN(startedAt.getTime());
+
+            return `
+              <article class="admin-payment-attempt">
+                <div class="admin-payment-attempt-person">
+                  <strong>${escapeHtml(attempt.name)}</strong>
+                  <a href="mailto:${escapeHtml(attempt.email)}">${escapeHtml(attempt.email)}</a>
+                </div>
+                <div class="admin-payment-attempt-meta">
+                  <strong>${escapeHtml(money(attempt.amount))}</strong>
+                  <span>${hasValidStartedAt ? `${escapeHtml(readableDate(startedAt))} · ${escapeHtml(readableTime(startedAt))}` : "Start time unavailable"}</span>
+                </div>
+                <span class="admin-payment-attempt-status ${attempt.completed ? "is-completed" : "is-incomplete"}">
+                  ${attempt.completed ? "Completed" : "Not completed"}
+                </span>
+              </article>
+            `;
+          })
+          .join("")
+      : `<p class="admin-payment-attempt-empty">No Admin payment attempts in this window.</p>`;
+  }
   elements.adminAnalyticsUpdated.textContent = hasValidDate
-    ? `Updated ${readableDate(generatedAt)} at ${readableTime(generatedAt)}${topPath ? ` · Top path: ${topPath.path}` : ""}`
-    : "Open the admin portal to load page-view analytics.";
+    ? `Updated ${readableDate(generatedAt)} at ${readableTime(generatedAt)} · Admin checkout only`
+    : "Open the admin portal to load Admin checkout analytics.";
 }
 
 function renderCalendarDetails(context) {

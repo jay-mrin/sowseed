@@ -70,3 +70,17 @@ test("cleanup migrations close direct-table bypasses and remove retired schema",
     assert.ok(cleanupMigration.includes(`drop table if exists public.${table}`));
   }
 });
+
+test("Admin checkout analytics come from route-scoped persisted payment attempts", () => {
+  const analytics = read("supabase/functions/admin-analytics/index.ts");
+  const bootstrap = read("supabase/functions/public-bootstrap/index.ts");
+  const migration = read("supabase/migrations/202608180008_admin_checkout_analytics.sql");
+
+  assert.match(analytics, /\.from\("payment_attempts"\)/);
+  assert.match(analytics, /\.eq\("payment_route", "standard"\)/);
+  assert.match(analytics, /contact_email/);
+  assert.match(analytics, /attempt\.status === "confirmed"/);
+  assert.doesNotMatch(analytics, /checkout_button_clicked|paypal_checkout_started/);
+  assert.match(bootstrap, /payment_route: paymentRoute/);
+  assert.match(migration, /add column if not exists payment_route text/);
+});
