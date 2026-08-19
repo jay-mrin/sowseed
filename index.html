@@ -243,8 +243,8 @@
           <section class="admin-section admin-analytics-section">
             <div class="admin-analytics-heading">
               <div>
-                <h3>3. Admin checkout activity</h3>
-                <p>Only Admin-route visits and persisted PayPal attempts from the last 24 hours.</p>
+                <h3 id="adminAnalyticsTitle">3. Admin checkout activity</h3>
+                <p id="adminAnalyticsDescription">Only Admin-route visits and persisted PayPal attempts from the last 24 hours.</p>
               </div>
               <button class="button button-secondary admin-analytics-reset-button" id="resetAdminAnalyticsButton" type="button">
                 Reset data
@@ -254,17 +254,17 @@
               <article>
                 <span>No. of page visits</span>
                 <strong id="adminPageViews24h">0</strong>
-                <small>Admin-route views last 24 hours</small>
+                <small id="adminPageViewsLabel">Admin-route views last 24 hours</small>
               </article>
               <article>
                 <span>No. who started payment</span>
                 <strong id="adminPaymentStarts24h">0</strong>
-                <small>Persisted Admin checkout attempts</small>
+                <small id="adminPaymentStartsLabel">Persisted Admin checkout attempts</small>
               </article>
               <article>
                 <span>No. of payments completed</span>
                 <strong id="adminPaymentsCompleted24h">0</strong>
-                <small>Server-verified Admin payments</small>
+                <small id="adminPaymentsCompletedLabel">Server-verified Admin payments</small>
               </article>
             </div>
             <div class="admin-payment-attempts">

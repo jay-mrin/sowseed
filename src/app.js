@@ -218,6 +218,8 @@ const elements = {
   aboutExpanded: document.querySelector("#aboutExpanded"),
   aboutTitle: document.querySelector("#aboutTitle"),
   adminActionStatus: document.querySelector("#adminActionStatus"),
+  adminAnalyticsDescription: document.querySelector("#adminAnalyticsDescription"),
+  adminAnalyticsTitle: document.querySelector("#adminAnalyticsTitle"),
   adminAnalyticsUpdated: document.querySelector("#adminAnalyticsUpdated"),
   adminBackdrop: document.querySelector("#adminBackdrop"),
   adminCalendarDetails: document.querySelector("#adminCalendarDetails"),
@@ -238,10 +240,13 @@ const elements = {
   adminPanel: document.querySelector("#adminPanel"),
   adminPaymentAttemptList: document.querySelector("#adminPaymentAttemptList"),
   adminPaymentStarts24h: document.querySelector("#adminPaymentStarts24h"),
+  adminPaymentStartsLabel: document.querySelector("#adminPaymentStartsLabel"),
   adminPageViews24h: document.querySelector("#adminPageViews24h"),
+  adminPageViewsLabel: document.querySelector("#adminPageViewsLabel"),
   adminPasswordError: document.querySelector("#adminPasswordError"),
   adminPasswordInput: document.querySelector("#adminPasswordInput"),
   adminPaymentsCompleted24h: document.querySelector("#adminPaymentsCompleted24h"),
+  adminPaymentsCompletedLabel: document.querySelector("#adminPaymentsCompletedLabel"),
   adminPostList: document.querySelector("#adminPostList"),
   adminPublishPostButton: document.querySelector("#adminPublishPostButton"),
   resetAdminAnalyticsButton: document.querySelector("#resetAdminAnalyticsButton"),
@@ -482,6 +487,7 @@ function createEmptyAnalytics() {
     completedPaymentsLast24h: 0,
     generatedAt: null,
     pageViewsLast24h: 0,
+    paymentRoute: null,
     paymentAttempts: [],
     paymentStartsLast24h: 0,
   };
@@ -508,6 +514,7 @@ function normalizeAnalytics(analytics) {
     completedPaymentsLast24h: Math.max(Number.parseInt(analytics?.completedPaymentsLast24h, 10) || 0, 0),
     generatedAt: analytics?.generatedAt || defaults.generatedAt,
     pageViewsLast24h: Math.max(Number.parseInt(analytics?.pageViewsLast24h, 10) || 0, 0),
+    paymentRoute: analytics?.paymentRoute === "superadmin" ? "superadmin" : analytics?.paymentRoute === "standard" ? "standard" : null,
     paymentAttempts,
     paymentStartsLast24h: Math.max(Number.parseInt(analytics?.paymentStartsLast24h, 10) || 0, 0),
   };
@@ -1644,9 +1651,10 @@ async function loadAdminAnalytics(options = {}) {
   if (!isBackendConfigured() || !getAdminAccessToken()) return;
 
   const announce = Boolean(options.announce);
+  const routeLabel = state.adminProfile?.role === "super_admin" ? "SuperAdmin" : "Admin";
 
   if (announce) {
-    setAdminStatus("Loading Admin checkout activity from the last 24 hours...", "loading", { persist: true });
+    setAdminStatus(`Loading ${routeLabel} checkout activity from the last 24 hours...`, "loading", { persist: true });
   }
 
   try {
@@ -1656,10 +1664,14 @@ async function loadAdminAnalytics(options = {}) {
     });
 
     state.analytics = normalizeAnalytics(payload);
+    const expectedRoute = state.adminProfile?.role === "super_admin" ? "superadmin" : "standard";
+    if (state.analytics.paymentRoute !== expectedRoute) {
+      throw new Error(`${routeLabel} checkout analytics were not correctly isolated.`);
+    }
     renderAdminAnalytics();
 
     if (announce) {
-      setAdminStatus("Admin checkout activity loaded for the last 24 hours.", "success");
+      setAdminStatus(`${routeLabel} checkout activity loaded for the last 24 hours.`, "success");
     }
   } catch (error) {
     const message = error.message || "Could not load page view analytics.";
@@ -1669,10 +1681,11 @@ async function loadAdminAnalytics(options = {}) {
 }
 
 async function resetAdminAnalytics() {
+  const routeLabel = state.adminProfile?.role === "super_admin" ? "SuperAdmin" : "Admin";
   if (!isBackendConfigured() || !getAdminAccessToken()) {
     state.analytics = createEmptyAnalytics();
     renderAdminAnalytics();
-    showToast("Admin checkout analytics reset locally.");
+    showToast(`${routeLabel} checkout analytics reset locally.`);
     return;
   }
 
@@ -1680,9 +1693,9 @@ async function resetAdminAnalytics() {
     {
       button: elements.resetAdminAnalyticsButton,
       busyText: "Resetting...",
-      loadingMessage: "Resetting Admin checkout analytics...",
-      successMessage: "Admin checkout analytics reset. New activity will count from now.",
-      errorMessage: "Could not reset Admin checkout analytics.",
+      loadingMessage: `Resetting ${routeLabel} checkout analytics...`,
+      successMessage: `${routeLabel} checkout analytics reset. New activity will count from now.`,
+      errorMessage: `Could not reset ${routeLabel} checkout analytics.`,
     },
     async () => {
       const payload = await callEdge("admin-analytics", {
@@ -1707,14 +1720,15 @@ async function refreshAdminPortalData() {
   setButtonBusy(elements.refreshAdminButton, true, "Reloading...");
   if (elements.adminCalendarPrev) elements.adminCalendarPrev.disabled = true;
   if (elements.adminCalendarNext) elements.adminCalendarNext.disabled = true;
-  setAdminStatus("Reloading page content, order records, posts, and Admin checkout activity...", "loading", { persist: true });
+  const routeLabel = state.adminProfile?.role === "super_admin" ? "SuperAdmin" : "Admin";
+  setAdminStatus(`Reloading page content, order records, posts, and ${routeLabel} checkout activity...`, "loading", { persist: true });
 
   try {
     await loadBackendData({ throwOnError: true });
     renderApp();
     await Promise.all([loadAdminDonations(), loadAdminAnalytics()]);
-    setAdminStatus("Admin portal data reloaded.", "success");
-    showToast("Admin portal data reloaded.");
+    setAdminStatus(`${routeLabel} portal data reloaded.`, "success");
+    showToast(`${routeLabel} portal data reloaded.`);
   } catch (error) {
     const message = error.message || "Could not reload admin portal data.";
     setAdminStatus(message, "error", { persist: true });
@@ -2007,8 +2021,25 @@ function renderAdminAnalytics() {
   if (!elements.adminPageViews24h || !elements.adminPaymentStarts24h || !elements.adminAnalyticsUpdated) return;
 
   const analytics = normalizeAnalytics(state.analytics);
+  const routeLabel = state.adminProfile?.role === "super_admin" ? "SuperAdmin" : "Admin";
   const generatedAt = analytics.generatedAt ? new Date(analytics.generatedAt) : null;
   const hasValidDate = generatedAt && !Number.isNaN(generatedAt.getTime());
+
+  if (elements.adminAnalyticsTitle) {
+    elements.adminAnalyticsTitle.textContent = `3. ${routeLabel} checkout activity`;
+  }
+  if (elements.adminAnalyticsDescription) {
+    elements.adminAnalyticsDescription.textContent = `Only ${routeLabel}-route visits and persisted PayPal attempts from the last 24 hours.`;
+  }
+  if (elements.adminPageViewsLabel) {
+    elements.adminPageViewsLabel.textContent = `${routeLabel}-route views last 24 hours`;
+  }
+  if (elements.adminPaymentStartsLabel) {
+    elements.adminPaymentStartsLabel.textContent = `Persisted ${routeLabel} checkout attempts`;
+  }
+  if (elements.adminPaymentsCompletedLabel) {
+    elements.adminPaymentsCompletedLabel.textContent = `Server-verified ${routeLabel} payments`;
+  }
 
   elements.adminPageViews24h.textContent = formatCompactNumber(analytics.pageViewsLast24h);
   elements.adminPaymentStarts24h.textContent = formatCompactNumber(analytics.paymentStartsLast24h);
@@ -2039,11 +2070,11 @@ function renderAdminAnalytics() {
             `;
           })
           .join("")
-      : `<p class="admin-payment-attempt-empty">No Admin payment attempts in this window.</p>`;
+      : `<p class="admin-payment-attempt-empty">No ${routeLabel} payment attempts in this window.</p>`;
   }
   elements.adminAnalyticsUpdated.textContent = hasValidDate
-    ? `Updated ${readableDate(generatedAt)} at ${readableTime(generatedAt)} · Admin checkout only`
-    : "Open the admin portal to load Admin checkout analytics.";
+    ? `Updated ${readableDate(generatedAt)} at ${readableTime(generatedAt)} · ${routeLabel} checkout only`
+    : `Open the ${routeLabel} portal to load ${routeLabel} checkout analytics.`;
 }
 
 function renderCalendarDetails(context) {
@@ -2814,7 +2845,10 @@ function openAdminPanel() {
   sections.forEach(section => {
     const isSuperAdminSection = section.classList.contains("admin-super-checkout-section");
     const isCollectionCalendar = section.classList.contains("admin-donations");
-    const shouldShow = isSuperAdmin ? isSuperAdminSection || isCollectionCalendar : !isSuperAdminSection;
+    const isRoleScopedAnalytics = section.classList.contains("admin-analytics-section");
+    const shouldShow = isSuperAdmin
+      ? isSuperAdminSection || isCollectionCalendar || isRoleScopedAnalytics
+      : !isSuperAdminSection;
     section.hidden = !shouldShow;
     section.style.display = shouldShow ? "" : "none";
   });

@@ -14,7 +14,7 @@ Then open `http://127.0.0.1:5173`.
 
 When `src/config.js` has `backendEnabled: false`, the app stays in local demo mode. When Supabase values are filled and `backendEnabled: true`, public data, goal settings, posts, orders, likes, comments, and PayPal checkout are loaded through Supabase Edge Functions.
 
-The admin portal also shows Admin-checkout analytics for the last 24 hours. A public page load records one hourly view session tagged with the active checkout route. The admin-only analytics endpoint reports only Admin-route page visits and persisted PayPal payment attempts, including each customer's name, email, amount, and server-verified completion status. SuperAdmin-route traffic and payments are excluded. Admins can reset this dashboard so new activity starts counting from zero.
+Each portal shows checkout analytics for its own payment route from the last 24 hours. A public page load records one hourly view session tagged with the active checkout route. The role-scoped analytics endpoint reports the current portal's page visits and persisted PayPal payment attempts, including each customer's name, email, amount, and server-verified completion status. Admin never receives SuperAdmin activity, and SuperAdmin never receives Admin activity. Each portal can reset its own dashboard without affecting the other portal.
 
 The payment column includes a Blessing Wall loaded from `seed_comments`. Initial comments are imported from legacy data, and completed public Admin-routed orders can add a new comment with the captured payment timestamp.
 
@@ -118,7 +118,7 @@ Use PayPal sandbox first:
 - Cancelled checkout creates no donation.
 - Duplicate capture/webhook updates do not create duplicate donations.
 - Admin calendar can download a proof PDF for each digital-service order and mark orders fulfilled.
-- Admin analytics shows unique visitors, view sessions, donation taps, PayPal starts, and completed payments from the last 24 hours; Reset views starts those counts fresh.
+- Admin and SuperAdmin analytics each show only their own route's visits, PayPal starts, and completed payments from the last 24 hours; resetting one portal does not affect the other.
 - Public Blessing Wall loads imported legacy comments and appends paid blessing requests after confirmed payment capture.
 - Admin login requires Supabase Auth and `admin_profiles`; Admin and SuperAdmin see only the orders routed to their respective collection account.
 - Donor comments require the same-browser donor token returned after a completed donation.

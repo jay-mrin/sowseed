@@ -1,10 +1,17 @@
 import { errorResponse, handleOptions, jsonResponse } from "../_shared/http.ts";
 import { requireAdmin } from "../_shared/supabase.ts";
 
-function createEmptyAnalytics(generatedAt: string, resetAt: string) {
+type PaymentRoute = "standard" | "superadmin";
+
+function createEmptyAnalytics(
+  generatedAt: string,
+  resetAt: string,
+  paymentRoute: PaymentRoute,
+) {
   return {
     generatedAt,
     resetAt,
+    paymentRoute,
     pageViewsLast24h: 0,
     paymentStartsLast24h: 0,
     completedPaymentsLast24h: 0,
@@ -12,12 +19,12 @@ function createEmptyAnalytics(generatedAt: string, resetAt: string) {
   };
 }
 
-async function getAnalyticsSince(supabase: any) {
+async function getAnalyticsSince(supabase: any, paymentRoute: PaymentRoute) {
   const dayWindow = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const { data, error } = await supabase
-    .from("analytics_state")
+    .from("checkout_analytics_state")
     .select("reset_at")
-    .eq("id", true)
+    .eq("payment_route", paymentRoute)
     .maybeSingle();
 
   if (error) throw error;
@@ -36,30 +43,38 @@ Deno.serve(async (request) => {
   if (options) return options;
 
   try {
-    const { supabase } = await requireAdmin(request, { allowedRoles: ["admin", "super_admin"] });
+    const { supabase, adminProfile } = await requireAdmin(request, {
+      allowedRoles: ["admin", "super_admin"],
+    });
+    const paymentRoute: PaymentRoute = adminProfile.role === "super_admin"
+      ? "superadmin"
+      : "standard";
 
     if (request.method === "DELETE") {
       const resetAt = new Date().toISOString();
       const { error } = await supabase
-        .from("analytics_state")
-        .upsert({ id: true, reset_at: resetAt, updated_at: resetAt }, { onConflict: "id" });
+        .from("checkout_analytics_state")
+        .upsert(
+          { payment_route: paymentRoute, reset_at: resetAt, updated_at: resetAt },
+          { onConflict: "payment_route" },
+        );
 
       if (error) throw error;
 
-      return jsonResponse(createEmptyAnalytics(resetAt, resetAt));
+      return jsonResponse(createEmptyAnalytics(resetAt, resetAt, paymentRoute));
     }
 
     if (request.method !== "GET") {
       return errorResponse("Method not allowed.", 405);
     }
 
-    const { since, resetAt } = await getAnalyticsSince(supabase);
+    const { since, resetAt } = await getAnalyticsSince(supabase, paymentRoute);
 
     const { data, error } = await supabase
       .from("page_views")
       .select("id")
       .gte("last_seen_at", since)
-      .eq("payment_route", "standard")
+      .eq("payment_route", paymentRoute)
       .order("last_seen_at", { ascending: false })
       .limit(10000);
 
@@ -69,7 +84,7 @@ Deno.serve(async (request) => {
       .from("payment_attempts")
       .select("id, display_name, contact_email, amount, currency, status, created_at, confirmed_at")
       .gte("created_at", since)
-      .eq("payment_route", "standard")
+      .eq("payment_route", paymentRoute)
       .order("created_at", { ascending: false })
       .limit(10000);
 
@@ -82,6 +97,7 @@ Deno.serve(async (request) => {
     return jsonResponse({
       generatedAt: new Date().toISOString(),
       resetAt,
+      paymentRoute,
       pageViewsLast24h: rows.length,
       paymentStartsLast24h: attempts.length,
       completedPaymentsLast24h: completedPayments,
@@ -98,6 +114,6 @@ Deno.serve(async (request) => {
     });
   } catch (error) {
     if (error instanceof Response) return error;
-    return errorResponse("Could not load Admin checkout analytics.", 500, String(error));
+    return errorResponse("Could not load checkout analytics.", 500, String(error));
   }
 });
