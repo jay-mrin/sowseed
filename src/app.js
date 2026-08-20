@@ -651,6 +651,7 @@ async function callEdge(functionName, options = {}) {
   const response = await fetch(edgeUrl(functionName), {
     method: options.method || "POST",
     headers,
+    cache: "no-store",
     body: options.body instanceof FormData ? options.body : options.body ? JSON.stringify(options.body) : undefined,
   });
   const payload = await response.json().catch(() => ({}));
@@ -798,23 +799,19 @@ async function initializeApp() {
     setActiveView(getViewIdFromHash());
   } finally {
     finishInitialLoading();
-    const paypalWarmup = preloadPayPalSdk(getCheckoutRoute());
 
     if (window.location.hash === "#admin") {
       openAdminLogin();
     }
 
     window.requestAnimationFrame(() => {
-      void loadDeferredBackendData(paypalWarmup);
+      void loadDeferredBackendData();
     });
   }
 }
 
-async function loadDeferredBackendData(paypalWarmup = Promise.resolve(null)) {
+async function loadDeferredBackendData() {
   if (!isBackendConfigured() || !backendReady || !publicContentLoading) return;
-
-  await Promise.race([paypalWarmup, wait(900)]);
-  if (!publicContentLoading) return;
 
   await loadBackendData({ mode: "content" });
   renderApp();
@@ -2470,6 +2467,11 @@ function resetPayPalSdk(namespace) {
   }
 }
 
+function resetAllPayPalSdks() {
+  resetPayPalSdk(getPayPalSdkNamespace("standard"));
+  resetPayPalSdk(getPayPalSdkNamespace("superadmin"));
+}
+
 function loadPayPalSdk(paymentRoute = getCheckoutRoute()) {
   const route = paymentRoute === "superadmin" ? "superadmin" : "standard";
   const clientId = getPayPalClientId(route);
@@ -2538,21 +2540,28 @@ function loadPayPalSdk(paymentRoute = getCheckoutRoute()) {
   return sdkPromise;
 }
 
-function preloadPayPalSdk(paymentRoute = getCheckoutRoute()) {
-  if (!isBackendConfigured() || !backendReady || !isPayPalConfigured(paymentRoute)) {
-    return Promise.resolve(null);
-  }
-
-  return loadPayPalSdk(paymentRoute).catch(() => null);
-}
-
 function clearPayPalButtons() {
   if (elements.paypalButtonContainer) elements.paypalButtonContainer.innerHTML = "";
   if (elements.cardButtonContainer) elements.cardButtonContainer.innerHTML = "";
 }
 
 function hasRenderedPayPalButton(container) {
-  return Boolean(container?.firstElementChild);
+  const iframe = container?.querySelector("iframe");
+  if (!iframe?.isConnected) return false;
+
+  const bounds = iframe.getBoundingClientRect();
+  return bounds.width > 0 && bounds.height > 0;
+}
+
+async function waitForRenderedPayPalButton(container, label, timeoutMs = 4000) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    if (hasRenderedPayPalButton(container)) return;
+    await wait(80);
+  }
+
+  throw new Error(`${label} did not finish rendering. Please try again.`);
 }
 
 function buildPayPalButtonOptions(paypal, fundingSource) {
@@ -2597,9 +2606,17 @@ function buildPayPalButtonOptions(paypal, fundingSource) {
       await finishVerifiedDonation(payload);
     },
     onCancel: () => {
+      clearPayPalButtons();
+      resetAllPayPalSdks();
+      elements.paypalButton.hidden = true;
+      elements.cardButton.hidden = true;
       setPaymentStatus("Payment cancelled. Your order was not recorded.", true);
     },
     onError: (error) => {
+      clearPayPalButtons();
+      resetAllPayPalSdks();
+      elements.paypalButton.hidden = true;
+      elements.cardButton.hidden = true;
       setPaymentStatus(error?.message || "PayPal checkout failed. Please try again.", true);
     },
   };
@@ -2616,20 +2633,11 @@ function renderPayPalButtons() {
 }
 
 async function renderFreshPayPalButtons() {
-  const route = getCheckoutRoute();
-  const namespace = getPayPalSdkNamespace(route);
+  let namespace = "";
 
   clearPayPalButtons();
   setPaymentStatus("");
   setPayPalCheckoutLoading(true);
-
-  if (!isPayPalConfigured()) {
-    elements.paypalButton.hidden = true;
-    elements.cardButton.hidden = true;
-    setPaymentStatus("PayPal checkout is currently unavailable.", true);
-    setPayPalCheckoutLoading(false);
-    return;
-  }
 
   if (!isBackendConfigured() || !backendReady) {
     elements.paypalButton.hidden = true;
@@ -2639,11 +2647,22 @@ async function renderFreshPayPalButtons() {
     return;
   }
 
-  if (pendingDonation) {
-    pendingDonation = { ...pendingDonation, paymentRoute: route };
-  }
-
   try {
+    await loadBackendData({ mode: "critical", throwOnError: true });
+    const route = getCheckoutRoute();
+    namespace = getPayPalSdkNamespace(route);
+
+    if (!isPayPalConfigured(route)) {
+      throw new Error(`${getCheckoutRouteLabel(route)} PayPal checkout is currently unavailable.`);
+    }
+
+    resetAllPayPalSdks();
+    clearPayPalButtons();
+
+    if (pendingDonation) {
+      pendingDonation = { ...pendingDonation, paymentRoute: route };
+    }
+
     const paypal = await loadPayPalSdk(route);
     if (route !== getCheckoutRoute()) {
       throw new Error("The payment route changed while PayPal was loading.");
@@ -2663,14 +2682,14 @@ async function renderFreshPayPalButtons() {
     if (cardEligible) renderTasks.push(cardButtons.render(elements.cardButtonContainer));
     await Promise.all(renderTasks);
 
-    if (paypalEligible && !hasRenderedPayPalButton(elements.paypalButtonContainer)) {
-      throw new Error("The PayPal button did not finish rendering.");
-    }
-    if (cardEligible && !hasRenderedPayPalButton(elements.cardButtonContainer)) {
-      throw new Error("The card button did not finish rendering.");
-    }
-
-    await wait(250);
+    await Promise.all([
+      paypalEligible
+        ? waitForRenderedPayPalButton(elements.paypalButtonContainer, "The PayPal button")
+        : Promise.resolve(),
+      cardEligible
+        ? waitForRenderedPayPalButton(elements.cardButtonContainer, "The card button")
+        : Promise.resolve(),
+    ]);
     if (route !== getCheckoutRoute()) {
       throw new Error("The payment route changed while PayPal was rendering.");
     }
@@ -2680,7 +2699,7 @@ async function renderFreshPayPalButtons() {
     setPaymentStatus("Continue with PayPal for your seed");
   } catch (error) {
     clearPayPalButtons();
-    resetPayPalSdk(namespace);
+    if (namespace) resetPayPalSdk(namespace);
     elements.paypalButton.hidden = true;
     elements.cardButton.hidden = true;
     setPaymentStatus(error?.message || "Payment buttons could not load. Please click Sow Your Seed again.", true);
@@ -2769,6 +2788,7 @@ function openInlinePayPalCheckout() {
 
 function closeInlinePayPalCheckout() {
   clearPayPalButtons();
+  resetAllPayPalSdks();
   setPayPalCheckoutLoading(false);
   elements.paypalButton.hidden = true;
   elements.cardButton.hidden = true;
@@ -3340,7 +3360,6 @@ function renderApp() {
 elements.amountInput.addEventListener("input", () => {
   elements.amountError.textContent = "";
   updateCheckoutLabel();
-  void preloadPayPalSdk(getCheckoutRoute());
 });
 elements.amountInput.addEventListener("blur", () => {
   if (getAmount() < MIN_DONATION_AMOUNT) {
@@ -3349,11 +3368,9 @@ elements.amountInput.addEventListener("blur", () => {
 });
 elements.decreaseSeedButton?.addEventListener("click", () => {
   stepSeedAmount(-1);
-  void preloadPayPalSdk(getCheckoutRoute());
 });
 elements.increaseSeedButton?.addEventListener("click", () => {
   stepSeedAmount(1);
-  void preloadPayPalSdk(getCheckoutRoute());
 });
 
 elements.adminCalendarPrev.addEventListener("click", () => {
@@ -3463,12 +3480,6 @@ elements.showMoreButtons.forEach((button) => {
   });
 });
 
-elements.supportForm.addEventListener("focusin", () => {
-  void preloadPayPalSdk(getCheckoutRoute());
-});
-elements.checkoutButton.addEventListener("pointerenter", () => {
-  void preloadPayPalSdk(getCheckoutRoute());
-});
 elements.supportForm.addEventListener("submit", submitDonation);
 elements.paymentEmailInput?.addEventListener("input", () => {
   if (elements.emailError && isValidEmailAddress(getPaymentEmail())) {

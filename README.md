@@ -93,6 +93,8 @@ npm run supabase:deploy
 
 This app uses the PayPal Orders API with the PayPal JavaScript SDK. It renders the official PayPal wallet button and, when PayPal marks it eligible for the buyer, the official debit or credit card button.
 
+The PayPal SDK is never preloaded. When a customer opens checkout, the app refreshes the server-selected payment route, removes any previous PayPal SDK instance, displays the rotating seed loader, and loads a new SDK instance. PayPal buttons remain hidden until each eligible button has rendered a visible iframe.
+
 For your India-registered PayPal Business account, test with PayPal sandbox buyer accounts before switching to live credentials.
 
 SuperAdmin chooses whether payments use the Admin or SuperAdmin PayPal account. The optional `$21 or more` override always routes qualifying payments to SuperAdmin. Admin uses `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, and `PAYPAL_WEBHOOK_ID`; SuperAdmin uses the corresponding `SUPER_ADMIN_PAYPAL_*` secrets.

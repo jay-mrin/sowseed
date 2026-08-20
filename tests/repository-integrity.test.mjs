@@ -86,13 +86,12 @@ test("frontend ID selectors and static asset paths resolve", () => {
   }
 });
 
-test("public startup prioritizes checkout before deferred community content", () => {
+test("public startup loads checkout settings before deferred community content", () => {
   const app = readRepositoryFile("src/app.js");
   const bootstrap = readRepositoryFile("supabase/functions/public-bootstrap/index.ts");
 
   assert.match(app, /loadBackendData\(\{ mode: "critical" \}\)/);
-  assert.match(app, /preloadPayPalSdk\(getCheckoutRoute\(\)\)/);
-  assert.match(app, /Promise\.race\(\[paypalWarmup, wait\(900\)\]\)/);
+  assert.doesNotMatch(app, /preloadPayPalSdk|paypalWarmup/);
   assert.match(app, /loadBackendData\(\{ mode: "content" \}\)/);
   assert.doesNotMatch(app, /waitForInitialAssets/);
   assert.match(bootstrap, /requestedMode === "critical" \|\| requestedMode === "content"/);
@@ -122,10 +121,12 @@ test("PayPal buttons stay behind the seed loader until rendering succeeds", () =
   assert.match(html, /id="paypalCheckoutLoader"[\s\S]*paypal-checkout-loader-seed[\s\S]*🌱[\s\S]*Preparing your seed…/);
   assert.doesNotMatch(html, /id="paypalCheckoutRetry"/);
   assert.match(app, /async function renderFreshPayPalButtons\(\)[\s\S]*const route = getCheckoutRoute\(\)/);
+  assert.match(app, /await loadBackendData\(\{ mode: "critical", throwOnError: true \}\)/);
+  assert.match(app, /resetAllPayPalSdks\(\)[\s\S]*const paypal = await loadPayPalSdk\(route\)/);
   assert.match(app, /const paypal = await loadPayPalSdk\(route\)/);
   assert.match(app, /await Promise\.all\(renderTasks\)/);
-  assert.match(app, /await wait\(250\)/);
-  assert.match(app, /hasRenderedPayPalButton/);
+  assert.match(app, /waitForRenderedPayPalButton/);
+  assert.match(app, /querySelector\("iframe"\)/);
   assert.match(app, /setPaymentStatus\("Continue with PayPal for your seed"\)/);
   assert.match(styles, /\.inline-paypal-checkout\.is-loading \.payment-choice\s*\{[\s\S]*opacity: 0/);
   assert.match(styles, /\.paypal-checkout-loader[\s\S]*background: linear-gradient/);
