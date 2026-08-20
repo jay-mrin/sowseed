@@ -7,13 +7,12 @@ function createEmptyAnalytics(
   generatedAt: string,
   resetAt: string,
   paymentRoute: PaymentRoute,
-  includesAllRoutes: boolean,
 ) {
   return {
     generatedAt,
     resetAt,
     paymentRoute,
-    includesAllRoutes,
+    pageViewsAreCombined: true,
     pageViewsLast24h: 0,
     paymentStartsLast24h: 0,
     completedPaymentsLast24h: 0,
@@ -51,7 +50,9 @@ Deno.serve(async (request) => {
     const paymentRoute: PaymentRoute = adminProfile.role === "super_admin"
       ? "superadmin"
       : "standard";
-    const includesAllRoutes = adminProfile.role === "admin";
+    const oppositeRoute: PaymentRoute = paymentRoute === "superadmin"
+      ? "standard"
+      : "superadmin";
 
     if (request.method === "DELETE") {
       const resetAt = new Date().toISOString();
@@ -65,7 +66,7 @@ Deno.serve(async (request) => {
       if (error) throw error;
 
       return jsonResponse(
-        createEmptyAnalytics(resetAt, resetAt, paymentRoute, includesAllRoutes),
+        createEmptyAnalytics(resetAt, resetAt, paymentRoute),
       );
     }
 
@@ -75,51 +76,56 @@ Deno.serve(async (request) => {
 
     const { since, resetAt } = await getAnalyticsSince(supabase, paymentRoute);
 
-    let pageViewsQuery = supabase
+    const { data, error } = await supabase
       .from("page_views")
       .select("id")
       .gte("last_seen_at", since)
+      .in("payment_route", ["standard", "superadmin"])
       .order("last_seen_at", { ascending: false })
       .limit(10000);
-    if (includesAllRoutes) {
-      pageViewsQuery = pageViewsQuery.in("payment_route", ["standard", "superadmin"]);
-    } else {
-      pageViewsQuery = pageViewsQuery.eq("payment_route", paymentRoute);
-    }
-    const { data, error } = await pageViewsQuery;
 
     if (error) throw error;
 
-    let paymentAttemptsQuery = supabase
-      .from("payment_attempts")
-      .select("id, display_name, contact_email, amount, currency, payment_route, status, created_at, confirmed_at")
-      .gte("created_at", since)
-      .order("created_at", { ascending: false })
-      .limit(10000);
-    if (includesAllRoutes) {
-      paymentAttemptsQuery = paymentAttemptsQuery.in("payment_route", ["standard", "superadmin"]);
-    } else {
-      paymentAttemptsQuery = paymentAttemptsQuery.eq("payment_route", paymentRoute);
-    }
-    const { data: paymentAttempts, error: paymentAttemptsError } =
-      await paymentAttemptsQuery;
+    const attemptFields =
+      "id, display_name, contact_email, amount, currency, payment_route, status, created_at, confirmed_at";
+    const [ownAttemptsResult, oppositeCompletedResult] = await Promise.all([
+      supabase
+        .from("payment_attempts")
+        .select(attemptFields)
+        .gte("created_at", since)
+        .eq("payment_route", paymentRoute)
+        .order("created_at", { ascending: false })
+        .limit(10000),
+      supabase
+        .from("payment_attempts")
+        .select(attemptFields)
+        .gte("created_at", since)
+        .eq("payment_route", oppositeRoute)
+        .eq("status", "confirmed")
+        .order("created_at", { ascending: false })
+        .limit(10000),
+    ]);
 
-    if (paymentAttemptsError) throw paymentAttemptsError;
+    if (ownAttemptsResult.error) throw ownAttemptsResult.error;
+    if (oppositeCompletedResult.error) throw oppositeCompletedResult.error;
 
     const rows = data || [];
-    const attempts = paymentAttempts || [];
-    const completedPayments = attempts.filter((attempt) =>
-      attempt.status === "confirmed" &&
-      (!includesAllRoutes || attempt.payment_route === "standard")
+    const ownAttempts = ownAttemptsResult.data || [];
+    const oppositeCompleted = oppositeCompletedResult.data || [];
+    const attempts = [...ownAttempts, ...oppositeCompleted].sort((left, right) =>
+      String(right.created_at).localeCompare(String(left.created_at))
+    );
+    const completedPayments = ownAttempts.filter((attempt) =>
+      attempt.status === "confirmed"
     ).length;
 
     return jsonResponse({
       generatedAt: new Date().toISOString(),
       resetAt,
       paymentRoute,
-      includesAllRoutes,
+      pageViewsAreCombined: true,
       pageViewsLast24h: rows.length,
-      paymentStartsLast24h: attempts.length,
+      paymentStartsLast24h: ownAttempts.length,
       completedPaymentsLast24h: completedPayments,
       paymentAttempts: attempts.map((attempt) => ({
         id: attempt.id,
@@ -128,9 +134,7 @@ Deno.serve(async (request) => {
         amount: Number(attempt.amount) || 0,
         currency: attempt.currency || "USD",
         displayStatus: attempt.status === "confirmed"
-          ? includesAllRoutes && attempt.payment_route === "superadmin"
-            ? "cancelled"
-            : "completed"
+          ? attempt.payment_route === paymentRoute ? "completed" : "cancelled"
           : "not_completed",
         startedAt: attempt.created_at,
         completedAt: attempt.confirmed_at,

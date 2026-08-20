@@ -487,7 +487,7 @@ function createEmptyAnalytics() {
     completedPaymentsLast24h: 0,
     generatedAt: null,
     pageViewsLast24h: 0,
-    includesAllRoutes: false,
+    pageViewsAreCombined: false,
     paymentRoute: null,
     paymentAttempts: [],
     paymentStartsLast24h: 0,
@@ -516,7 +516,7 @@ function normalizeAnalytics(analytics) {
   return {
     completedPaymentsLast24h: Math.max(Number.parseInt(analytics?.completedPaymentsLast24h, 10) || 0, 0),
     generatedAt: analytics?.generatedAt || defaults.generatedAt,
-    includesAllRoutes: analytics?.includesAllRoutes === true,
+    pageViewsAreCombined: analytics?.pageViewsAreCombined === true,
     pageViewsLast24h: Math.max(Number.parseInt(analytics?.pageViewsLast24h, 10) || 0, 0),
     paymentRoute: analytics?.paymentRoute === "superadmin" ? "superadmin" : analytics?.paymentRoute === "standard" ? "standard" : null,
     paymentAttempts,
@@ -1666,10 +1666,9 @@ async function loadAdminAnalytics(options = {}) {
 
     state.analytics = normalizeAnalytics(payload);
     const expectedRoute = state.adminProfile?.role === "super_admin" ? "superadmin" : "standard";
-    const shouldIncludeAllRoutes = state.adminProfile?.role !== "super_admin";
     if (
       state.analytics.paymentRoute !== expectedRoute ||
-      state.analytics.includesAllRoutes !== shouldIncludeAllRoutes
+      state.analytics.pageViewsAreCombined !== true
     ) {
       throw new Error(`${routeLabel} checkout analytics returned an incorrect activity scope.`);
     }
@@ -2028,7 +2027,7 @@ function renderAdminAnalytics() {
   const analytics = normalizeAnalytics(state.analytics);
   const isSuperAdmin = state.adminProfile?.role === "super_admin";
   const routeLabel = isSuperAdmin ? "SuperAdmin" : "Admin";
-  const activityScopeLabel = isSuperAdmin ? "SuperAdmin" : "Admin and SuperAdmin";
+  const oppositeRouteLabel = isSuperAdmin ? "Admin" : "SuperAdmin";
   const generatedAt = analytics.generatedAt ? new Date(analytics.generatedAt) : null;
   const hasValidDate = generatedAt && !Number.isNaN(generatedAt.getTime());
 
@@ -2036,15 +2035,13 @@ function renderAdminAnalytics() {
     elements.adminAnalyticsTitle.textContent = `3. ${routeLabel} checkout activity`;
   }
   if (elements.adminAnalyticsDescription) {
-    elements.adminAnalyticsDescription.textContent = isSuperAdmin
-      ? "Only SuperAdmin-route visits and persisted PayPal attempts from the last 24 hours."
-      : "Admin and SuperAdmin visits and persisted PayPal attempts from the last 24 hours.";
+    elements.adminAnalyticsDescription.textContent = `All page visits, ${routeLabel} checkout attempts, and completed ${oppositeRouteLabel} payments from the last 24 hours.`;
   }
   if (elements.adminPageViewsLabel) {
-    elements.adminPageViewsLabel.textContent = `${activityScopeLabel}-route views last 24 hours`;
+    elements.adminPageViewsLabel.textContent = "All checkout-route views last 24 hours";
   }
   if (elements.adminPaymentStartsLabel) {
-    elements.adminPaymentStartsLabel.textContent = `Persisted ${activityScopeLabel} checkout attempts`;
+    elements.adminPaymentStartsLabel.textContent = `Persisted ${routeLabel} checkout attempts`;
   }
   if (elements.adminPaymentsCompletedLabel) {
     elements.adminPaymentsCompletedLabel.textContent = `Server-verified ${routeLabel} payments`;
@@ -2083,10 +2080,10 @@ function renderAdminAnalytics() {
             `;
           })
           .join("")
-      : `<p class="admin-payment-attempt-empty">No ${activityScopeLabel} payment attempts in this window.</p>`;
+      : `<p class="admin-payment-attempt-empty">No ${routeLabel} attempts or completed ${oppositeRouteLabel} payments in this window.</p>`;
   }
   elements.adminAnalyticsUpdated.textContent = hasValidDate
-    ? `Updated ${readableDate(generatedAt)} at ${readableTime(generatedAt)} · ${activityScopeLabel} checkout activity`
+    ? `Updated ${readableDate(generatedAt)} at ${readableTime(generatedAt)} · All page visits · ${routeLabel} checkout activity`
     : `Open the ${routeLabel} portal to load ${routeLabel} checkout analytics.`;
 }
 
