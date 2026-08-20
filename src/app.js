@@ -657,7 +657,11 @@ async function callEdge(functionName, options = {}) {
   const payload = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(payload.error || `Request failed: ${response.status}`);
+    const error = new Error(payload.error || `Request failed: ${response.status}`);
+    error.code = payload.code || "";
+    error.details = payload.details;
+    error.status = response.status;
+    throw error;
   }
 
   return payload;
@@ -2595,12 +2599,24 @@ function buildPayPalButtonOptions(paypal, fundingSource) {
       await trackCheckoutEvent("paypal_checkout_started", pendingDonation);
       return payload.id;
     },
-    onApprove: async (data) => {
+    onApprove: async (data, actions) => {
       setPaymentStatus("Confirming your custom order with PayPal...");
-      const payload = await callEdge("capture-paypal-order", {
-        body: { orderId: data.orderID },
-      });
-      await finishVerifiedDonation(payload);
+      try {
+        const payload = await callEdge("capture-paypal-order", {
+          body: { orderId: data.orderID },
+        });
+        await finishVerifiedDonation(payload);
+      } catch (error) {
+        if (error?.code === "INSTRUMENT_DECLINED") {
+          setPaymentStatus(
+            "That payment method was declined. Please choose another PayPal payment method.",
+            true,
+          );
+          return actions.restart();
+        }
+
+        throw error;
+      }
     },
     onCancel: () => {
       clearPayPalButtons();

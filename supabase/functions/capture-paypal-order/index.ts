@@ -12,6 +12,7 @@ import {
   getPayPalCurrency,
   getPayPalOrder,
   parseMoneyToCents,
+  PayPalApiError,
 } from "../_shared/paypal.ts";
 import {
   createRandomToken,
@@ -30,7 +31,11 @@ function seedCountFromAmount(amount: number) {
 }
 
 function captureFromOrder(order: Record<string, any>) {
-  return order.purchase_units?.[0]?.payments?.captures?.[0] || null;
+  const captures = order.purchase_units?.[0]?.payments?.captures;
+  if (!Array.isArray(captures) || !captures.length) return null;
+
+  return captures.find((capture) => capture?.status === "COMPLETED") ||
+    captures.at(-1) || null;
 }
 
 function getOrderNumberFromPayPal(order: Record<string, any>) {
@@ -325,7 +330,7 @@ Deno.serve(async (request) => {
     const { data: paymentAttempt, error: attemptError } = await supabase
       .from("payment_attempts")
       .select(
-        "id, paypal_order_id, payment_route, amount, currency, display_name, contact_email, customer_request, supporter_message, status, expires_at",
+        "id, paypal_order_id, payment_route, amount, currency, display_name, contact_email, customer_request, supporter_message, status, failure_reason, raw_payment, expires_at",
       )
       .eq("paypal_order_id", orderId)
       .maybeSingle();
@@ -368,8 +373,48 @@ Deno.serve(async (request) => {
           410,
         );
       }
-      order = await capturePayPalOrder(orderId, paymentRoute);
-      capture = captureFromOrder(order);
+      try {
+        order = await capturePayPalOrder(orderId, paymentRoute);
+        capture = captureFromOrder(order);
+      } catch (error) {
+        if (
+          error instanceof PayPalApiError &&
+          error.issue === "INSTRUMENT_DECLINED"
+        ) {
+          const previousRawPayment =
+            paymentAttempt.raw_payment &&
+              typeof paymentAttempt.raw_payment === "object" &&
+              !Array.isArray(paymentAttempt.raw_payment)
+              ? paymentAttempt.raw_payment
+              : {};
+          const { error: declineUpdateError } = await supabase
+            .from("payment_attempts")
+            .update({
+              status: "started",
+              failure_reason: error.issue,
+              raw_payment: {
+                ...previousRawPayment,
+                order,
+                lastCaptureError: error.payload,
+              },
+            })
+            .eq("id", paymentAttempt.id)
+            .neq("status", "confirmed");
+          if (declineUpdateError) throw declineUpdateError;
+
+          return jsonResponse(
+            {
+              error:
+                "The selected PayPal payment method was declined. Please choose another payment method.",
+              code: error.issue,
+              retryable: true,
+            },
+            422,
+          );
+        }
+
+        throw error;
+      }
     }
 
     if (!capture || capture.status !== "COMPLETED") {

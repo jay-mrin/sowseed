@@ -6,6 +6,26 @@ const PAYPAL_API_BASE = {
 export const DIGITAL_ORDER_ITEM_NAME =
   "Personalised Digital Writing - Custom Order Made Writing";
 
+export class PayPalApiError extends Error {
+  status: number;
+  payload: Record<string, any>;
+  issue: string;
+
+  constructor(
+    operation: string,
+    status: number,
+    payload: Record<string, any>,
+  ) {
+    const issue = String(payload?.details?.[0]?.issue || payload?.name || "")
+      .trim();
+    super(`PayPal ${operation} failed: ${JSON.stringify(payload)}`);
+    this.name = "PayPalApiError";
+    this.status = status;
+    this.payload = payload;
+    this.issue = issue;
+  }
+}
+
 function padDatePart(value: number) {
   return String(value).padStart(2, "0");
 }
@@ -145,6 +165,9 @@ export async function capturePayPalOrder(
   paymentRoute?: string,
 ) {
   const accessToken = await getPayPalAccessToken(paymentRoute);
+  // A restarted checkout reuses the PayPal order with a new funding source.
+  // Use a fresh idempotency key so a prior declined capture is not replayed.
+  const captureRequestId = `${orderId}-${crypto.randomUUID()}`;
   const response = await fetch(
     `${getPayPalBaseUrl()}/v2/checkout/orders/${orderId}/capture`,
     {
@@ -152,7 +175,7 @@ export async function capturePayPalOrder(
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
-        "PayPal-Request-Id": orderId,
+        "PayPal-Request-Id": captureRequestId,
       },
     },
   );
@@ -160,7 +183,7 @@ export async function capturePayPalOrder(
   const payload = await response.json();
 
   if (!response.ok) {
-    throw new Error(`PayPal capture failed: ${JSON.stringify(payload)}`);
+    throw new PayPalApiError("capture", response.status, payload);
   }
 
   return payload;

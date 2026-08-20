@@ -46,6 +46,28 @@ test("webhooks can recover completed captures without trusting browser metadata"
   assert.match(source, /attemptRoute !== verifiedRoute/);
 });
 
+test("declined PayPal instruments remain retryable across API, browser, and webhook handling", () => {
+  const paypal = read("supabase/functions/_shared/paypal.ts");
+  const capture = read("supabase/functions/capture-paypal-order/index.ts");
+  const webhook = read("supabase/functions/paypal-webhook/index.ts");
+  const app = read("src/app.js");
+
+  assert.match(paypal, /class PayPalApiError extends Error/);
+  assert.match(paypal, /const captureRequestId = `\$\{orderId\}-\$\{crypto\.randomUUID\(\)\}`/);
+  assert.doesNotMatch(paypal, /"PayPal-Request-Id": orderId/);
+  assert.match(capture, /error\.issue === "INSTRUMENT_DECLINED"/);
+  assert.match(capture, /failure_reason: error\.issue/);
+  assert.match(capture, /status: "started"/);
+  assert.match(capture, /captures\.find\(\(capture\) => capture\?\.status === "COMPLETED"\)/);
+  assert.match(capture, /captures\.at\(-1\)/);
+  assert.match(app, /onApprove: async \(data, actions\)/);
+  assert.match(app, /error\?\.code === "INSTRUMENT_DECLINED"/);
+  assert.match(app, /return actions\.restart\(\)/);
+  assert.match(webhook, /eventType !== "PAYMENT\.CAPTURE\.COMPLETED"/);
+  assert.match(webhook, /lastCaptureWebhook: event/);
+  assert.match(webhook, /PAYMENT_CAPTURE_\$\{normalizedStatus\}/);
+});
+
 test("cleanup migrations close direct-table bypasses and remove retired schema", () => {
   const integrityMigration = read("supabase/migrations/202608180006_checkout_integrity.sql");
   const cleanupMigration = read("supabase/migrations/202608180007_remove_dead_checkout_fields.sql");

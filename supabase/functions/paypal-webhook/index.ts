@@ -51,6 +51,72 @@ Deno.serve(async (request) => {
       : "standard";
     let existing = existingDonation;
 
+    if (!existing && eventType !== "PAYMENT.CAPTURE.COMPLETED") {
+      const orderId = String(
+        resource.supplementary_data?.related_ids?.order_id || "",
+      ).trim();
+      if (!orderId) {
+        return jsonResponse({ received: true, ignored: true });
+      }
+
+      const { data: paymentAttempt, error: attemptError } = await supabase
+        .from("payment_attempts")
+        .select("id, payment_route, status, failure_reason, raw_payment")
+        .eq("paypal_order_id", orderId)
+        .maybeSingle();
+      if (attemptError) throw attemptError;
+      if (!paymentAttempt) {
+        return jsonResponse({ received: true, ignored: true });
+      }
+
+      const attemptRoute = paymentAttempt.payment_route === "superadmin"
+        ? "superadmin"
+        : "standard";
+      if (attemptRoute !== verifiedRoute) {
+        return errorResponse(
+          "PayPal webhook route does not match the checkout attempt route.",
+          409,
+        );
+      }
+
+      if (paymentAttempt.status !== "confirmed") {
+        const previousRawPayment =
+          paymentAttempt.raw_payment &&
+            typeof paymentAttempt.raw_payment === "object" &&
+            !Array.isArray(paymentAttempt.raw_payment)
+            ? paymentAttempt.raw_payment
+            : {};
+        const normalizedStatus = String(status).toUpperCase();
+        const isRetryableFailure = ["DECLINED", "DENIED", "FAILED"].includes(
+          normalizedStatus,
+        );
+        const failureReason = isRetryableFailure
+          ? paymentAttempt.failure_reason || `PAYMENT_CAPTURE_${normalizedStatus}`
+          : null;
+        const { error: updateAttemptError } = await supabase
+          .from("payment_attempts")
+          .update({
+            status: "started",
+            ...(failureReason ? { failure_reason: failureReason } : {}),
+            raw_payment: {
+              ...previousRawPayment,
+              lastCaptureWebhook: event,
+              webhookRoute: verification.paymentRoute || "standard",
+            },
+          })
+          .eq("id", paymentAttempt.id)
+          .neq("status", "confirmed");
+        if (updateAttemptError) throw updateAttemptError;
+      }
+
+      return jsonResponse({
+        received: true,
+        retryable: ["DECLINED", "DENIED", "FAILED"].includes(
+          String(status).toUpperCase(),
+        ),
+      });
+    }
+
     if (!existing && eventType === "PAYMENT.CAPTURE.COMPLETED") {
       const orderId = String(
         resource.supplementary_data?.related_ids?.order_id || "",
