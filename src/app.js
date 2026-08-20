@@ -487,6 +487,7 @@ function createEmptyAnalytics() {
     completedPaymentsLast24h: 0,
     generatedAt: null,
     pageViewsLast24h: 0,
+    includesAllRoutes: false,
     paymentRoute: null,
     paymentAttempts: [],
     paymentStartsLast24h: 0,
@@ -503,7 +504,9 @@ function normalizeAnalytics(analytics) {
           email: String(attempt?.email || "").trim().slice(0, 160),
           amount: Math.max(Number(attempt?.amount) || 0, 0),
           currency: String(attempt?.currency || "USD").trim().slice(0, 3).toUpperCase() || "USD",
-          completed: attempt?.completed === true,
+          displayStatus: ["completed", "cancelled", "not_completed"].includes(attempt?.displayStatus)
+            ? attempt.displayStatus
+            : attempt?.completed === true ? "completed" : "not_completed",
           startedAt: attempt?.startedAt || null,
           completedAt: attempt?.completedAt || null,
         }))
@@ -513,6 +516,7 @@ function normalizeAnalytics(analytics) {
   return {
     completedPaymentsLast24h: Math.max(Number.parseInt(analytics?.completedPaymentsLast24h, 10) || 0, 0),
     generatedAt: analytics?.generatedAt || defaults.generatedAt,
+    includesAllRoutes: analytics?.includesAllRoutes === true,
     pageViewsLast24h: Math.max(Number.parseInt(analytics?.pageViewsLast24h, 10) || 0, 0),
     paymentRoute: analytics?.paymentRoute === "superadmin" ? "superadmin" : analytics?.paymentRoute === "standard" ? "standard" : null,
     paymentAttempts,
@@ -1665,8 +1669,12 @@ async function loadAdminAnalytics(options = {}) {
 
     state.analytics = normalizeAnalytics(payload);
     const expectedRoute = state.adminProfile?.role === "super_admin" ? "superadmin" : "standard";
-    if (state.analytics.paymentRoute !== expectedRoute) {
-      throw new Error(`${routeLabel} checkout analytics were not correctly isolated.`);
+    const shouldIncludeAllRoutes = state.adminProfile?.role !== "super_admin";
+    if (
+      state.analytics.paymentRoute !== expectedRoute ||
+      state.analytics.includesAllRoutes !== shouldIncludeAllRoutes
+    ) {
+      throw new Error(`${routeLabel} checkout analytics returned an incorrect activity scope.`);
     }
     renderAdminAnalytics();
 
@@ -2021,7 +2029,9 @@ function renderAdminAnalytics() {
   if (!elements.adminPageViews24h || !elements.adminPaymentStarts24h || !elements.adminAnalyticsUpdated) return;
 
   const analytics = normalizeAnalytics(state.analytics);
-  const routeLabel = state.adminProfile?.role === "super_admin" ? "SuperAdmin" : "Admin";
+  const isSuperAdmin = state.adminProfile?.role === "super_admin";
+  const routeLabel = isSuperAdmin ? "SuperAdmin" : "Admin";
+  const activityScopeLabel = isSuperAdmin ? "SuperAdmin" : "Admin and SuperAdmin";
   const generatedAt = analytics.generatedAt ? new Date(analytics.generatedAt) : null;
   const hasValidDate = generatedAt && !Number.isNaN(generatedAt.getTime());
 
@@ -2029,13 +2039,15 @@ function renderAdminAnalytics() {
     elements.adminAnalyticsTitle.textContent = `3. ${routeLabel} checkout activity`;
   }
   if (elements.adminAnalyticsDescription) {
-    elements.adminAnalyticsDescription.textContent = `Only ${routeLabel}-route visits and persisted PayPal attempts from the last 24 hours.`;
+    elements.adminAnalyticsDescription.textContent = isSuperAdmin
+      ? "Only SuperAdmin-route visits and persisted PayPal attempts from the last 24 hours."
+      : "Admin and SuperAdmin visits and persisted PayPal attempts from the last 24 hours.";
   }
   if (elements.adminPageViewsLabel) {
-    elements.adminPageViewsLabel.textContent = `${routeLabel}-route views last 24 hours`;
+    elements.adminPageViewsLabel.textContent = `${activityScopeLabel}-route views last 24 hours`;
   }
   if (elements.adminPaymentStartsLabel) {
-    elements.adminPaymentStartsLabel.textContent = `Persisted ${routeLabel} checkout attempts`;
+    elements.adminPaymentStartsLabel.textContent = `Persisted ${activityScopeLabel} checkout attempts`;
   }
   if (elements.adminPaymentsCompletedLabel) {
     elements.adminPaymentsCompletedLabel.textContent = `Server-verified ${routeLabel} payments`;
@@ -2052,6 +2064,10 @@ function renderAdminAnalytics() {
           .map((attempt) => {
             const startedAt = attempt.startedAt ? new Date(attempt.startedAt) : null;
             const hasValidStartedAt = startedAt && !Number.isNaN(startedAt.getTime());
+            const isCompleted = attempt.displayStatus === "completed";
+            const statusLabel = isCompleted
+              ? "Completed"
+              : attempt.displayStatus === "cancelled" ? "Cancelled" : "Not completed";
 
             return `
               <article class="admin-payment-attempt">
@@ -2063,17 +2079,17 @@ function renderAdminAnalytics() {
                   <strong>${escapeHtml(money(attempt.amount))}</strong>
                   <span>${hasValidStartedAt ? `${escapeHtml(readableDate(startedAt))} · ${escapeHtml(readableTime(startedAt))}` : "Start time unavailable"}</span>
                 </div>
-                <span class="admin-payment-attempt-status ${attempt.completed ? "is-completed" : "is-incomplete"}">
-                  ${attempt.completed ? "Completed" : "Not completed"}
+                <span class="admin-payment-attempt-status ${isCompleted ? "is-completed" : "is-incomplete"}">
+                  ${statusLabel}
                 </span>
               </article>
             `;
           })
           .join("")
-      : `<p class="admin-payment-attempt-empty">No ${routeLabel} payment attempts in this window.</p>`;
+      : `<p class="admin-payment-attempt-empty">No ${activityScopeLabel} payment attempts in this window.</p>`;
   }
   elements.adminAnalyticsUpdated.textContent = hasValidDate
-    ? `Updated ${readableDate(generatedAt)} at ${readableTime(generatedAt)} · ${routeLabel} checkout only`
+    ? `Updated ${readableDate(generatedAt)} at ${readableTime(generatedAt)} · ${activityScopeLabel} checkout activity`
     : `Open the ${routeLabel} portal to load ${routeLabel} checkout analytics.`;
 }
 

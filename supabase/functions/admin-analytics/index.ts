@@ -7,11 +7,13 @@ function createEmptyAnalytics(
   generatedAt: string,
   resetAt: string,
   paymentRoute: PaymentRoute,
+  includesAllRoutes: boolean,
 ) {
   return {
     generatedAt,
     resetAt,
     paymentRoute,
+    includesAllRoutes,
     pageViewsLast24h: 0,
     paymentStartsLast24h: 0,
     completedPaymentsLast24h: 0,
@@ -49,6 +51,7 @@ Deno.serve(async (request) => {
     const paymentRoute: PaymentRoute = adminProfile.role === "super_admin"
       ? "superadmin"
       : "standard";
+    const includesAllRoutes = adminProfile.role === "admin";
 
     if (request.method === "DELETE") {
       const resetAt = new Date().toISOString();
@@ -61,7 +64,9 @@ Deno.serve(async (request) => {
 
       if (error) throw error;
 
-      return jsonResponse(createEmptyAnalytics(resetAt, resetAt, paymentRoute));
+      return jsonResponse(
+        createEmptyAnalytics(resetAt, resetAt, paymentRoute, includesAllRoutes),
+      );
     }
 
     if (request.method !== "GET") {
@@ -70,34 +75,49 @@ Deno.serve(async (request) => {
 
     const { since, resetAt } = await getAnalyticsSince(supabase, paymentRoute);
 
-    const { data, error } = await supabase
+    let pageViewsQuery = supabase
       .from("page_views")
       .select("id")
       .gte("last_seen_at", since)
-      .eq("payment_route", paymentRoute)
       .order("last_seen_at", { ascending: false })
       .limit(10000);
+    if (includesAllRoutes) {
+      pageViewsQuery = pageViewsQuery.in("payment_route", ["standard", "superadmin"]);
+    } else {
+      pageViewsQuery = pageViewsQuery.eq("payment_route", paymentRoute);
+    }
+    const { data, error } = await pageViewsQuery;
 
     if (error) throw error;
 
-    const { data: paymentAttempts, error: paymentAttemptsError } = await supabase
+    let paymentAttemptsQuery = supabase
       .from("payment_attempts")
-      .select("id, display_name, contact_email, amount, currency, status, created_at, confirmed_at")
+      .select("id, display_name, contact_email, amount, currency, payment_route, status, created_at, confirmed_at")
       .gte("created_at", since)
-      .eq("payment_route", paymentRoute)
       .order("created_at", { ascending: false })
       .limit(10000);
+    if (includesAllRoutes) {
+      paymentAttemptsQuery = paymentAttemptsQuery.in("payment_route", ["standard", "superadmin"]);
+    } else {
+      paymentAttemptsQuery = paymentAttemptsQuery.eq("payment_route", paymentRoute);
+    }
+    const { data: paymentAttempts, error: paymentAttemptsError } =
+      await paymentAttemptsQuery;
 
     if (paymentAttemptsError) throw paymentAttemptsError;
 
     const rows = data || [];
     const attempts = paymentAttempts || [];
-    const completedPayments = attempts.filter((attempt) => attempt.status === "confirmed").length;
+    const completedPayments = attempts.filter((attempt) =>
+      attempt.status === "confirmed" &&
+      (!includesAllRoutes || attempt.payment_route === "standard")
+    ).length;
 
     return jsonResponse({
       generatedAt: new Date().toISOString(),
       resetAt,
       paymentRoute,
+      includesAllRoutes,
       pageViewsLast24h: rows.length,
       paymentStartsLast24h: attempts.length,
       completedPaymentsLast24h: completedPayments,
@@ -107,7 +127,11 @@ Deno.serve(async (request) => {
         email: attempt.contact_email,
         amount: Number(attempt.amount) || 0,
         currency: attempt.currency || "USD",
-        completed: attempt.status === "confirmed",
+        displayStatus: attempt.status === "confirmed"
+          ? includesAllRoutes && attempt.payment_route === "superadmin"
+            ? "cancelled"
+            : "completed"
+          : "not_completed",
         startedAt: attempt.created_at,
         completedAt: attempt.confirmed_at,
       })),

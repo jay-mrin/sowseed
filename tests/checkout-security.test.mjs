@@ -71,7 +71,7 @@ test("cleanup migrations close direct-table bypasses and remove retired schema",
   }
 });
 
-test("checkout analytics isolate persisted attempts by the signed-in portal role", () => {
+test("Admin analytics aggregate both routes while SuperAdmin remains route-scoped", () => {
   const analytics = read("supabase/functions/admin-analytics/index.ts");
   const bootstrap = read("supabase/functions/public-bootstrap/index.ts");
   const migration = read("supabase/migrations/202608180008_admin_checkout_analytics.sql");
@@ -79,10 +79,13 @@ test("checkout analytics isolate persisted attempts by the signed-in portal role
 
   assert.match(analytics, /\.from\("payment_attempts"\)/);
   assert.match(analytics, /adminProfile\.role === "super_admin"/);
-  assert.match(analytics, /\.eq\("payment_route", paymentRoute\)/);
+  assert.match(analytics, /includesAllRoutes = adminProfile\.role === "admin"/);
+  assert.match(analytics, /pageViewsQuery\.in\("payment_route", \["standard", "superadmin"\]\)/);
+  assert.match(analytics, /paymentAttemptsQuery\.in\("payment_route", \["standard", "superadmin"\]\)/);
   assert.match(analytics, /\.from\("checkout_analytics_state"\)/);
   assert.match(analytics, /contact_email/);
-  assert.match(analytics, /attempt\.status === "confirmed"/);
+  assert.match(analytics, /attempt\.payment_route === "standard"/);
+  assert.match(analytics, /attempt\.payment_route === "superadmin"[\s\S]*"cancelled"/);
   assert.doesNotMatch(analytics, /checkout_button_clicked|paypal_checkout_started/);
   assert.match(bootstrap, /payment_route: paymentRoute/);
   assert.match(migration, /add column if not exists payment_route text/);
