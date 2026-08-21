@@ -132,3 +132,16 @@ test("PayPal buttons stay behind the seed loader until rendering succeeds", () =
   assert.match(styles, /\.paypal-checkout-loader[\s\S]*background: linear-gradient/);
   assert.match(styles, /\.paypal-checkout-loader-seed[\s\S]*animation: app-loader-spin/);
 });
+
+test("1080-wide tutorial opens in a modal and returns to checkout when playback ends", () => {
+  const html = readRepositoryFile("index.html");
+  const app = readRepositoryFile("src/app.js");
+  const videoPath = path.join(repositoryRoot, "assets/how-to-sow-your-seed-1080p.mp4");
+
+  assert.ok(existsSync(videoPath), "tutorial video asset is missing");
+  assert.ok(statSync(videoPath).size > 0, "tutorial video asset is empty");
+  assert.match(html, /id="howToSow"[\s\S]*How To Sow Your Seed/);
+  assert.match(html, /id="tutorialVideo"[\s\S]*width="1080"[\s\S]*height="1844"[\s\S]*how-to-sow-your-seed-1080p\.mp4/);
+  assert.match(app, /tutorialVideo\?\.addEventListener\("ended", \(\) => closeTutorial\(true\)\)/);
+  assert.match(app, /elements\.supportCard\.scrollIntoView/);
+});

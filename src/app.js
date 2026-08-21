@@ -261,6 +261,7 @@ const elements = {
   checkoutLabel: document.querySelector("#checkoutLabel"),
   closeAdminButton: document.querySelector("#closeAdminButton"),
   closeReceiptButton: document.querySelector("#closeReceiptButton"),
+  closeTutorialButton: document.querySelector("#closeTutorialButton"),
   doneButton: document.querySelector("#doneButton"),
   decreaseSeedButton: document.querySelector("#decreaseSeedButton"),
   followersText: document.querySelector("#followersText"),
@@ -274,6 +275,7 @@ const elements = {
   meterExpanded: document.querySelector("#meterExpanded"),
   meterHeadline: document.querySelector("#meterHeadline"),
   nameInput: document.querySelector("#nameInput"),
+  openTutorialButton: document.querySelector("#openTutorialButton"),
   emailError: document.querySelector("#emailError"),
   inlinePaypalCheckout: document.querySelector("#inlinePaypalCheckout"),
   paymentEmailInput: document.querySelector("#paymentEmailInput"),
@@ -304,9 +306,12 @@ const elements = {
   showMoreButtons: document.querySelectorAll("[data-toggle-target]"),
   sidebarPostList: document.querySelector("#sidebarPostList"),
   supportForm: document.querySelector("#supportForm"),
+  supportCard: document.querySelector("#support"),
   supportTitle: document.querySelector("#supportTitle"),
   toast: document.querySelector("#toast"),
   topicPill: document.querySelector("#topicPill"),
+  tutorialDialog: document.querySelector("#tutorialDialog"),
+  tutorialVideo: document.querySelector("#tutorialVideo"),
   checkoutRouteOptions: document.querySelectorAll("[data-checkout-route]"),
   superAdminHighPaymentEnabled: document.querySelector("#superAdminHighPaymentEnabled"),
   purgeAllOrdersButton: document.querySelector("#purgeAllOrdersButton"),
@@ -2826,6 +2831,57 @@ function closeReceipt() {
   elements.receiptDialog.close();
 }
 
+function openTutorial() {
+  if (!elements.tutorialDialog || !elements.tutorialVideo) return;
+
+  document.body.classList.add("tutorial-open");
+  elements.tutorialVideo.currentTime = 0;
+
+  if (typeof elements.tutorialDialog.showModal === "function") {
+    elements.tutorialDialog.showModal();
+  } else {
+    elements.tutorialDialog.setAttribute("open", "");
+  }
+
+  window.requestAnimationFrame(() => {
+    elements.tutorialDialog.classList.add("is-open");
+    void elements.tutorialVideo.play().catch(() => {
+      elements.tutorialVideo.controls = true;
+    });
+  });
+}
+
+function returnToSowYourSeed() {
+  if (!elements.supportCard) return;
+
+  const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+  elements.paymentEmailInput?.focus({ preventScroll: true });
+  elements.supportCard.scrollIntoView({ behavior, block: "start" });
+}
+
+function closeTutorial(returnToSupport = false) {
+  if (!elements.tutorialDialog || !elements.tutorialVideo) return;
+
+  elements.tutorialVideo.pause();
+  elements.tutorialVideo.currentTime = 0;
+  elements.tutorialDialog.classList.remove("is-open");
+  document.body.classList.remove("tutorial-open");
+
+  if (elements.tutorialDialog.open) {
+    elements.tutorialDialog.close();
+  } else {
+    elements.tutorialDialog.removeAttribute("open");
+  }
+
+  window.requestAnimationFrame(() => {
+    if (returnToSupport) {
+      returnToSowYourSeed();
+    } else {
+      elements.openTutorialButton?.focus();
+    }
+  });
+}
+
 function openAdminLogin() {
   clearAdminSession();
   if (elements.adminEmailInput) {
@@ -3646,6 +3702,21 @@ elements.closeReceiptButton.addEventListener("click", closeReceipt);
 elements.doneButton.addEventListener("click", closeReceipt);
 elements.receiptDialog.addEventListener("close", () => {
   document.body.classList.remove("receipt-open");
+});
+elements.openTutorialButton?.addEventListener("click", openTutorial);
+elements.closeTutorialButton?.addEventListener("click", () => closeTutorial());
+elements.tutorialVideo?.addEventListener("ended", () => closeTutorial(true));
+elements.tutorialDialog?.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeTutorial();
+});
+elements.tutorialDialog?.addEventListener("click", (event) => {
+  if (event.target === elements.tutorialDialog) closeTutorial();
+});
+elements.tutorialDialog?.addEventListener("close", () => {
+  elements.tutorialVideo?.pause();
+  elements.tutorialDialog.classList.remove("is-open");
+  document.body.classList.remove("tutorial-open");
 });
 window.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && document.body.classList.contains("admin-open")) {

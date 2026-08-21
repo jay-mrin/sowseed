@@ -18,7 +18,7 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="src/styles.css?v=77" />
+    <link rel="stylesheet" href="src/styles.css?v=78" />
   </head>
   <body class="app-loading">
     <div class="app-loader" id="appLoader" role="status" aria-live="polite" aria-label="Loading Seed garden">
@@ -407,6 +407,23 @@
         </div>
 
         <aside class="support-column">
+          <section class="tutorial-invite" id="howToSow" aria-labelledby="howToSowTitle">
+            <div class="tutorial-invite-copy">
+              <span class="tutorial-play-mark" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="m9 7 8 5-8 5V7Z" />
+                </svg>
+              </span>
+              <div>
+                <p class="section-kicker">Quick video tutorial</p>
+                <h2 id="howToSowTitle">See how it works before you begin</h2>
+              </div>
+            </div>
+            <button class="button tutorial-open-button" id="openTutorialButton" type="button" aria-haspopup="dialog" aria-controls="tutorialDialog">
+              How To Sow Your Seed
+            </button>
+          </section>
+
           <section class="donation-card minimal-offering" id="support" aria-labelledby="supportTitle">
             <div class="donation-header">
               <div>
@@ -505,6 +522,38 @@
       </section>
     </main>
 
+    <dialog class="tutorial-dialog" id="tutorialDialog" aria-labelledby="tutorialDialogTitle">
+      <div class="tutorial-dialog-card">
+        <div class="tutorial-dialog-heading">
+          <div>
+            <p class="section-kicker">1080p tutorial</p>
+            <h2 id="tutorialDialogTitle">How To Sow Your Seed</h2>
+          </div>
+          <button class="icon-button tutorial-close-button" id="closeTutorialButton" type="button" aria-label="Close tutorial">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m6 6 12 12M18 6 6 18" />
+            </svg>
+          </button>
+        </div>
+        <div class="tutorial-video-frame">
+          <video
+            class="tutorial-video"
+            id="tutorialVideo"
+            width="1080"
+            height="1844"
+            controls
+            playsinline
+            preload="metadata"
+            aria-label="How To Sow Your Seed video tutorial"
+          >
+            <source src="assets/how-to-sow-your-seed-1080p.mp4" type="video/mp4" />
+            Your browser does not support the tutorial video.
+          </video>
+        </div>
+        <p class="tutorial-dialog-note">When the tutorial finishes, you&rsquo;ll return to the Sow Your Seed form.</p>
+      </div>
+    </dialog>
+
     <dialog class="receipt-dialog" id="receiptDialog" aria-labelledby="receiptTitle">
       <div class="receipt-card">
         <button class="icon-button close-receipt" id="closeReceiptButton" type="button" aria-label="Close receipt">
@@ -545,6 +594,6 @@
     </footer>
 
     <script src="src/config.js?v=2"></script>
-    <script src="src/app.js?v=84" defer></script>
+    <script src="src/app.js?v=85" defer></script>
   </body>
 </html>
