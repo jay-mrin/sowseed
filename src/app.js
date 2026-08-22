@@ -12,7 +12,7 @@ const SEED_DOLLAR_VALUE = 7;
 const MIN_DONATION_AMOUNT = 7;
 const HIGH_PAYMENT_THRESHOLD_CENTS = 2100;
 const PAYPAL_SDK_LOAD_TIMEOUT_MS = 8000;
-const TOP_BRAND_TITLE = "Seed garden";
+const TOP_BRAND_TITLE = "Seed Garden";
 const MINIMAL_SUPPORT_TITLE = "Buy a Seed to Sow for the Love You’ve Been Waiting For 💗💕";
 const LEGACY_SUPPORT_TITLES = new Set([
   "Choose a Seed Writing from the Seed Garden 🌱💗",
@@ -1826,7 +1826,7 @@ function renderRecentDonations() {
   elements.recentDonationList.innerHTML = donations.length
     ? donations
         .map((donation) => {
-          const name = donation.anonymous ? "Private customer" : donation.name || "Christ Garden customer";
+          const name = donation.anonymous ? "Private customer" : donation.name || "Seed Garden customer";
           const seedCount = getSeedCountFromAmount(donation.amount);
           const createdAt = donation.createdAt || new Date().toISOString();
 
