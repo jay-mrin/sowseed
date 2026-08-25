@@ -103,6 +103,7 @@ test("Google AdSense is controlled by the persisted admin setting on every conte
   const adsense = readRepositoryFile("src/adsense.js");
   const adminSettings = readRepositoryFile("supabase/functions/admin-settings/index.ts");
   const migration = readRepositoryFile("supabase/migrations/202608250001_add_adsense_toggle.sql");
+  const adsText = readRepositoryFile("ads.txt").trim();
   const contentPages = [
     "index.html",
     "about-us.html",
@@ -120,6 +121,11 @@ test("Google AdSense is controlled by the persisted admin setting on every conte
 
   for (const page of contentPages) {
     const html = readRepositoryFile(page);
+    assert.match(
+      html,
+      /<meta name="google-adsense-account" content="ca-pub-7086538868392432" \/>/,
+      `${page} must expose the static AdSense verification meta tag`,
+    );
     assert.match(html, /src="src\/config\.js\?v=3"/, `${page} must load public configuration`);
     assert.match(html, /src="src\/adsense\.js\?v=1"/, `${page} must load the conditional AdSense controller`);
   }
@@ -131,6 +137,7 @@ test("Google AdSense is controlled by the persisted admin setting on every conte
   assert.match(adminSettings, /"adsenseEnabled"/);
   assert.match(adminSettings, /next\.adsenseEnabled = isEnabled\(submitted\.adsenseEnabled\)/);
   assert.match(migration, /'\{adsenseEnabled\}'[\s\S]*'true'::jsonb/);
+  assert.equal(adsText, "google.com, pub-7086538868392432, DIRECT, f08c47fec0942fa0");
 });
 
 test("optimized page images stay within the initial transfer budget", () => {

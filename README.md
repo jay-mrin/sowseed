@@ -105,6 +105,7 @@ A valid email address is required at checkout so the order can be delivered. Dis
 The public meter is a repeating goal cycle, separate from the complete order calendar. Admin sets the goal amount and current cycle amount in dollars. With `$7 = 1 seed` and a `$700` goal, the target is `100 seeds`; a `$7` order adds `1%`, a `$14` order adds `2%`, and custom amounts contribute as `amount / 7`. When the current cycle reaches `$700`, the visible meter resets to `0%` and starts the next cycle.
 
 Admin can enable or disable Google AdSense under Site settings. The setting is public, applies across the main and legal/information pages, and takes effect for new page loads.
+The static `google-adsense-account` meta tag and root `ads.txt` record remain available for Google site ownership verification; neither marker loads ads when the admin setting is disabled.
 
 Every completed PayPal capture also creates a linked digital-service order for `Personalised Digital Writing - Custom Order Made Writing`. The calendar for the collecting role shows the order ID, PayPal transaction ID, personalised-writing request, fulfillment status, and a proof PDF download for each payment.
 
