@@ -98,6 +98,41 @@ test("public startup loads checkout settings before deferred community content",
   assert.match(bootstrap, /Promise\.all\(\[\s*supabase[\s\S]*\.from\("donations"\)[\s\S]*\.from\("seed_comments"\)[\s\S]*\.from\("posts"\)/);
 });
 
+test("Google AdSense is controlled by the persisted admin setting on every content page", () => {
+  const app = readRepositoryFile("src/app.js");
+  const adsense = readRepositoryFile("src/adsense.js");
+  const adminSettings = readRepositoryFile("supabase/functions/admin-settings/index.ts");
+  const migration = readRepositoryFile("supabase/migrations/202608250001_add_adsense_toggle.sql");
+  const contentPages = [
+    "index.html",
+    "about-us.html",
+    "terms-and-conditions.html",
+    "privacy-policy.html",
+    "delivery-fulfillment-policy.html",
+  ];
+
+  assert.match(adsense, /ca-pub-7086538868392432/);
+  assert.match(adsense, /pagead2\.googlesyndication\.com\/pagead\/js\/adsbygoogle\.js\?client=/);
+  assert.match(adsense, /script\.async = true/);
+  assert.match(adsense, /script\.crossOrigin = "anonymous"/);
+  assert.match(adsense, /payload\.settings\?\.adsenseEnabled/);
+  assert.match(adsense, /catch \(error\) \{\s*setEnabled\(false\)/);
+
+  for (const page of contentPages) {
+    const html = readRepositoryFile(page);
+    assert.match(html, /src="src\/config\.js\?v=3"/, `${page} must load public configuration`);
+    assert.match(html, /src="src\/adsense\.js\?v=1"/, `${page} must load the conditional AdSense controller`);
+  }
+
+  assert.match(readRepositoryFile("index.html"), /id="adminAdsenseEnabled"/);
+  assert.match(app, /adsenseEnabled: true/);
+  assert.match(app, /adminAdsenseEnabled: document\.querySelector\("#adminAdsenseEnabled"\)/);
+  assert.match(app, /SeedGardenAdsense\?\.setEnabled\(settings\.adsenseEnabled\)/);
+  assert.match(adminSettings, /"adsenseEnabled"/);
+  assert.match(adminSettings, /next\.adsenseEnabled = isEnabled\(submitted\.adsenseEnabled\)/);
+  assert.match(migration, /'\{adsenseEnabled\}'[\s\S]*'true'::jsonb/);
+});
+
 test("optimized page images stay within the initial transfer budget", () => {
   const html = readRepositoryFile("index.html");
   const imageBudgets = {

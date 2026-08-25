@@ -213,7 +213,7 @@
 
         <div class="admin-right-column">
           <section class="admin-section admin-settings-section">
-            <h3>2. Goal settings</h3>
+            <h3>2. Site settings</h3>
             <div class="admin-grid">
               <label>
                 <span>Goal amount ($)</span>
@@ -235,8 +235,15 @@
                 Show or hide the public community blessing comments section.
               </span>
             </label>
+            <label class="admin-toggle">
+              <input id="adminAdsenseEnabled" type="checkbox" />
+              <span>
+                <strong>Google AdSense</strong>
+                Load AdSense on public site pages. Changes apply to new page loads.
+              </span>
+            </label>
             <div class="admin-actions">
-              <button class="button button-primary" id="saveAdminButton" type="submit">Save goal settings</button>
+              <button class="button button-primary" id="saveAdminButton" type="submit">Save site settings</button>
             </div>
           </section>
 
@@ -593,7 +600,8 @@
       <p class="footer-contact">Contact: <a href="mailto:sowyourseed@christgarden.church">sowyourseed@christgarden.church</a></p>
     </footer>
 
-    <script src="src/config.js?v=2"></script>
-    <script src="src/app.js?v=85" defer></script>
+    <script src="src/config.js?v=3"></script>
+    <script src="src/adsense.js?v=1" data-adsense-mode="app" defer></script>
+    <script src="src/app.js?v=86" defer></script>
   </body>
 </html>

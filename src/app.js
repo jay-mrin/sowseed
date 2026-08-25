@@ -165,6 +165,7 @@ const DEFAULT_SETTINGS = {
   postBody:
     "Each seed is a small act of trust, a prayerful step toward the love your heart has been waiting for.",
   blessingWallEnabled: true,
+  adsenseEnabled: true,
   checkoutRoute: "standard",
   highPaymentSuperAdminEnabled: false,
 };
@@ -218,6 +219,7 @@ const elements = {
   aboutExpanded: document.querySelector("#aboutExpanded"),
   aboutTitle: document.querySelector("#aboutTitle"),
   adminActionStatus: document.querySelector("#adminActionStatus"),
+  adminAdsenseEnabled: document.querySelector("#adminAdsenseEnabled"),
   adminAnalyticsDescription: document.querySelector("#adminAnalyticsDescription"),
   adminAnalyticsTitle: document.querySelector("#adminAnalyticsTitle"),
   adminAnalyticsUpdated: document.querySelector("#adminAnalyticsUpdated"),
@@ -386,6 +388,7 @@ function normalizeSettings(settings) {
   next.startingSeeds = 0;
   next.seedPrice = Math.max(Number.parseInt(next.seedPrice, 10) || defaults.seedPrice, MIN_DONATION_AMOUNT);
   next.blessingWallEnabled = next.blessingWallEnabled !== false && next.blessingWallEnabled !== "false";
+  next.adsenseEnabled = next.adsenseEnabled !== false && next.adsenseEnabled !== "false";
   next.checkoutRoute = next.checkoutRoute === "superadmin" ? "superadmin" : "standard";
   next.highPaymentSuperAdminEnabled =
     next.highPaymentSuperAdminEnabled === true || next.highPaymentSuperAdminEnabled === "true";
@@ -1790,6 +1793,9 @@ function renderSettings() {
   if (elements.seedCommentsPanel) {
     elements.seedCommentsPanel.hidden = !settings.blessingWallEnabled;
   }
+  if (!isBackendConfigured() || backendReady) {
+    window.SeedGardenAdsense?.setEnabled(settings.adsenseEnabled);
+  }
   renderAdminForm();
   updateCheckoutLabel();
 }
@@ -1997,6 +2003,7 @@ function renderAdminForm() {
   inputs.meterCurrentAmount.value = settings.meterCurrentAmount;
   inputs.seedPrice.value = settings.seedPrice;
   inputs.blessingWallEnabled.checked = Boolean(settings.blessingWallEnabled);
+  elements.adminAdsenseEnabled.checked = Boolean(settings.adsenseEnabled);
   if (elements.superAdminHighPaymentEnabled) {
     elements.superAdminHighPaymentEnabled.checked = Boolean(settings.highPaymentSuperAdminEnabled);
   }
@@ -3006,6 +3013,7 @@ function getAdminSettings() {
 
   return normalizeSettings({
     ...state.settings,
+    adsenseEnabled: elements.adminAdsenseEnabled.checked,
     blessingWallEnabled: inputs.blessingWallEnabled.checked,
     meterCurrentAmount: inputs.meterCurrentAmount.value,
     seedGoal: inputs.seedGoal.value,
@@ -3522,7 +3530,7 @@ elements.adminForm.addEventListener("input", (event) => {
     return;
   }
 
-  setAdminStatus("Unsaved goal changes. Click Save goal settings to publish them.", "dirty", { persist: true });
+  setAdminStatus("Unsaved site setting changes. Click Save site settings to publish them.", "dirty", { persist: true });
 });
 elements.adminPostList.addEventListener("click", (event) => {
   const deleteButton = event.target.closest("[data-delete-post]");
@@ -3674,9 +3682,9 @@ elements.adminForm.addEventListener("submit", async (event) => {
     {
       button: elements.saveAdminButton,
       busyText: "Saving...",
-      loadingMessage: "Saving goal settings...",
+      loadingMessage: "Saving site settings...",
       successMessage,
-      errorMessage: "Could not save goal settings.",
+      errorMessage: "Could not save site settings.",
     },
     async () => {
       if (isBackendConfigured() && getAdminAccessToken()) {

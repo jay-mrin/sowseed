@@ -3,5 +3,6 @@ window.SOW_YOUR_SEED_CONFIG = {
   supabaseAnonKey: "your-supabase-anon-key",
   paypalClientId: "your-paypal-client-id",
   paypalCurrency: "USD",
+  adsenseEnabled: true,
   backendEnabled: true,
 };

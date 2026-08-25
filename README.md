@@ -22,6 +22,7 @@ The payment column includes a Blessing Wall loaded from `seed_comments`. Initial
 
 - `index.html` - static app entrypoint
 - `src/app.js` - frontend state, Supabase calls, PayPal SDK wiring
+- `src/adsense.js` - backend-controlled Google AdSense loader shared by public pages
 - `src/styles.css` - responsive UI and modal styling
 - `src/config.js` - local browser config, never store secrets here
 - `.env.example` - server secret placeholders
@@ -102,6 +103,8 @@ SuperAdmin chooses whether payments use the Admin or SuperAdmin PayPal account. 
 A valid email address is required at checkout so the order can be delivered. Display name and message are optional. Checkout creates a single PayPal payment; it does not create a recurring subscription.
 
 The public meter is a repeating goal cycle, separate from the complete order calendar. Admin sets the goal amount and current cycle amount in dollars. With `$7 = 1 seed` and a `$700` goal, the target is `100 seeds`; a `$7` order adds `1%`, a `$14` order adds `2%`, and custom amounts contribute as `amount / 7`. When the current cycle reaches `$700`, the visible meter resets to `0%` and starts the next cycle.
+
+Admin can enable or disable Google AdSense under Site settings. The setting is public, applies across the main and legal/information pages, and takes effect for new page loads.
 
 Every completed PayPal capture also creates a linked digital-service order for `Personalised Digital Writing - Custom Order Made Writing`. The calendar for the collecting role shows the order ID, PayPal transaction ID, personalised-writing request, fulfillment status, and a proof PDF download for each payment.
 
