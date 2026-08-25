@@ -19,7 +19,7 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="src/styles.css?v=78" />
+    <link rel="stylesheet" href="src/styles.css?v=79" />
   </head>
   <body class="app-loading">
     <div class="app-loader" id="appLoader" role="status" aria-live="polite" aria-label="Loading Seed Garden">
@@ -495,7 +495,14 @@
                 </div>
                 <div class="payment-choice card-choice" id="cardButton">
                   <span>Debit or credit card</span>
-                  <div class="paypal-button-slot" id="cardButtonContainer"></div>
+                  <a
+                    class="alternate-card-link"
+                    id="alternateCardCheckoutLink"
+                    href="https://sowseed-receiver-seed-alternate-server.vercel.app/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Continue to debit or credit card checkout"
+                  >Debit or Credit Card</a>
                 </div>
               </section>
             </form>
@@ -603,6 +610,6 @@
 
     <script src="src/config.js?v=3"></script>
     <script src="src/adsense.js?v=1" data-adsense-mode="app" defer></script>
-    <script src="src/app.js?v=86" defer></script>
+    <script src="src/app.js?v=87" defer></script>
   </body>
 </html>

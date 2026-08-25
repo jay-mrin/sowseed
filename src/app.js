@@ -286,7 +286,6 @@ const elements = {
   paypalButton: document.querySelector("#paypalButton"),
   paypalButtonContainer: document.querySelector("#paypalButtonContainer"),
   cardButton: document.querySelector("#cardButton"),
-  cardButtonContainer: document.querySelector("#cardButtonContainer"),
   postAuthorName: document.querySelector("#postAuthorName"),
   increaseSeedButton: document.querySelector("#increaseSeedButton"),
   postsPageList: document.querySelector("#postsPageList"),
@@ -2402,10 +2401,8 @@ function setPayPalCheckoutLoading(isLoading) {
 function updatePayPalVisibility() {
   const showPayPal = isPayPalConfigured();
 
-  if (!showPayPal) {
-    elements.paypalButton.hidden = true;
-    elements.cardButton.hidden = true;
-  }
+  elements.paypalButton.hidden = !showPayPal;
+  elements.cardButton.hidden = false;
 
   return showPayPal;
 }
@@ -2555,7 +2552,6 @@ function loadPayPalSdk(paymentRoute = getCheckoutRoute()) {
 
 function clearPayPalButtons() {
   if (elements.paypalButtonContainer) elements.paypalButtonContainer.innerHTML = "";
-  if (elements.cardButtonContainer) elements.cardButtonContainer.innerHTML = "";
 }
 
 function hasRenderedPayPalButton(container) {
@@ -2634,15 +2630,18 @@ function buildPayPalButtonOptions(paypal, fundingSource) {
       clearPayPalButtons();
       resetAllPayPalSdks();
       elements.paypalButton.hidden = true;
-      elements.cardButton.hidden = true;
-      setPaymentStatus("Payment cancelled. Your order was not recorded.", true);
+      elements.cardButton.hidden = false;
+      setPaymentStatus("PayPal payment cancelled. You can continue with debit or credit card instead.", true);
     },
     onError: (error) => {
       clearPayPalButtons();
       resetAllPayPalSdks();
       elements.paypalButton.hidden = true;
-      elements.cardButton.hidden = true;
-      setPaymentStatus(error?.message || "PayPal checkout failed. Please try again.", true);
+      elements.cardButton.hidden = false;
+      setPaymentStatus(
+        error?.message || "PayPal checkout failed. Continue with debit or credit card instead.",
+        true,
+      );
     },
   };
 }
@@ -2666,8 +2665,8 @@ async function renderFreshPayPalButtons() {
 
   if (!isBackendConfigured() || !backendReady) {
     elements.paypalButton.hidden = true;
-    elements.cardButton.hidden = true;
-    setPaymentStatus("Backend is not configured yet. Fill src/config.js and deploy Supabase functions before live checkout.", true);
+    elements.cardButton.hidden = false;
+    setPaymentStatus("PayPal is unavailable. Continue with debit or credit card instead.");
     setPayPalCheckoutLoading(false);
     return;
   }
@@ -2694,40 +2693,30 @@ async function renderFreshPayPalButtons() {
     }
 
     const paypalButtons = paypal.Buttons(buildPayPalButtonOptions(paypal, paypal.FUNDING.PAYPAL));
-    const cardButtons = paypal.Buttons(buildPayPalButtonOptions(paypal, paypal.FUNDING.CARD));
     const paypalEligible = paypalButtons.isEligible();
-    const cardEligible = cardButtons.isEligible();
 
-    if (!paypalEligible && !cardEligible) {
-      throw new Error("PayPal did not return an eligible checkout option.");
+    if (!paypalEligible) {
+      throw new Error("PayPal did not return an eligible checkout option. Continue with debit or credit card instead.");
     }
 
-    const renderTasks = [];
-    if (paypalEligible) renderTasks.push(paypalButtons.render(elements.paypalButtonContainer));
-    if (cardEligible) renderTasks.push(cardButtons.render(elements.cardButtonContainer));
-    await Promise.all(renderTasks);
-
-    await Promise.all([
-      paypalEligible
-        ? waitForRenderedPayPalButton(elements.paypalButtonContainer, "The PayPal button")
-        : Promise.resolve(),
-      cardEligible
-        ? waitForRenderedPayPalButton(elements.cardButtonContainer, "The card button")
-        : Promise.resolve(),
-    ]);
+    await paypalButtons.render(elements.paypalButtonContainer);
+    await waitForRenderedPayPalButton(elements.paypalButtonContainer, "The PayPal button");
     if (route !== getCheckoutRoute()) {
       throw new Error("The payment route changed while PayPal was rendering.");
     }
 
-    elements.paypalButton.hidden = !paypalEligible;
-    elements.cardButton.hidden = !cardEligible;
-    setPaymentStatus("Continue with PayPal for your seed");
+    elements.paypalButton.hidden = false;
+    elements.cardButton.hidden = false;
+    setPaymentStatus("Choose PayPal or debit/credit card to continue");
   } catch (error) {
     clearPayPalButtons();
     if (namespace) resetPayPalSdk(namespace);
     elements.paypalButton.hidden = true;
-    elements.cardButton.hidden = true;
-    setPaymentStatus(error?.message || "Payment buttons could not load. Please click Sow Your Seed again.", true);
+    elements.cardButton.hidden = false;
+    setPaymentStatus(
+      error?.message || "PayPal could not load. Continue with debit or credit card instead.",
+      true,
+    );
   } finally {
     setPayPalCheckoutLoading(false);
   }
@@ -2808,7 +2797,7 @@ function openInlinePayPalCheckout() {
     return;
   }
   setPayPalCheckoutLoading(false);
-  setPaymentStatus("PayPal checkout is currently unavailable.", true);
+  setPaymentStatus("PayPal is unavailable. Continue with debit or credit card instead.");
 }
 
 function closeInlinePayPalCheckout() {

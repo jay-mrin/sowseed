@@ -2795,6 +2795,36 @@ legend::after {
   text-align: center;
 }
 
+.alternate-card-link {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 18px;
+  border: 1px solid #111827;
+  border-radius: var(--button-radius);
+  color: #ffffff;
+  background: linear-gradient(135deg, #111827, #26354f);
+  box-shadow: 0 8px 18px rgba(17, 24, 39, 0.18);
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+}
+
+.alternate-card-link:hover {
+  box-shadow: 0 11px 22px rgba(17, 24, 39, 0.24);
+  filter: brightness(1.08);
+}
+
+.alternate-card-link:focus-visible {
+  outline: 3px solid rgba(248, 50, 184, 0.42);
+  outline-offset: 3px;
+}
+
 .receipt-dialog {
   width: min(470px, calc(100% - 32px));
   padding: 0;

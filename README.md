@@ -92,7 +92,7 @@ npm run supabase:deploy
 
 ## PayPal Notes
 
-This app uses the PayPal Orders API with the PayPal JavaScript SDK. It renders the official PayPal wallet button and, when PayPal marks it eligible for the buyer, the official debit or credit card button.
+This app uses the PayPal Orders API with the PayPal JavaScript SDK for the official PayPal wallet button. The debit or credit card option redirects to the separately hosted alternate checkout website.
 
 The PayPal SDK is never preloaded. When a customer opens checkout, the app refreshes the server-selected payment route, removes any previous PayPal SDK instance, displays the rotating seed loader, and loads a new SDK instance. PayPal buttons remain hidden until each eligible button has rendered a visible iframe.
 
@@ -120,7 +120,7 @@ npm run check
 Use PayPal sandbox first:
 
 - Successful wallet capture creates one donation row and returns a fortune.
-- Successful eligible card capture creates one donation row and returns a fortune.
+- Debit or credit card checkout redirects to the configured alternate checkout website.
 - Cancelled checkout creates no donation.
 - Duplicate capture/webhook updates do not create duplicate donations.
 - Admin calendar can download a proof PDF for each digital-service order and mark orders fulfilled.

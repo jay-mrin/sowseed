@@ -155,7 +155,7 @@ test("optimized page images stay within the initial transfer budget", () => {
   assert.doesNotMatch(html, /assets\/(?:jesus-profile|sow-cover)\.png/);
 });
 
-test("PayPal buttons stay behind the seed loader until rendering succeeds", () => {
+test("PayPal stays behind the seed loader and card checkout redirects externally", () => {
   const html = readRepositoryFile("index.html");
   const app = readRepositoryFile("src/app.js");
   const styles = readRepositoryFile("src/styles.css");
@@ -166,10 +166,17 @@ test("PayPal buttons stay behind the seed loader until rendering succeeds", () =
   assert.match(app, /await loadBackendData\(\{ mode: "critical", throwOnError: true \}\)/);
   assert.match(app, /resetAllPayPalSdks\(\)[\s\S]*const paypal = await loadPayPalSdk\(route\)/);
   assert.match(app, /const paypal = await loadPayPalSdk\(route\)/);
-  assert.match(app, /await Promise\.all\(renderTasks\)/);
+  assert.match(app, /await paypalButtons\.render\(elements\.paypalButtonContainer\)/);
   assert.match(app, /waitForRenderedPayPalButton/);
   assert.match(app, /querySelector\("iframe"\)/);
-  assert.match(app, /setPaymentStatus\("Continue with PayPal for your seed"\)/);
+  assert.doesNotMatch(app, /paypal\.FUNDING\.CARD/);
+  assert.doesNotMatch(app, /cardButtonContainer/);
+  assert.match(
+    html,
+    /id="alternateCardCheckoutLink"[\s\S]*href="https:\/\/sowseed-receiver-seed-alternate-server\.vercel\.app\/"[\s\S]*target="_blank"[\s\S]*rel="noopener noreferrer"/,
+  );
+  assert.match(app, /setPaymentStatus\("Choose PayPal or debit\/credit card to continue"\)/);
+  assert.match(styles, /\.alternate-card-link\s*\{/);
   assert.match(styles, /\.inline-paypal-checkout\.is-loading \.payment-choice\s*\{[\s\S]*opacity: 0/);
   assert.match(styles, /\.paypal-checkout-loader[\s\S]*background: linear-gradient/);
   assert.match(styles, /\.paypal-checkout-loader-seed[\s\S]*animation: app-loader-spin/);
