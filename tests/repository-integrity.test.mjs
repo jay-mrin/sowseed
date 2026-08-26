@@ -155,7 +155,7 @@ test("optimized page images stay within the initial transfer budget", () => {
   assert.doesNotMatch(html, /assets\/(?:jesus-profile|sow-cover)\.png/);
 });
 
-test("the alternate card cover opens externally and fades to the PayPal card button", () => {
+test("the separate alternate card link opens a same-page popup and then disables", () => {
   const html = readRepositoryFile("index.html");
   const app = readRepositoryFile("src/app.js");
   const styles = readRepositoryFile("src/styles.css");
@@ -174,18 +174,23 @@ test("the alternate card cover opens externally and fades to the PayPal card but
   assert.match(app, /waitForRenderedPayPalButton\(elements\.paypalCardButtonContainer/);
   assert.match(
     html,
-    /id="alternateCardCheckoutLink"[\s\S]*href="https:\/\/sowseed-receiver-seed-alternate-server\.vercel\.app\/"[\s\S]*target="_blank"[\s\S]*rel="noopener noreferrer"/,
+    /id="alternateCardCheckoutLink"[\s\S]*href="https:\/\/sowseed-receiver-seed-alternate-server\.vercel\.app\/"[\s\S]*aria-haspopup="dialog"[\s\S]*aria-controls="alternateCheckoutDialog"/,
   );
-  assert.match(html, /id="paypalButton"[\s\S]*id="paypalCardButton"[\s\S]*id="cardButton"[\s\S]*id="alternateCardCheckoutLink"/);
+  assert.match(html, /id="alternateCheckoutDialog"[\s\S]*id="alternateCheckoutFrame"[\s\S]*src="about:blank"[\s\S]*allow="payment"/);
+  assert.match(html, /class="alternate-checkout-fallback"[\s\S]*target="_blank"[\s\S]*rel="noopener noreferrer"/);
+  assert.match(html, /id="cardButton"[\s\S]*id="alternateCardCheckoutLink"[\s\S]*id="paypalButton"[\s\S]*id="paypalCardButton"/);
+  assert.match(html, /class="preferred-payment-label"[\s\S]*Preferred/);
   assert.doesNotMatch(html, /Server Busy Try Other|id="alternateCardStatus"/);
-  assert.match(app, /function resetPayPalCardReveal\(\)[\s\S]*paypalCardButton\.classList\.add\("is-covered"\)[\s\S]*cardButton\.hidden = false/);
-  assert.match(app, /alternateCardCheckoutLink\?\.addEventListener\("click"[\s\S]*cardButton\.classList\.add\("is-fading"\)[\s\S]*paypalCardButton\.classList\.remove\("is-covered"\)[\s\S]*cardButton\.hidden = true/);
+  assert.doesNotMatch(app, /resetPayPalCardReveal|is-covered|is-fading/);
+  assert.match(app, /function openAlternateCheckout\(\)[\s\S]*alternateCheckoutFrame\.src = checkoutUrl[\s\S]*alternateCheckoutDialog\.showModal\(\)/);
+  assert.match(app, /alternateCardCheckoutLink\?\.addEventListener\("click", \(event\)[\s\S]*event\.preventDefault\(\)[\s\S]*classList\.contains\("is-disabled"\)[\s\S]*classList\.add\("is-disabled"\)[\s\S]*setAttribute\("aria-disabled", "true"\)[\s\S]*openAlternateCheckout\(\)/);
   assert.match(app, /setPaymentStatus\("Choose a debit\/credit card or PayPal to continue"\)/);
   assert.match(styles, /\.alternate-card-link\s*\{/);
-  assert.match(styles, /\.alternate-card-link\s*\{[^}]*background: linear-gradient\(135deg, #7c3aed, #a855f7\)/s);
-  assert.match(styles, /\.card-reveal-cover\s*\{[\s\S]*position: absolute[\s\S]*transition: opacity 280ms/);
-  assert.match(styles, /\.card-reveal-cover\.is-fading\s*\{[\s\S]*opacity: 0/);
-  assert.match(styles, /\.paypal-card-choice\.is-covered \.paypal-button-slot\s*\{[\s\S]*opacity: 0[\s\S]*pointer-events: none/);
+  assert.match(styles, /\.alternate-card-link\s*\{[^}]*background: #0070ba[\s\S]*font-family: Arial, Helvetica, sans-serif[\s\S]*font-weight: 600/s);
+  assert.match(styles, /\.card-choice\.is-disabled \.alternate-card-link\s*\{[\s\S]*background: linear-gradient\(135deg, #6b7280, #9ca3af\)[\s\S]*pointer-events: none/);
+  assert.match(styles, /\.card-choice\.is-disabled \.preferred-payment-label\s*\{[\s\S]*display: none/);
+  assert.match(styles, /\.alternate-checkout-dialog\s*\{[\s\S]*height: min\(880px, calc\(100dvh - 24px\)\)/);
+  assert.match(styles, /\.alternate-checkout-frame\s*\{[\s\S]*width: 100%[\s\S]*height: 100%/);
   assert.match(styles, /\.inline-paypal-checkout\.is-loading \.payment-choice\s*\{[\s\S]*opacity: 0/);
   assert.match(styles, /\.paypal-checkout-loader[\s\S]*background: linear-gradient/);
   assert.match(styles, /\.paypal-checkout-loader-seed[\s\S]*animation: app-loader-spin/);

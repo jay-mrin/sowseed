@@ -283,6 +283,9 @@ const elements = {
   paymentEmailInput: document.querySelector("#paymentEmailInput"),
   paymentStatus: document.querySelector("#paymentStatus"),
   alternateCardCheckoutLink: document.querySelector("#alternateCardCheckoutLink"),
+  alternateCheckoutDialog: document.querySelector("#alternateCheckoutDialog"),
+  alternateCheckoutFrame: document.querySelector("#alternateCheckoutFrame"),
+  closeAlternateCheckoutButton: document.querySelector("#closeAlternateCheckoutButton"),
   paypalCheckoutLoader: document.querySelector("#paypalCheckoutLoader"),
   paypalButton: document.querySelector("#paypalButton"),
   paypalButtonContainer: document.querySelector("#paypalButtonContainer"),
@@ -2391,12 +2394,6 @@ function setPaymentStatus(message, isError = false) {
   elements.paymentStatus.hidden = !message;
 }
 
-function resetPayPalCardReveal() {
-  elements.paypalCardButton.classList.add("is-covered");
-  elements.cardButton.classList.remove("is-fading");
-  elements.cardButton.hidden = false;
-}
-
 function setPayPalCheckoutLoading(isLoading) {
   elements.inlinePaypalCheckout.classList.toggle("is-loading", isLoading);
   if (elements.paypalCheckoutLoader) elements.paypalCheckoutLoader.hidden = !isLoading;
@@ -2730,7 +2727,7 @@ async function renderFreshPayPalButtons() {
 
     elements.paypalButton.hidden = false;
     elements.paypalCardButton.hidden = !paypalCardEligible;
-    if (paypalCardEligible) resetPayPalCardReveal();
+    elements.cardButton.hidden = false;
     setPaymentStatus("Choose a debit/credit card or PayPal to continue");
   } catch (error) {
     clearPayPalButtons();
@@ -2811,7 +2808,6 @@ async function finishVerifiedDonation(payload) {
 
 function openInlinePayPalCheckout() {
   setPaymentStatus("");
-  resetPayPalCardReveal();
   const showPayPal = updatePayPalVisibility();
   elements.inlinePaypalCheckout.hidden = false;
   elements.checkoutButton.classList.add("is-checkout-open");
@@ -2852,6 +2848,32 @@ function openReceipt() {
 function closeReceipt() {
   document.body.classList.remove("receipt-open");
   elements.receiptDialog.close();
+}
+
+function openAlternateCheckout() {
+  const checkoutUrl = elements.alternateCardCheckoutLink?.href;
+  if (!checkoutUrl || !elements.alternateCheckoutDialog || !elements.alternateCheckoutFrame) return;
+
+  elements.alternateCheckoutFrame.src = checkoutUrl;
+  document.body.classList.add("alternate-checkout-open");
+
+  if (typeof elements.alternateCheckoutDialog.showModal === "function") {
+    elements.alternateCheckoutDialog.showModal();
+  } else {
+    elements.alternateCheckoutDialog.setAttribute("open", "");
+  }
+}
+
+function closeAlternateCheckout() {
+  if (!elements.alternateCheckoutDialog) return;
+
+  document.body.classList.remove("alternate-checkout-open");
+  if (elements.alternateCheckoutDialog.open && typeof elements.alternateCheckoutDialog.close === "function") {
+    elements.alternateCheckoutDialog.close();
+  } else {
+    elements.alternateCheckoutDialog.removeAttribute("open");
+  }
+  if (elements.alternateCheckoutFrame) elements.alternateCheckoutFrame.src = "about:blank";
 }
 
 function openTutorial() {
@@ -3574,13 +3596,18 @@ elements.showMoreButtons.forEach((button) => {
 });
 
 elements.supportForm.addEventListener("submit", submitDonation);
-elements.alternateCardCheckoutLink?.addEventListener("click", () => {
-  elements.cardButton.classList.add("is-fading");
-  window.setTimeout(() => {
-    elements.paypalCardButton.classList.remove("is-covered");
-    elements.cardButton.hidden = true;
-    elements.paypalCardButtonContainer?.querySelector("iframe")?.focus();
-  }, 280);
+elements.alternateCardCheckoutLink?.addEventListener("click", (event) => {
+  event.preventDefault();
+
+  if (elements.cardButton.classList.contains("is-disabled")) {
+    return;
+  }
+
+  elements.cardButton.classList.add("is-disabled");
+  elements.alternateCardCheckoutLink.setAttribute("aria-disabled", "true");
+  elements.alternateCardCheckoutLink.setAttribute("tabindex", "-1");
+  elements.alternateCardCheckoutLink.blur();
+  openAlternateCheckout();
 });
 elements.paymentEmailInput?.addEventListener("input", () => {
   if (elements.emailError && isValidEmailAddress(getPaymentEmail())) {
@@ -3734,6 +3761,18 @@ elements.closeReceiptButton.addEventListener("click", closeReceipt);
 elements.doneButton.addEventListener("click", closeReceipt);
 elements.receiptDialog.addEventListener("close", () => {
   document.body.classList.remove("receipt-open");
+});
+elements.closeAlternateCheckoutButton?.addEventListener("click", closeAlternateCheckout);
+elements.alternateCheckoutDialog?.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeAlternateCheckout();
+});
+elements.alternateCheckoutDialog?.addEventListener("click", (event) => {
+  if (event.target === elements.alternateCheckoutDialog) closeAlternateCheckout();
+});
+elements.alternateCheckoutDialog?.addEventListener("close", () => {
+  document.body.classList.remove("alternate-checkout-open");
+  if (elements.alternateCheckoutFrame) elements.alternateCheckoutFrame.src = "about:blank";
 });
 elements.openTutorialButton?.addEventListener("click", openTutorial);
 elements.closeTutorialButton?.addEventListener("click", () => closeTutorial());

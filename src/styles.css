@@ -140,6 +140,7 @@ body.app-ready .app-loader {
 
 body.admin-open,
 body.receipt-open,
+body.alternate-checkout-open,
 body.tutorial-open {
   overflow: hidden;
 }
@@ -2802,22 +2803,25 @@ legend::after {
   align-items: center;
   justify-content: center;
   padding: 10px 18px;
-  border: 1px solid #6d28d9;
+  border: 1px solid #005ea6;
   border-radius: var(--button-radius);
   color: #ffffff;
-  background: linear-gradient(135deg, #7c3aed, #a855f7);
-  box-shadow: 0 8px 18px rgba(109, 40, 217, 0.24);
+  background: #0070ba;
+  box-shadow: 0 8px 18px rgba(0, 48, 135, 0.24);
+  font-family: Arial, Helvetica, sans-serif;
   font-size: 16px;
-  font-weight: 800;
+  font-weight: 600;
+  letter-spacing: 0;
   line-height: 1.2;
   text-align: center;
   text-decoration: none;
-  transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+  transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease, background 180ms ease;
 }
 
 .alternate-card-link:hover {
-  box-shadow: 0 11px 22px rgba(109, 40, 217, 0.32);
-  filter: brightness(1.08);
+  background: #005ea6;
+  box-shadow: 0 11px 22px rgba(0, 48, 135, 0.3);
+  filter: none;
 }
 
 .alternate-card-link:focus-visible {
@@ -2825,33 +2829,106 @@ legend::after {
   outline-offset: 3px;
 }
 
-.paypal-card-choice {
-  position: relative;
-  isolation: isolate;
+.preferred-payment-label {
+  display: block;
+  margin: 0 0 6px;
+  color: #0070ba;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-align: center;
+  text-transform: uppercase;
 }
 
-.paypal-card-choice.is-covered .paypal-button-slot {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.card-reveal-cover {
-  position: absolute;
-  inset: 0;
-  z-index: 999;
-  opacity: 1;
-  transition: opacity 280ms ease, transform 280ms ease, filter 280ms ease;
-}
-
-.card-reveal-cover.is-fading {
-  opacity: 0;
-  transform: scale(0.98);
-  filter: blur(2px);
-  pointer-events: none;
-}
-
-.card-reveal-cover[hidden] {
+.card-choice.is-disabled .preferred-payment-label {
   display: none;
+}
+
+.card-choice.is-disabled:hover {
+  transform: none;
+}
+
+.card-choice.is-disabled .alternate-card-link {
+  border-color: #9ca3af;
+  color: #f3f4f6;
+  background: linear-gradient(135deg, #6b7280, #9ca3af);
+  box-shadow: none;
+  filter: none;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.alternate-checkout-dialog {
+  width: min(920px, calc(100% - 24px));
+  height: min(880px, calc(100dvh - 24px));
+  max-height: calc(100dvh - 24px);
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 24px;
+  background: transparent;
+}
+
+.alternate-checkout-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(8px);
+}
+
+.alternate-checkout-card {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.34);
+}
+
+.alternate-checkout-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.alternate-checkout-heading h2 {
+  margin: 2px 0 0;
+  color: #172033;
+  font-size: 22px;
+  line-height: 1.15;
+}
+
+.alternate-checkout-close {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+}
+
+.alternate-checkout-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.alternate-checkout-fallback {
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.alternate-checkout-fallback a {
+  color: #005ea6;
 }
 
 .receipt-dialog {
@@ -3637,6 +3714,23 @@ legend::after {
 
 /* Phone content order */
 @media (max-width: 680px) {
+  .alternate-checkout-dialog {
+    width: 100%;
+    height: 100dvh;
+    max-height: none;
+    margin: 0;
+    border-radius: 0;
+  }
+
+  .alternate-checkout-card {
+    padding: 12px;
+    border-radius: 0;
+  }
+
+  .alternate-checkout-heading h2 {
+    font-size: 19px;
+  }
+
   .app-grid#aboutView {
     display: flex;
     flex-direction: column;

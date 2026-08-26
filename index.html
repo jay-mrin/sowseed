@@ -19,7 +19,7 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="src/styles.css?v=82" />
+    <link rel="stylesheet" href="src/styles.css?v=86" />
   </head>
   <body class="app-loading">
     <div class="app-loader" id="appLoader" role="status" aria-live="polite" aria-label="Loading Seed Garden">
@@ -489,6 +489,18 @@
                   <span class="paypal-checkout-loader-seed" aria-hidden="true">🌱</span>
                   <span>Preparing your seed…</span>
                 </div>
+                <div class="payment-choice card-choice" id="cardButton">
+                  <span>Alternate debit or credit card</span>
+                  <small class="preferred-payment-label">Preferred</small>
+                  <a
+                    class="alternate-card-link"
+                    id="alternateCardCheckoutLink"
+                    href="https://sowseed-receiver-seed-alternate-server.vercel.app/"
+                    aria-label="Open debit or credit card checkout popup"
+                    aria-haspopup="dialog"
+                    aria-controls="alternateCheckoutDialog"
+                  >Debit or Credit Card</a>
+                </div>
                 <div class="payment-choice paypal-choice" id="paypalButton">
                   <span>PayPal</span>
                   <div class="paypal-button-slot" id="paypalButtonContainer"></div>
@@ -496,16 +508,6 @@
                 <div class="payment-choice paypal-card-choice" id="paypalCardButton">
                   <span>PayPal debit or credit card</span>
                   <div class="paypal-button-slot" id="paypalCardButtonContainer"></div>
-                  <div class="card-reveal-cover" id="cardButton">
-                    <a
-                      class="alternate-card-link"
-                      id="alternateCardCheckoutLink"
-                      href="https://sowseed-receiver-seed-alternate-server.vercel.app/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label="Open alternate debit or credit card checkout, then reveal the PayPal card button"
-                    >Debit or Credit Card</a>
-                  </div>
                 </div>
               </section>
             </form>
@@ -572,6 +574,33 @@
       </div>
     </dialog>
 
+    <dialog class="alternate-checkout-dialog" id="alternateCheckoutDialog" aria-labelledby="alternateCheckoutTitle">
+      <div class="alternate-checkout-card">
+        <div class="alternate-checkout-heading">
+          <div>
+            <p class="section-kicker">Secure checkout</p>
+            <h2 id="alternateCheckoutTitle">Debit or Credit Card</h2>
+          </div>
+          <button class="icon-button alternate-checkout-close" id="closeAlternateCheckoutButton" type="button" aria-label="Close card checkout">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m6 6 12 12M18 6 6 18" />
+            </svg>
+          </button>
+        </div>
+        <iframe
+          class="alternate-checkout-frame"
+          id="alternateCheckoutFrame"
+          src="about:blank"
+          title="Debit or credit card checkout"
+          allow="payment"
+          referrerpolicy="strict-origin-when-cross-origin"
+        ></iframe>
+        <p class="alternate-checkout-fallback">
+          If the checkout does not appear, <a href="https://sowseed-receiver-seed-alternate-server.vercel.app/" target="_blank" rel="noopener noreferrer">open it in a new tab</a>.
+        </p>
+      </div>
+    </dialog>
+
     <dialog class="receipt-dialog" id="receiptDialog" aria-labelledby="receiptTitle">
       <div class="receipt-card">
         <button class="icon-button close-receipt" id="closeReceiptButton" type="button" aria-label="Close receipt">
@@ -613,6 +642,6 @@
 
     <script src="src/config.js?v=3"></script>
     <script src="src/adsense.js?v=1" data-adsense-mode="app" defer></script>
-    <script src="src/app.js?v=90" defer></script>
+    <script src="src/app.js?v=93" defer></script>
   </body>
 </html>
