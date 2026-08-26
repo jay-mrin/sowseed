@@ -155,7 +155,7 @@ test("optimized page images stay within the initial transfer budget", () => {
   assert.doesNotMatch(html, /assets\/(?:jesus-profile|sow-cover)\.png/);
 });
 
-test("PayPal stays behind the seed loader and card checkout redirects externally", () => {
+test("the alternate card cover opens externally and fades to the PayPal card button", () => {
   const html = readRepositoryFile("index.html");
   const app = readRepositoryFile("src/app.js");
   const styles = readRepositoryFile("src/styles.css");
@@ -169,14 +169,23 @@ test("PayPal stays behind the seed loader and card checkout redirects externally
   assert.match(app, /await paypalButtons\.render\(elements\.paypalButtonContainer\)/);
   assert.match(app, /waitForRenderedPayPalButton/);
   assert.match(app, /querySelector\("iframe"\)/);
-  assert.doesNotMatch(app, /paypal\.FUNDING\.CARD/);
-  assert.doesNotMatch(app, /cardButtonContainer/);
+  assert.match(app, /paypal\.Buttons\(buildPayPalButtonOptions\(paypal, paypal\.FUNDING\.CARD\)\)/);
+  assert.match(app, /await paypalCardButtons\.render\(elements\.paypalCardButtonContainer\)/);
+  assert.match(app, /waitForRenderedPayPalButton\(elements\.paypalCardButtonContainer/);
   assert.match(
     html,
     /id="alternateCardCheckoutLink"[\s\S]*href="https:\/\/sowseed-receiver-seed-alternate-server\.vercel\.app\/"[\s\S]*target="_blank"[\s\S]*rel="noopener noreferrer"/,
   );
-  assert.match(app, /setPaymentStatus\("Choose PayPal or debit\/credit card to continue"\)/);
+  assert.match(html, /id="paypalButton"[\s\S]*id="paypalCardButton"[\s\S]*id="cardButton"[\s\S]*id="alternateCardCheckoutLink"/);
+  assert.doesNotMatch(html, /Server Busy Try Other|id="alternateCardStatus"/);
+  assert.match(app, /function resetPayPalCardReveal\(\)[\s\S]*paypalCardButton\.classList\.add\("is-covered"\)[\s\S]*cardButton\.hidden = false/);
+  assert.match(app, /alternateCardCheckoutLink\?\.addEventListener\("click"[\s\S]*cardButton\.classList\.add\("is-fading"\)[\s\S]*paypalCardButton\.classList\.remove\("is-covered"\)[\s\S]*cardButton\.hidden = true/);
+  assert.match(app, /setPaymentStatus\("Choose a debit\/credit card or PayPal to continue"\)/);
   assert.match(styles, /\.alternate-card-link\s*\{/);
+  assert.match(styles, /\.alternate-card-link\s*\{[^}]*background: linear-gradient\(135deg, #7c3aed, #a855f7\)/s);
+  assert.match(styles, /\.card-reveal-cover\s*\{[\s\S]*position: absolute[\s\S]*transition: opacity 280ms/);
+  assert.match(styles, /\.card-reveal-cover\.is-fading\s*\{[\s\S]*opacity: 0/);
+  assert.match(styles, /\.paypal-card-choice\.is-covered \.paypal-button-slot\s*\{[\s\S]*opacity: 0[\s\S]*pointer-events: none/);
   assert.match(styles, /\.inline-paypal-checkout\.is-loading \.payment-choice\s*\{[\s\S]*opacity: 0/);
   assert.match(styles, /\.paypal-checkout-loader[\s\S]*background: linear-gradient/);
   assert.match(styles, /\.paypal-checkout-loader-seed[\s\S]*animation: app-loader-spin/);

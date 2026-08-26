@@ -282,9 +282,12 @@ const elements = {
   inlinePaypalCheckout: document.querySelector("#inlinePaypalCheckout"),
   paymentEmailInput: document.querySelector("#paymentEmailInput"),
   paymentStatus: document.querySelector("#paymentStatus"),
+  alternateCardCheckoutLink: document.querySelector("#alternateCardCheckoutLink"),
   paypalCheckoutLoader: document.querySelector("#paypalCheckoutLoader"),
   paypalButton: document.querySelector("#paypalButton"),
   paypalButtonContainer: document.querySelector("#paypalButtonContainer"),
+  paypalCardButton: document.querySelector("#paypalCardButton"),
+  paypalCardButtonContainer: document.querySelector("#paypalCardButtonContainer"),
   cardButton: document.querySelector("#cardButton"),
   postAuthorName: document.querySelector("#postAuthorName"),
   increaseSeedButton: document.querySelector("#increaseSeedButton"),
@@ -2388,12 +2391,19 @@ function setPaymentStatus(message, isError = false) {
   elements.paymentStatus.hidden = !message;
 }
 
+function resetPayPalCardReveal() {
+  elements.paypalCardButton.classList.add("is-covered");
+  elements.cardButton.classList.remove("is-fading");
+  elements.cardButton.hidden = false;
+}
+
 function setPayPalCheckoutLoading(isLoading) {
   elements.inlinePaypalCheckout.classList.toggle("is-loading", isLoading);
   if (elements.paypalCheckoutLoader) elements.paypalCheckoutLoader.hidden = !isLoading;
 
   if (isLoading) {
     elements.paypalButton.hidden = false;
+    elements.paypalCardButton.hidden = false;
     elements.cardButton.hidden = false;
   }
 }
@@ -2402,6 +2412,7 @@ function updatePayPalVisibility() {
   const showPayPal = isPayPalConfigured();
 
   elements.paypalButton.hidden = !showPayPal;
+  elements.paypalCardButton.hidden = !showPayPal;
   elements.cardButton.hidden = false;
 
   return showPayPal;
@@ -2552,6 +2563,7 @@ function loadPayPalSdk(paymentRoute = getCheckoutRoute()) {
 
 function clearPayPalButtons() {
   if (elements.paypalButtonContainer) elements.paypalButtonContainer.innerHTML = "";
+  if (elements.paypalCardButtonContainer) elements.paypalCardButtonContainer.innerHTML = "";
 }
 
 function hasRenderedPayPalButton(container) {
@@ -2630,6 +2642,7 @@ function buildPayPalButtonOptions(paypal, fundingSource) {
       clearPayPalButtons();
       resetAllPayPalSdks();
       elements.paypalButton.hidden = true;
+      elements.paypalCardButton.hidden = true;
       elements.cardButton.hidden = false;
       setPaymentStatus("PayPal payment cancelled. You can continue with debit or credit card instead.", true);
     },
@@ -2637,6 +2650,7 @@ function buildPayPalButtonOptions(paypal, fundingSource) {
       clearPayPalButtons();
       resetAllPayPalSdks();
       elements.paypalButton.hidden = true;
+      elements.paypalCardButton.hidden = true;
       elements.cardButton.hidden = false;
       setPaymentStatus(
         error?.message || "PayPal checkout failed. Continue with debit or credit card instead.",
@@ -2665,6 +2679,7 @@ async function renderFreshPayPalButtons() {
 
   if (!isBackendConfigured() || !backendReady) {
     elements.paypalButton.hidden = true;
+    elements.paypalCardButton.hidden = true;
     elements.cardButton.hidden = false;
     setPaymentStatus("PayPal is unavailable. Continue with debit or credit card instead.");
     setPayPalCheckoutLoading(false);
@@ -2693,7 +2708,9 @@ async function renderFreshPayPalButtons() {
     }
 
     const paypalButtons = paypal.Buttons(buildPayPalButtonOptions(paypal, paypal.FUNDING.PAYPAL));
+    const paypalCardButtons = paypal.Buttons(buildPayPalButtonOptions(paypal, paypal.FUNDING.CARD));
     const paypalEligible = paypalButtons.isEligible();
+    const paypalCardEligible = paypalCardButtons.isEligible();
 
     if (!paypalEligible) {
       throw new Error("PayPal did not return an eligible checkout option. Continue with debit or credit card instead.");
@@ -2701,17 +2718,25 @@ async function renderFreshPayPalButtons() {
 
     await paypalButtons.render(elements.paypalButtonContainer);
     await waitForRenderedPayPalButton(elements.paypalButtonContainer, "The PayPal button");
+
+    if (paypalCardEligible) {
+      await paypalCardButtons.render(elements.paypalCardButtonContainer);
+      await waitForRenderedPayPalButton(elements.paypalCardButtonContainer, "The PayPal debit or credit card button");
+    }
+
     if (route !== getCheckoutRoute()) {
       throw new Error("The payment route changed while PayPal was rendering.");
     }
 
     elements.paypalButton.hidden = false;
-    elements.cardButton.hidden = false;
-    setPaymentStatus("Choose PayPal or debit/credit card to continue");
+    elements.paypalCardButton.hidden = !paypalCardEligible;
+    if (paypalCardEligible) resetPayPalCardReveal();
+    setPaymentStatus("Choose a debit/credit card or PayPal to continue");
   } catch (error) {
     clearPayPalButtons();
     if (namespace) resetPayPalSdk(namespace);
     elements.paypalButton.hidden = true;
+    elements.paypalCardButton.hidden = true;
     elements.cardButton.hidden = false;
     setPaymentStatus(
       error?.message || "PayPal could not load. Continue with debit or credit card instead.",
@@ -2786,6 +2811,7 @@ async function finishVerifiedDonation(payload) {
 
 function openInlinePayPalCheckout() {
   setPaymentStatus("");
+  resetPayPalCardReveal();
   const showPayPal = updatePayPalVisibility();
   elements.inlinePaypalCheckout.hidden = false;
   elements.checkoutButton.classList.add("is-checkout-open");
@@ -2805,6 +2831,7 @@ function closeInlinePayPalCheckout() {
   resetAllPayPalSdks();
   setPayPalCheckoutLoading(false);
   elements.paypalButton.hidden = true;
+  elements.paypalCardButton.hidden = true;
   elements.cardButton.hidden = true;
   elements.inlinePaypalCheckout.hidden = true;
   elements.checkoutButton.classList.remove("is-checkout-open");
@@ -3547,6 +3574,14 @@ elements.showMoreButtons.forEach((button) => {
 });
 
 elements.supportForm.addEventListener("submit", submitDonation);
+elements.alternateCardCheckoutLink?.addEventListener("click", () => {
+  elements.cardButton.classList.add("is-fading");
+  window.setTimeout(() => {
+    elements.paypalCardButton.classList.remove("is-covered");
+    elements.cardButton.hidden = true;
+    elements.paypalCardButtonContainer?.querySelector("iframe")?.focus();
+  }, 280);
+});
 elements.paymentEmailInput?.addEventListener("input", () => {
   if (elements.emailError && isValidEmailAddress(getPaymentEmail())) {
     elements.emailError.textContent = "";

@@ -92,7 +92,7 @@ npm run supabase:deploy
 
 ## PayPal Notes
 
-This app uses the PayPal Orders API with the PayPal JavaScript SDK for the official PayPal wallet button. The debit or credit card option redirects to the separately hosted alternate checkout website.
+This app uses the PayPal Orders API with the PayPal JavaScript SDK for the official PayPal wallet and native debit or credit card buttons. A purple cover over the native card button opens the separately hosted alternate checkout website, then fades away to reveal PayPal's card button underneath.
 
 The PayPal SDK is never preloaded. When a customer opens checkout, the app refreshes the server-selected payment route, removes any previous PayPal SDK instance, displays the rotating seed loader, and loads a new SDK instance. PayPal buttons remain hidden until each eligible button has rendered a visible iframe.
 
