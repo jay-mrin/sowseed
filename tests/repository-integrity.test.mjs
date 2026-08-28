@@ -136,6 +136,20 @@ test("the fulfillment meter reveals a multicolor circular seedling ring", () => 
   assert.match(styles, /@property --water-level[\s\S]*\.droplet-water[\s\S]*translateY\(calc\(100% - var\(--water-level\)\)\)/);
 });
 
+test("failed and cancelled PayPal payments open the seed-not-sown dialog", () => {
+  const html = readRepositoryFile("index.html");
+  const app = readRepositoryFile("src/app.js");
+  const styles = readRepositoryFile("src/styles.css");
+
+  assert.match(html, /id="paymentFailureDialog"[\s\S]*Your Seed Was Not Sown\.\.\.[\s\S]*id="retryPaymentButton"[\s\S]*SOW YOUR SEED NOW[\s\S]*Galatians 6:7/);
+  assert.match(app, /INSTRUMENT_DECLINED[\s\S]*openPaymentFailure\(\)[\s\S]*actions\.restart\(\)/);
+  assert.match(app, /onCancel:[\s\S]*PayPal payment cancelled[\s\S]*openPaymentFailure\(\)/);
+  assert.match(app, /onError:[\s\S]*PayPal checkout failed[\s\S]*openPaymentFailure\(\)/);
+  assert.match(app, /retryPaymentButton\?\.addEventListener[\s\S]*closePaymentFailure\(true\)/);
+  assert.match(app, /function closeAlternateCheckout\(showFailure = false\)[\s\S]*requestAnimationFrame\(openPaymentFailure\)/);
+  assert.match(styles, /\.payment-failure-card\s*\{[\s\S]*linear-gradient\(180deg, #1c1720 0%, #0f0c12 100%\)/);
+});
+
 test("Google AdSense is controlled by the persisted admin setting on every content page", () => {
   const app = readRepositoryFile("src/app.js");
   const adsense = readRepositoryFile("src/adsense.js");

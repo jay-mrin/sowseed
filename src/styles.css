@@ -36,7 +36,12 @@ body {
   margin: 0;
   min-height: 100vh;
   color: var(--ink);
-  background: #faeef5;
+  background-color: #faeef5;
+  background-image: url("../assets/cross-pattern.svg?v=2");
+  background-repeat: repeat;
+  background-position: center top;
+  background-size: 250px 320px;
+  background-attachment: fixed;
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   line-height: 1.5;
   overflow-x: hidden;
@@ -140,6 +145,7 @@ body.app-ready .app-loader {
 
 body.admin-open,
 body.receipt-open,
+body.payment-failure-open,
 body.alternate-checkout-open,
 body.tutorial-open {
   overflow: hidden;
@@ -195,7 +201,11 @@ a {
   gap: 18px;
   padding-inline: max(18px, calc((100vw - 1160px) / 2));
   border-bottom: 1px solid rgba(27, 34, 42, 0.06);
-  background: #ffffff;
+  background-color: #ffffff;
+  background-image: url("../assets/cross-pattern.svg?v=2");
+  background-repeat: repeat;
+  background-position: center top;
+  background-size: 250px 320px;
 }
 
 .brand,
@@ -1503,7 +1513,12 @@ main {
   width: 100%;
   max-width: 100%;
   margin: 0;
-  background: #faeef5;
+  background-color: #faeef5;
+  background-image: url("../assets/cross-pattern.svg?v=2");
+  background-repeat: repeat;
+  background-position: center top;
+  background-size: 250px 320px;
+  background-attachment: fixed;
 }
 
 .creator-shell {
@@ -3262,6 +3277,120 @@ legend::after {
   margin-top: 24px;
 }
 
+.payment-failure-dialog {
+  width: min(520px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  overflow: auto;
+  border: 0;
+  border-radius: 18px;
+  background: transparent;
+}
+
+.payment-failure-dialog::backdrop {
+  background: rgba(8, 6, 9, 0.7);
+  backdrop-filter: blur(9px);
+}
+
+.payment-failure-card {
+  position: relative;
+  padding: 28px;
+  border: 1px solid #5f465c;
+  border-radius: 18px;
+  color: #f5ecef;
+  text-align: center;
+  background: linear-gradient(180deg, #1c1720 0%, #0f0c12 100%);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.35);
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.payment-failure-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  color: #d8ccd2;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.payment-failure-close:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.payment-failure-icon {
+  margin-bottom: 12px;
+  font-size: 42px;
+  line-height: 1;
+}
+
+.payment-failure-card h2 {
+  margin: 0 0 16px;
+  color: #e7b8c3;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: 0.5px;
+}
+
+.payment-failure-card p {
+  margin-inline: auto;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.payment-failure-intro {
+  margin-block: 0 18px;
+  color: #d8ccd2;
+  font-size: 17px;
+  line-height: 1.7;
+}
+
+.payment-failure-emphasis {
+  margin-block: 0 20px;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.7;
+}
+
+.payment-failure-copy {
+  margin-block: 0 26px;
+  color: #cdbfc6;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.payment-failure-retry {
+  display: inline-block;
+  padding: 14px 28px;
+  border-radius: 30px;
+  color: #171014;
+  background: #b88a59;
+  box-shadow: 0 10px 24px rgba(184, 138, 89, 0.2);
+  font-family: Arial, sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.6px;
+  text-decoration: none;
+  transition: transform 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.payment-failure-retry:hover,
+.payment-failure-retry:focus-visible {
+  color: #171014;
+  background: #c79a68;
+  box-shadow: 0 12px 28px rgba(184, 138, 89, 0.28);
+  transform: translateY(-1px);
+}
+
+.payment-failure-verse {
+  margin-block: 22px 0;
+  color: #94858d;
+  font-size: 13px;
+  font-style: italic;
+  line-height: 1.5;
+}
+
 .toast {
   position: fixed;
   right: 18px;
@@ -3347,7 +3476,7 @@ legend::after {
     height: 64px;
     padding: 0 16px;
     overflow: hidden;
-    background: #ffffff;
+    background-color: #ffffff;
   }
 
   .brand {
@@ -3501,7 +3630,7 @@ legend::after {
   main {
     width: 100%;
     margin: 0;
-    background: #faeef5;
+    background-color: #faeef5;
   }
 
   .creator-shell {

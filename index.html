@@ -19,7 +19,7 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="src/styles.css?v=102" />
+    <link rel="stylesheet" href="src/styles.css?v=107" />
   </head>
   <body class="app-loading">
     <div class="app-loader" id="appLoader" role="status" aria-live="polite" aria-label="Loading Seed Garden">
@@ -656,6 +656,27 @@
       </div>
     </dialog>
 
+    <dialog class="payment-failure-dialog" id="paymentFailureDialog" aria-labelledby="paymentFailureTitle">
+      <div class="payment-failure-card">
+        <button class="icon-button payment-failure-close" id="closePaymentFailureButton" type="button" aria-label="Close payment message">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m6 6 12 12M18 6 6 18" />
+          </svg>
+        </button>
+        <div class="payment-failure-icon" aria-hidden="true">🥀</div>
+        <h2 id="paymentFailureTitle">Your Seed Was Not Sown...</h2>
+        <p class="payment-failure-intro">
+          The prayer you carried in your heart is still waiting. The hope you wanted to place before God has not yet been planted.
+        </p>
+        <p class="payment-failure-emphasis">Do not let this moment pass unfinished.</p>
+        <p class="payment-failure-copy">
+          Sow your seed with faith for the person you love, the prayer you are holding onto, and the future you are asking Jesus to guide. Even the smallest seed begins with one faithful act.
+        </p>
+        <a class="payment-failure-retry" id="retryPaymentButton" href="#support">🌱 SOW YOUR SEED NOW</a>
+        <p class="payment-failure-verse">“For whatever one sows, that will he also reap.” — Galatians 6:7</p>
+      </div>
+    </dialog>
+
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <footer class="footer">
@@ -674,6 +695,6 @@
 
     <script src="src/config.js?v=3"></script>
     <script src="src/adsense.js?v=1" data-adsense-mode="app" defer></script>
-    <script src="src/app.js?v=99" defer></script>
+    <script src="src/app.js?v=100" defer></script>
   </body>
 </html>

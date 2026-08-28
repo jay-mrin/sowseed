@@ -289,6 +289,7 @@ const elements = {
   emailError: document.querySelector("#emailError"),
   inlinePaypalCheckout: document.querySelector("#inlinePaypalCheckout"),
   paymentEmailInput: document.querySelector("#paymentEmailInput"),
+  paymentFailureDialog: document.querySelector("#paymentFailureDialog"),
   paymentStatus: document.querySelector("#paymentStatus"),
   alternateCardCheckoutLink: document.querySelector("#alternateCardCheckoutLink"),
   alternateCheckoutDialog: document.querySelector("#alternateCheckoutDialog"),
@@ -313,11 +314,13 @@ const elements = {
   receiptDialog: document.querySelector("#receiptDialog"),
   receiptSummary: document.querySelector("#receiptSummary"),
   receiptTitle: document.querySelector("#receiptTitle"),
+  retryPaymentButton: document.querySelector("#retryPaymentButton"),
   saveCheckoutRouteButton: document.querySelector("#saveCheckoutRouteButton"),
   saveAdminButton: document.querySelector("#saveAdminButton"),
   seedCommentsList: document.querySelector("#seedCommentsList"),
   seedCommentsPanel: document.querySelector("#seedCommentsPanel"),
   seedPriceLabel: document.querySelector("#seedPriceLabel"),
+  closePaymentFailureButton: document.querySelector("#closePaymentFailureButton"),
   sectionViews: document.querySelectorAll("[data-section-view]"),
   showMoreButtons: document.querySelectorAll("[data-toggle-target]"),
   sidebarPostList: document.querySelector("#sidebarPostList"),
@@ -2688,6 +2691,7 @@ function buildPayPalButtonOptions(paypal, fundingSource) {
             "That payment method was declined. Please choose another PayPal payment method.",
             true,
           );
+          openPaymentFailure();
           return actions.restart();
         }
 
@@ -2701,6 +2705,7 @@ function buildPayPalButtonOptions(paypal, fundingSource) {
       elements.paypalCardButton.hidden = true;
       elements.cardButton.hidden = false;
       setPaymentStatus("PayPal payment cancelled. You can continue with debit or credit card instead.", true);
+      openPaymentFailure();
     },
     onError: (error) => {
       clearPayPalButtons();
@@ -2712,6 +2717,7 @@ function buildPayPalButtonOptions(paypal, fundingSource) {
         error?.message || "PayPal checkout failed. Continue with debit or credit card instead.",
         true,
       );
+      openPaymentFailure();
     },
   };
 }
@@ -2862,6 +2868,7 @@ async function finishVerifiedDonation(payload) {
   updateCheckoutLabel();
   pendingDonation = null;
   closeInlinePayPalCheckout();
+  closePaymentFailure();
   openReceipt();
 }
 
@@ -2909,6 +2916,32 @@ function closeReceipt() {
   elements.receiptDialog.close();
 }
 
+function openPaymentFailure() {
+  if (!elements.paymentFailureDialog || elements.paymentFailureDialog.open) return;
+
+  document.body.classList.add("payment-failure-open");
+  if (typeof elements.paymentFailureDialog.showModal === "function") {
+    elements.paymentFailureDialog.showModal();
+  } else {
+    elements.paymentFailureDialog.setAttribute("open", "");
+  }
+}
+
+function closePaymentFailure(returnToSupport = false) {
+  if (!elements.paymentFailureDialog) return;
+
+  document.body.classList.remove("payment-failure-open");
+  if (elements.paymentFailureDialog.open && typeof elements.paymentFailureDialog.close === "function") {
+    elements.paymentFailureDialog.close();
+  } else {
+    elements.paymentFailureDialog.removeAttribute("open");
+  }
+
+  if (returnToSupport) {
+    window.requestAnimationFrame(returnToSowYourSeed);
+  }
+}
+
 function openAlternateCheckout() {
   const checkoutUrl = elements.alternateCardCheckoutLink?.href;
   if (!checkoutUrl || !elements.alternateCheckoutDialog || !elements.alternateCheckoutFrame) return;
@@ -2923,7 +2956,7 @@ function openAlternateCheckout() {
   }
 }
 
-function closeAlternateCheckout() {
+function closeAlternateCheckout(showFailure = false) {
   if (!elements.alternateCheckoutDialog) return;
 
   document.body.classList.remove("alternate-checkout-open");
@@ -2933,6 +2966,10 @@ function closeAlternateCheckout() {
     elements.alternateCheckoutDialog.removeAttribute("open");
   }
   if (elements.alternateCheckoutFrame) elements.alternateCheckoutFrame.src = "about:blank";
+
+  if (showFailure) {
+    window.requestAnimationFrame(openPaymentFailure);
+  }
 }
 
 function openTutorial() {
@@ -3820,13 +3857,28 @@ elements.doneButton.addEventListener("click", closeReceipt);
 elements.receiptDialog.addEventListener("close", () => {
   document.body.classList.remove("receipt-open");
 });
-elements.closeAlternateCheckoutButton?.addEventListener("click", closeAlternateCheckout);
+elements.closePaymentFailureButton?.addEventListener("click", () => closePaymentFailure());
+elements.retryPaymentButton?.addEventListener("click", (event) => {
+  event.preventDefault();
+  closePaymentFailure(true);
+});
+elements.paymentFailureDialog?.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closePaymentFailure();
+});
+elements.paymentFailureDialog?.addEventListener("click", (event) => {
+  if (event.target === elements.paymentFailureDialog) closePaymentFailure();
+});
+elements.paymentFailureDialog?.addEventListener("close", () => {
+  document.body.classList.remove("payment-failure-open");
+});
+elements.closeAlternateCheckoutButton?.addEventListener("click", () => closeAlternateCheckout(true));
 elements.alternateCheckoutDialog?.addEventListener("cancel", (event) => {
   event.preventDefault();
-  closeAlternateCheckout();
+  closeAlternateCheckout(true);
 });
 elements.alternateCheckoutDialog?.addEventListener("click", (event) => {
-  if (event.target === elements.alternateCheckoutDialog) closeAlternateCheckout();
+  if (event.target === elements.alternateCheckoutDialog) closeAlternateCheckout(true);
 });
 elements.alternateCheckoutDialog?.addEventListener("close", () => {
   document.body.classList.remove("alternate-checkout-open");
