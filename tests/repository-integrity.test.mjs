@@ -98,6 +98,44 @@ test("public startup loads checkout settings before deferred community content",
   assert.match(bootstrap, /Promise\.all\(\[\s*supabase[\s\S]*\.from\("donations"\)[\s\S]*\.from\("seed_comments"\)[\s\S]*\.from\("posts"\)/);
 });
 
+test("the public meter is reconciled from confirmed Admin-payment ledger entries", () => {
+  const migration = readRepositoryFile("supabase/migrations/202608280001_reconcile_meter_to_admin_orders.sql");
+  const adminSettings = readRepositoryFile("supabase/functions/admin-settings/index.ts");
+  const app = readRepositoryFile("src/app.js");
+  const html = readRepositoryFile("index.html");
+
+  assert.match(migration, /create or replace function public\.reconcile_standard_meter\(\)/);
+  assert.match(migration, /select coalesce\(sum\(amount\), 0\)[\s\S]*from public\.meter_applied_donations/);
+  assert.match(migration, /return public\.reconcile_standard_meter\(\)/);
+  assert.match(migration, /after delete on public\.meter_applied_donations/);
+  assert.match(migration, /select public\.reconcile_standard_meter\(\)/);
+  assert.match(adminSettings, /supabase\.rpc\(\s*"reconcile_standard_meter"/);
+  assert.doesNotMatch(app, /meterCurrentAmount: inputs\.meterCurrentAmount\.value/);
+  assert.match(html, /id="adminMeterCurrentAmount"[^>]*readonly[^>]*aria-readonly="true"/);
+});
+
+test("the fulfillment meter reveals a multicolor circular seedling ring", () => {
+  const html = readRepositoryFile("index.html");
+  const app = readRepositoryFile("src/app.js");
+  const styles = readRepositoryFile("src/styles.css");
+
+  assert.match(html, /id="milestoneProgress"[^>]*role="progressbar"[^>]*aria-valuemax="100"/);
+  assert.match(html, /class="progress-ring-gradient"[\s\S]*id="progressRing"[\s\S]*class="ring-droplet"[\s\S]*id="meterDropletClip"[\s\S]*class="droplet-water"[\s\S]*class="droplet-seed" src="assets\/droplet-seed\.svg"/);
+  assert.match(html, /class="meter-progress-layout"[\s\S]*class="meter-ring-column"[\s\S]*Everyone who puts their faith in Christ will receive a gift in their mail when the seed reaches 100%\.[\s\S]*<strong>Keep Sowing<\/strong>/);
+  assert.match(html, /id="meterCollapsed">\s*Welcome, beloved seeker of love\. 💗\s*<\/p>/);
+  assert.match(html, /id="meterHeadline"><strong>Sow Your Seed<\/strong> <span>with faith,trust and patience💫<\/span>/);
+  assert.match(app, /renderMeterHeadline\(elements\.meterHeadline, settings\.meterHeadline\)/);
+  assert.match(styles, /\.meter-header h2\s*\{[\s\S]*?font-weight: 400;[\s\S]*?\.meter-header h2 strong\s*\{[\s\S]*?font-weight: 800;/);
+  assert.match(styles, /\.donation-meter-card \.show-more-button\s*\{[\s\S]*?font-size: 12px;[\s\S]*?font-weight: 400;/);
+  assert.match(app, /setProperty\("--ring-angle", `\$\{boundedPercent \* 3\.6\}deg`\)/);
+  assert.match(app, /setProperty\("--water-level", `\$\{boundedPercent\}%`\)/);
+  assert.match(html, /progress-ring-startcap[\s\S]*progress-ring-endcap/);
+  assert.match(styles, /\.progress-ring-gradient[\s\S]*conic-gradient\([\s\S]*#35bc67[\s\S]*#159fe8[\s\S]*#9852db[\s\S]*#eea90f/);
+  assert.match(styles, /\.progress-ring-cover[\s\S]*transparent 0deg var\(--ring-angle\)[\s\S]*#edecef/);
+  assert.match(styles, /--ring-angle 5200ms[\s\S]*--water-level 5600ms[\s\S]*\.progress-ring-endcap/);
+  assert.match(styles, /@property --water-level[\s\S]*\.droplet-water[\s\S]*translateY\(calc\(100% - var\(--water-level\)\)\)/);
+});
+
 test("Google AdSense is controlled by the persisted admin setting on every content page", () => {
   const app = readRepositoryFile("src/app.js");
   const adsense = readRepositoryFile("src/adsense.js");
@@ -177,7 +215,7 @@ test("the separate alternate card link opens a same-page popup and then disables
     /id="alternateCardCheckoutLink"[\s\S]*href="https:\/\/sowseed-receiver-seed-alternate-server\.vercel\.app\/"[\s\S]*aria-haspopup="dialog"[\s\S]*aria-controls="alternateCheckoutDialog"/,
   );
   assert.match(html, /id="alternateCheckoutDialog"[\s\S]*id="alternateCheckoutFrame"[\s\S]*src="about:blank"[\s\S]*allow="payment"/);
-  assert.match(html, /class="alternate-checkout-fallback"[\s\S]*target="_blank"[\s\S]*rel="noopener noreferrer"/);
+  assert.match(html, /class="alternate-checkout-fallback"[\s\S]*<strong>If the server is down try other debit card payment button<\/strong>/);
   assert.match(html, /id="cardButton"[\s\S]*id="alternateCardCheckoutLink"[\s\S]*id="paypalButton"[\s\S]*id="paypalCardButton"/);
   assert.match(html, /class="preferred-payment-label"[\s\S]*Preferred/);
   assert.doesNotMatch(html, /Server Busy Try Other|id="alternateCardStatus"/);

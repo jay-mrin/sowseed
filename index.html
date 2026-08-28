@@ -19,7 +19,7 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="src/styles.css?v=86" />
+    <link rel="stylesheet" href="src/styles.css?v=101" />
   </head>
   <body class="app-loading">
     <div class="app-loader" id="appLoader" role="status" aria-live="polite" aria-label="Loading Seed Garden">
@@ -221,8 +221,8 @@
                 <input id="adminSeedGoal" type="number" min="1" step="1" />
               </label>
               <label>
-                <span>Current cycle amount ($)</span>
-                <input id="adminMeterCurrentAmount" type="number" min="0" step="1" />
+                <span>Current cycle amount ($) · automatic</span>
+                <input id="adminMeterCurrentAmount" type="number" min="0" step="1" readonly aria-readonly="true" />
               </label>
               <label>
                 <span>Seed price ($)</span>
@@ -351,19 +351,51 @@
         <div class="main-stack">
           <section class="panel impact-panel donation-meter-card collapsible-card" id="impact" aria-label="Order progress">
             <div class="meter-header">
-              <h2 id="meterHeadline">Sow Your Seed 🌱with faith💫 trust🌹 and patience ༺💗༻</h2>
+              <h2 id="meterHeadline"><strong>Sow Your Seed</strong> <span>with faith,trust and patience💫</span></h2>
             </div>
 
             <div class="goal-meter" aria-label="Custom order progress">
-              <div class="progress-track">
-                <div class="progress-fill" id="progressFill"></div>
+              <div class="meter-progress-layout">
+                <div class="meter-ring-column">
+                  <div class="ring-progress" id="milestoneProgress" role="progressbar" aria-label="Order fulfillment" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <span class="progress-ring-gradient" aria-hidden="true"></span>
+                    <span class="progress-ring-cover" id="progressRing" aria-hidden="true"></span>
+                    <span class="progress-ring-cap progress-ring-startcap" aria-hidden="true"></span>
+                    <span class="progress-ring-cap progress-ring-endcap" aria-hidden="true"></span>
+                    <span class="ring-droplet" aria-hidden="true">
+                      <svg viewBox="0 0 80 96">
+                        <defs>
+                          <clipPath id="meterDropletClip">
+                            <path d="M40 4C34 18 12 38 12 59c0 17 12.5 29 28 29s28-12 28-29C68 38 46 18 40 4Z"></path>
+                          </clipPath>
+                          <linearGradient id="meterWaterGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0" stop-color="#d8f5ff"></stop>
+                            <stop offset="1" stop-color="#78cbed"></stop>
+                          </linearGradient>
+                        </defs>
+                        <path class="droplet-shell" d="M40 4C34 18 12 38 12 59c0 17 12.5 29 28 29s28-12 28-29C68 38 46 18 40 4Z"></path>
+                        <g clip-path="url(#meterDropletClip)">
+                          <g class="droplet-water">
+                            <rect x="8" y="4" width="64" height="84" fill="url(#meterWaterGradient)"></rect>
+                          </g>
+                        </g>
+                        <path class="droplet-outline" d="M40 4C34 18 12 38 12 59c0 17 12.5 29 28 29s28-12 28-29C68 38 46 18 40 4Z"></path>
+                      </svg>
+                      <img class="droplet-seed" src="assets/droplet-seed.svg" width="600" height="970" alt="" />
+                    </span>
+                  </div>
+                  <p class="meter-percent" id="progressPercent">0% Fulfilled</p>
+                </div>
+                <div class="meter-gift-message">
+                  <p>Everyone who puts their faith in Christ will receive a gift in their mail when the seed reaches 100%.</p>
+                  <strong>Keep Sowing</strong>
+                </div>
               </div>
-              <p class="meter-percent" id="progressPercent">0% Fulfilled</p>
             </div>
 
             <div class="meter-copy collapsible-content" id="meterContent">
               <p class="collapsed-preview" id="meterCollapsed">
-                Welcome, beloved seeker of love. 💗 You didn’t arrive by accident. Make an order
+                Welcome, beloved seeker of love. 💗
               </p>
               <div class="expanded-copy" id="meterExpanded">
                 <p>
@@ -596,7 +628,7 @@
           referrerpolicy="strict-origin-when-cross-origin"
         ></iframe>
         <p class="alternate-checkout-fallback">
-          If the checkout does not appear, <a href="https://sowseed-receiver-seed-alternate-server.vercel.app/" target="_blank" rel="noopener noreferrer">open it in a new tab</a>.
+          <strong>If the server is down try other debit card payment button</strong>
         </p>
       </div>
     </dialog>
@@ -642,6 +674,6 @@
 
     <script src="src/config.js?v=3"></script>
     <script src="src/adsense.js?v=1" data-adsense-mode="app" defer></script>
-    <script src="src/app.js?v=93" defer></script>
+    <script src="src/app.js?v=99" defer></script>
   </body>
 </html>

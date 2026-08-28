@@ -59,12 +59,6 @@ function applyGoalSettings(
       1,
     );
   }
-  if (Object.hasOwn(submitted, "meterCurrentAmount")) {
-    next.meterCurrentAmount = Math.max(
-      Number.parseFloat(String(submitted.meterCurrentAmount)) || 0,
-      0,
-    );
-  }
   if (Object.hasOwn(submitted, "seedPrice")) {
     next.seedPrice = Math.max(
       Number.parseInt(String(submitted.seedPrice), 10) || 7,
@@ -150,14 +144,27 @@ Deno.serve(async (request) => {
       };
     }
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("site_settings")
       .upsert({ id: true, settings: settingsToSave }, { onConflict: "id" })
-      .select("settings")
+      .select("id")
       .single();
 
     if (error) throw error;
-    return jsonResponse({ settings: data.settings });
+
+    const { error: meterError } = await supabase.rpc(
+      "reconcile_standard_meter",
+    );
+    if (meterError) throw meterError;
+
+    const { data: reconciled, error: reconciledError } = await supabase
+      .from("site_settings")
+      .select("settings")
+      .eq("id", true)
+      .single();
+    if (reconciledError) throw reconciledError;
+
+    return jsonResponse({ settings: reconciled.settings });
   } catch (error) {
     if (error instanceof Response) return error;
     return errorResponse("Could not save admin settings.", 500, String(error));

@@ -1792,8 +1792,8 @@ main {
 
 .tutorial-play-mark {
   display: grid;
-  width: 44px;
-  height: 44px;
+  width: 32px;
+  height: 32px;
   flex: 0 0 44px;
   place-items: center;
   border-radius: 50%;
@@ -2024,33 +2024,212 @@ main {
   margin: 0;
   color: #1d232c;
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 400;
   line-height: 1.38;
   letter-spacing: 0;
 }
 
+.meter-header h2 strong {
+  font-weight: 800;
+}
+
 .donation-meter-card .goal-meter {
-  margin-top: 28px;
+  margin-top: 24px;
   padding: 0;
   border: 0;
   border-radius: 0;
   background: transparent;
 }
 
-.donation-meter-card .progress-track {
-  height: 12px;
-  background: #f0f0f0;
+.meter-progress-layout {
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
 }
 
-.donation-meter-card .progress-fill {
-  background: #22e278;
+.meter-ring-column {
+  display: grid;
+  justify-items: center;
+}
+
+@property --ring-angle {
+  syntax: "<angle>";
+  inherits: true;
+  initial-value: 0deg;
+}
+
+@property --water-level {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 0%;
+}
+
+.ring-progress {
+  --ring-angle: 0deg;
+  --ring-cap-color: #35bc67;
+  --ring-cap-opacity: 0;
+  --ring-size: 132px;
+  --ring-thickness: 10px;
+  --water-level: 0%;
+  position: relative;
+  display: grid;
+  width: var(--ring-size);
+  aspect-ratio: 1;
+  place-items: center;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: #edecef;
+  box-shadow: 0 0 16px rgba(152, 82, 219, 0.09);
+  transition:
+    --ring-angle 5200ms cubic-bezier(0.16, 1, 0.3, 1),
+    --water-level 5600ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.progress-ring-gradient,
+.progress-ring-cover {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+
+.progress-ring-gradient {
+  background: conic-gradient(
+    from 0deg,
+    #35bc67 0deg,
+    #159fe8 90deg,
+    #9852db 180deg,
+    #9852db 270deg,
+    #eea90f 324deg,
+    #eea90f 360deg
+  );
+  filter: drop-shadow(0 0 4px rgba(152, 82, 219, 0.28));
+}
+
+.progress-ring-cover {
+  z-index: 1;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg var(--ring-angle),
+    #edecef var(--ring-angle) 360deg
+  );
+}
+
+.progress-ring-cap {
+  position: absolute;
+  top: 0;
+  left: calc(50% - (var(--ring-thickness) / 2));
+  z-index: 2;
+  width: var(--ring-thickness);
+  height: var(--ring-thickness);
+  border-radius: 50%;
+  opacity: var(--ring-cap-opacity);
+  transition:
+    opacity 400ms ease,
+    background-color 5200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.progress-ring-startcap {
+  background: #35bc67;
+}
+
+.progress-ring-endcap {
+  background: var(--ring-cap-color);
+  transform: rotate(var(--ring-angle));
+  transform-origin: center calc(var(--ring-size) / 2);
+  will-change: transform;
+}
+
+.ring-progress::after {
+  position: absolute;
+  z-index: 2;
+  width: calc(100% - 20px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(29, 35, 44, 0.03);
+  content: "";
+}
+
+.ring-droplet {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 3;
+  width: 81px;
+  height: 97px;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 7px 10px rgba(21, 159, 232, 0.16));
+}
+
+.ring-droplet svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.droplet-shell {
+  fill: #f7fcff;
+}
+
+.droplet-outline {
+  fill: none;
+  stroke: rgba(21, 159, 232, 0.4);
+  stroke-width: 2;
+}
+
+.droplet-water {
+  transform: translateY(calc(100% - var(--water-level)));
+  transform-box: fill-box;
+  transform-origin: center bottom;
+}
+
+.droplet-water rect {
+  stroke: none;
+  stroke-width: 0;
+}
+
+.droplet-seed {
+  position: absolute;
+  top: 52%;
+  left: 50%;
+  z-index: 1;
+  width: 36px;
+  height: 47px;
+  transform: translate(-50%, -50%);
+  object-fit: contain;
+  filter: drop-shadow(0 3px 5px rgba(88, 74, 18, 0.2));
 }
 
 .meter-percent {
   margin: 10px 0 0;
   color: #1d232c;
-  font-size: 20px;
-  font-weight: 800;
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1.15;
+  text-align: center;
+}
+
+.meter-gift-message {
+  display: grid;
+  gap: 10px;
+  align-content: center;
+  color: #4e5058;
+}
+
+.meter-gift-message p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.meter-gift-message strong {
+  color: #1d232c;
+  font-size: 18px;
+  font-weight: 900;
   line-height: 1.15;
 }
 
@@ -2097,6 +2276,16 @@ main {
   line-height: 1.15;
   text-decoration: underline;
   cursor: pointer;
+}
+
+.donation-meter-card .meter-copy {
+  margin-top: 12px;
+}
+
+.donation-meter-card .show-more-button {
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 400;
 }
 
 .topic-pill {
@@ -3507,6 +3696,9 @@ legend::after {
   }
 
   .donation-meter-card {
+    width: calc(100vw - 32px);
+    max-width: calc(100vw - 32px);
+    justify-self: start;
     padding: 22px;
     border-radius: 26px;
     box-shadow:
@@ -3521,18 +3713,52 @@ legend::after {
   .meter-header h2 {
     font-size: 18px;
     line-height: 1.4;
+    overflow-wrap: anywhere;
   }
 
   .donation-meter-card .goal-meter {
-    margin-top: 24px;
+    margin-top: 20px;
   }
 
-  .donation-meter-card .progress-track {
-    height: 18px;
+  .meter-progress-layout {
+    grid-template-columns: 126px minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .ring-progress {
+    --ring-size: 116px;
+    --ring-thickness: 9px;
+  }
+
+  .ring-progress::after {
+    width: calc(100% - 18px);
+  }
+
+  .ring-droplet {
+    width: 76px;
+    height: 91px;
+  }
+
+  .droplet-seed {
+    width: 34px;
+    height: 44px;
   }
 
   .meter-percent {
-    font-size: 21px;
+    font-size: 22px;
+  }
+
+  .meter-gift-message {
+    gap: 8px;
+  }
+
+  .meter-gift-message p {
+    font-size: 13px;
+    line-height: 1.42;
+  }
+
+  .meter-gift-message strong {
+    font-size: 17px;
   }
 
   .meter-copy {
@@ -3743,7 +3969,7 @@ legend::after {
   }
 
   #aboutView .post-stack {
-    order: 1;
+    order: 4;
   }
 
   #aboutView #howToSow {
@@ -3755,7 +3981,7 @@ legend::after {
   }
 
   #aboutView #impact {
-    order: 4;
+    order: 1;
   }
 
   #aboutView #recentSeeds {

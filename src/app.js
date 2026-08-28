@@ -14,6 +14,16 @@ const HIGH_PAYMENT_THRESHOLD_CENTS = 2100;
 const PAYPAL_SDK_LOAD_TIMEOUT_MS = 8000;
 const TOP_BRAND_TITLE = "Seed Garden";
 const MINIMAL_SUPPORT_TITLE = "Buy a Seed to Sow for the Love You’ve Been Waiting For 💗💕";
+const METER_HEADLINE_PREFIX = "Sow Your Seed";
+const METER_HEADLINE_SUFFIX = "with faith,trust and patience💫";
+const METER_HEADLINE = `${METER_HEADLINE_PREFIX} ${METER_HEADLINE_SUFFIX}`;
+const LEGACY_METER_HEADLINES = new Set([
+  "Sow Your Seed 🌱with faith💫 trust🌹 and patience ༺💗༻",
+]);
+const METER_COLLAPSED_PREVIEW = "Welcome, beloved seeker of love. 💗";
+const LEGACY_METER_COLLAPSED_PREVIEWS = new Set([
+  "Welcome, beloved seeker of love. 💗 You didn’t arrive by accident. Make an order",
+]);
 const LEGACY_SUPPORT_TITLES = new Set([
   "Choose a Seed Writing from the Seed Garden 🌱💗",
   "Choose Your Seed Offering for Your Soulmate & Loved Ones🌱💗 and get a personalised mail as your digital writing order",
@@ -147,10 +157,8 @@ const DEFAULT_SETTINGS = {
   startingSeeds: 0,
   meterCurrentAmount: 0,
   seedPrice: 7,
-  meterHeadline:
-    "Sow Your Seed 🌱with faith💫 trust🌹 and patience ༺💗༻",
-  meterCollapsed:
-    "Welcome, beloved seeker of love. 💗 You didn’t arrive by accident. Make an order",
+  meterHeadline: METER_HEADLINE,
+  meterCollapsed: METER_COLLAPSED_PREVIEW,
   meterExpanded:
     "Welcome, beloved seeker of love. 💗 You didn’t arrive by accident. Make an order\n\nWith every seed you sow you get a personalised mail of your request, prepared with care and intention. 🌱💫🌹",
   aboutTitle: "About",
@@ -297,7 +305,8 @@ const elements = {
   postsPageList: document.querySelector("#postsPageList"),
   profileTitle: document.querySelector("#profileTitle"),
   profileTabs: document.querySelectorAll("[data-section-tab]"),
-  progressFill: document.querySelector("#progressFill"),
+  milestoneProgress: document.querySelector("#milestoneProgress"),
+  progressRing: document.querySelector("#progressRing"),
   progressPercent: document.querySelector("#progressPercent"),
   recentDonationList: document.querySelector("#recentDonationList"),
   refreshAdminButton: document.querySelector("#refreshAdminButton"),
@@ -403,6 +412,14 @@ function normalizeSettings(settings) {
     const rawValue = String(next[key] || defaults[key]).trim() || defaults[key];
     next[key] = CUSTOM_ORDER_STRING_KEYS.has(key) ? toCustomOrderCopy(rawValue) : rawValue;
   });
+
+  if (LEGACY_METER_COLLAPSED_PREVIEWS.has(next.meterCollapsed)) {
+    next.meterCollapsed = METER_COLLAPSED_PREVIEW;
+  }
+
+  if (LEGACY_METER_HEADLINES.has(next.meterHeadline)) {
+    next.meterHeadline = METER_HEADLINE;
+  }
 
   if (LEGACY_SUPPORT_TITLES.has(next.supportTitle)) {
     next.supportTitle = defaults.supportTitle;
@@ -1779,6 +1796,21 @@ function renderParagraphs(element, value) {
     .join("");
 }
 
+function renderMeterHeadline(element, value) {
+  if (!element) return;
+
+  if (value !== METER_HEADLINE) {
+    element.textContent = value;
+    return;
+  }
+
+  const emphasizedText = document.createElement("strong");
+  const supportingText = document.createElement("span");
+  emphasizedText.textContent = METER_HEADLINE_PREFIX;
+  supportingText.textContent = ` ${METER_HEADLINE_SUFFIX}`;
+  element.replaceChildren(emphasizedText, supportingText);
+}
+
 function renderSettings() {
   const settings = state.settings;
 
@@ -1786,7 +1818,7 @@ function renderSettings() {
   elements.brandTitle.textContent = TOP_BRAND_TITLE;
   elements.profileTitle.textContent = settings.profileTitle;
   elements.followersText.textContent = settings.followersText;
-  elements.meterHeadline.textContent = settings.meterHeadline;
+  renderMeterHeadline(elements.meterHeadline, settings.meterHeadline);
   renderTextWithBreaks(elements.meterCollapsed, settings.meterCollapsed);
   renderParagraphs(elements.meterExpanded, settings.meterExpanded);
   elements.aboutTitle.textContent = settings.aboutTitle;
@@ -1817,7 +1849,34 @@ function renderTotals() {
   const displayPercent = Math.floor(boundedPercent);
 
   elements.progressPercent.textContent = `${displayPercent}% Fulfilled`;
-  elements.progressFill.style.width = `${boundedPercent}%`;
+  elements.milestoneProgress.style.setProperty("--ring-angle", `${boundedPercent * 3.6}deg`);
+  elements.milestoneProgress.style.setProperty("--ring-cap-color", getRingCapColor(boundedPercent));
+  elements.milestoneProgress.style.setProperty("--ring-cap-opacity", boundedPercent > 0 ? "1" : "0");
+  elements.milestoneProgress.style.setProperty("--water-level", `${boundedPercent}%`);
+  elements.milestoneProgress?.setAttribute("aria-valuenow", String(displayPercent));
+  elements.milestoneProgress?.setAttribute("aria-valuetext", `${displayPercent}% fulfilled`);
+}
+
+function getRingCapColor(percent) {
+  const colorStops = [
+    [0, [53, 188, 103]],
+    [25, [21, 159, 232]],
+    [50, [152, 82, 219]],
+    [75, [152, 82, 219]],
+    [90, [238, 169, 15]],
+    [100, [238, 169, 15]],
+  ];
+  const boundedPercent = Math.min(Math.max(Number(percent) || 0, 0), 100);
+  const upperIndex = colorStops.findIndex(([stop]) => stop >= boundedPercent);
+  const upperStop = colorStops[upperIndex === -1 ? colorStops.length - 1 : upperIndex];
+  const lowerStop = colorStops[Math.max(0, (upperIndex === -1 ? colorStops.length - 1 : upperIndex) - 1)];
+  const span = upperStop[0] - lowerStop[0];
+  const blend = span > 0 ? (boundedPercent - lowerStop[0]) / span : 0;
+  const channels = lowerStop[1].map((channel, index) =>
+    Math.round(channel + (upperStop[1][index] - channel) * blend),
+  );
+
+  return `rgb(${channels.join(", ")})`;
 }
 
 function renderRecentDonations() {
@@ -3053,7 +3112,6 @@ function getAdminSettings() {
     ...state.settings,
     adsenseEnabled: elements.adminAdsenseEnabled.checked,
     blessingWallEnabled: inputs.blessingWallEnabled.checked,
-    meterCurrentAmount: inputs.meterCurrentAmount.value,
     seedGoal: inputs.seedGoal.value,
     seedPrice: inputs.seedPrice.value,
   });
