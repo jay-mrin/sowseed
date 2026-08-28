@@ -3973,15 +3973,15 @@ legend::after {
   }
 
   #aboutView #howToSow {
-    order: 2;
+    order: 1;
   }
 
   #aboutView #support {
-    order: 3;
+    order: 2;
   }
 
   #aboutView #impact {
-    order: 1;
+    order: 3;
   }
 
   #aboutView #recentSeeds {
