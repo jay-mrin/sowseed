@@ -1855,169 +1855,6 @@ main {
     transform 180ms ease;
 }
 
-body.frequency-open {
-  overflow: hidden;
-}
-
-.frequency-dialog {
-  width: min(760px, calc(100% - 28px));
-  max-width: calc(100vw - 28px);
-  max-height: calc(100dvh - 28px);
-  padding: 0;
-  border: 0;
-  border-radius: 38px;
-  color: #ffffff;
-  background: transparent;
-  box-shadow: 0 30px 90px rgba(117, 10, 80, 0.4);
-  overflow: auto;
-}
-
-.frequency-dialog::backdrop {
-  background: rgba(30, 12, 28, 0.68);
-  backdrop-filter: blur(8px);
-}
-
-.frequency-dialog-card {
-  display: grid;
-  gap: 22px;
-  padding: clamp(26px, 5vw, 54px);
-  border: 3px solid rgba(255, 237, 248, 0.82);
-  border-radius: inherit;
-  background:
-    radial-gradient(circle at 50% 5%, rgba(255, 255, 255, 0.18), transparent 27%),
-    linear-gradient(145deg, #ee5bac 0%, #e72e94 54%, #ed4aa4 100%);
-  text-align: center;
-}
-
-.frequency-dialog-mark {
-  display: grid;
-  width: 92px;
-  height: 92px;
-  margin: 0 auto 4px;
-  place-items: center;
-  border: 2px solid #ffffff;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  font-size: 44px;
-}
-
-.frequency-dialog h2 {
-  max-width: 680px;
-  margin: 0 auto;
-  color: #ffffff;
-  font-size: clamp(31px, 5vw, 50px);
-  font-weight: 900;
-  line-height: 1.08;
-  letter-spacing: -0.035em;
-}
-
-.frequency-dialog-card > p {
-  margin: -6px 0 6px;
-  color: rgba(255, 255, 255, 0.94);
-  font-size: clamp(18px, 2.7vw, 26px);
-  line-height: 1.35;
-}
-
-.frequency-choice-list {
-  display: grid;
-  gap: 16px;
-}
-
-.frequency-choice {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 18px;
-  width: 100%;
-  min-height: 132px;
-  padding: 20px 24px;
-  border: 3px solid;
-  border-radius: 28px;
-  text-align: left;
-  box-shadow: 0 18px 40px rgba(91, 16, 66, 0.12);
-  cursor: pointer;
-  transition: transform 160ms ease, box-shadow 160ms ease;
-}
-
-.frequency-choice:hover,
-.frequency-choice:focus-visible {
-  transform: translateY(-2px);
-  box-shadow: 0 22px 48px rgba(91, 16, 66, 0.2);
-  outline: 0;
-}
-
-.frequency-choice-once {
-  border-color: #4ad3a8;
-  color: #07552f;
-  background: linear-gradient(135deg, #f7fffc, #eaf9f3);
-}
-
-.frequency-choice-weekly {
-  border-color: #ffc034;
-  color: #843900;
-  background: linear-gradient(135deg, #fffdf7, #fff6e5);
-}
-
-.frequency-choice-icon {
-  display: grid;
-  width: 86px;
-  height: 86px;
-  place-items: center;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.9);
-  font-size: 43px;
-}
-
-.frequency-choice-copy {
-  display: grid;
-  gap: 7px;
-}
-
-.frequency-choice-copy strong {
-  font-size: clamp(20px, 3vw, 28px);
-  font-weight: 900;
-  line-height: 1.16;
-}
-
-.frequency-choice-copy small,
-.frequency-choice-copy em {
-  color: currentColor;
-  font-size: 14px;
-  font-style: normal;
-  font-weight: 800;
-  line-height: 1.35;
-  opacity: 0.78;
-}
-
-.frequency-choice-copy em {
-  color: #a64000;
-  opacity: 1;
-}
-
-.frequency-choice-arrow {
-  font-size: 54px;
-  font-weight: 500;
-  line-height: 1;
-}
-
-.frequency-not-now {
-  min-height: 66px;
-  border: 2px solid rgba(255, 255, 255, 0.48);
-  border-radius: 999px;
-  color: #240016;
-  background: rgba(255, 255, 255, 0.12);
-  font-size: 20px;
-  font-weight: 900;
-  cursor: pointer;
-}
-
-.frequency-not-now:hover,
-.frequency-not-now:focus-visible {
-  background: rgba(255, 255, 255, 0.24);
-  outline: 3px solid rgba(255, 255, 255, 0.38);
-  outline-offset: 2px;
-}
-
 .subscription-calendar-heading {
   align-items: flex-start;
 }
@@ -2137,42 +1974,6 @@ body.frequency-open {
 }
 
 @media (max-width: 680px) {
-  .frequency-dialog {
-    width: calc(100% - 18px);
-    max-width: calc(100vw - 18px);
-    max-height: calc(100dvh - 18px);
-    border-radius: 28px;
-  }
-
-  .frequency-dialog-card {
-    gap: 16px;
-    padding: 24px 16px;
-  }
-
-  .frequency-dialog-mark {
-    width: 68px;
-    height: 68px;
-    font-size: 32px;
-  }
-
-  .frequency-choice {
-    min-height: 108px;
-    gap: 12px;
-    padding: 14px;
-    border-width: 2px;
-    border-radius: 22px;
-  }
-
-  .frequency-choice-icon {
-    width: 62px;
-    height: 62px;
-    font-size: 31px;
-  }
-
-  .frequency-choice-arrow {
-    font-size: 40px;
-  }
-
   .subscription-calendar-heading,
   .subscription-profile-heading,
   .subscription-profile-actions {
@@ -4331,9 +4132,130 @@ legend::after {
   display: none;
 }
 
+.weekly-seed-toggle {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  width: fit-content;
+  margin: 30px auto 0;
+  padding: 9px 14px 9px 10px;
+  align-items: center;
+  gap: 12px;
+  font-size: 17px;
+  font-weight: 800;
+  border: 1px solid rgba(232, 181, 55, 0.32);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 78% 50%, rgba(255, 224, 118, 0.24), transparent 58%),
+    linear-gradient(135deg, rgba(255, 250, 226, 0.8), rgba(255, 241, 190, 0.38));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 5px 18px rgba(217, 159, 21, 0.14);
+  cursor: pointer;
+  user-select: none;
+}
+
+.weekly-seed-toggle::before {
+  position: absolute;
+  z-index: -1;
+  inset: -7px -10px;
+  border-radius: inherit;
+  background: radial-gradient(ellipse at center, rgba(255, 207, 65, 0.5), rgba(255, 219, 112, 0.18) 48%, transparent 74%);
+  opacity: 0.28;
+  content: "";
+  animation: weekly-seed-halo-glow 2.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+.weekly-seed-toggle-label {
+  color: #9a6100;
+  text-shadow:
+    0 1px 0 rgba(255, 249, 202, 0.95),
+    0 0 3px rgba(218, 151, 5, 0.2);
+  will-change: color, text-shadow;
+  animation: weekly-seed-text-glow 2.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+@keyframes weekly-seed-halo-glow {
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+
+  50% {
+    opacity: 0.88;
+  }
+}
+
+@keyframes weekly-seed-text-glow {
+  0%,
+  100% {
+    color: #946000;
+    text-shadow:
+      0 1px 0 rgba(255, 249, 202, 0.95),
+      0 0 3px rgba(218, 151, 5, 0.18);
+  }
+
+  50% {
+    color: #d99600;
+    text-shadow:
+      0 1px 0 #fff8c7,
+      0 0 5px rgba(255, 204, 51, 0.95),
+      0 0 13px rgba(255, 183, 0, 0.72),
+      0 0 22px rgba(255, 208, 75, 0.4);
+  }
+}
+
+.weekly-seed-toggle input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.weekly-seed-toggle-track {
+  position: relative;
+  width: 52px;
+  height: 30px;
+  flex: 0 0 52px;
+  border: 2px solid rgba(106, 91, 96, 0.24);
+  border-radius: 999px;
+  background: #ded9db;
+  box-shadow: inset 0 1px 3px rgba(53, 39, 44, 0.12);
+  transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+
+.weekly-seed-toggle-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(53, 39, 44, 0.28);
+  transition: transform 180ms ease;
+}
+
+.weekly-seed-toggle input:checked + .weekly-seed-toggle-track {
+  border-color: #dca91f;
+  background: linear-gradient(135deg, #ffd85c, #efa616);
+  box-shadow: 0 0 14px rgba(239, 166, 22, 0.34);
+}
+
+.weekly-seed-toggle input:checked + .weekly-seed-toggle-track .weekly-seed-toggle-thumb {
+  transform: translateX(22px);
+}
+
+.weekly-seed-toggle input:focus-visible + .weekly-seed-toggle-track {
+  outline: 3px solid rgba(248, 50, 184, 0.28);
+  outline-offset: 3px;
+}
+
 .minimal-offering .checkout-button {
   min-height: 66px;
-  margin-top: 40px;
+  margin-top: 18px;
   font-size: 24px;
   font-weight: 600;
   text-transform: none;
@@ -4504,6 +4426,11 @@ legend::after {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
   }
+
+  .weekly-seed-toggle::before,
+  .weekly-seed-toggle-label {
+    animation-duration: 2.2s !important;
+  }
 }
 
 /* Compact seed order with inline PayPal checkout */
@@ -4588,12 +4515,17 @@ legend::after {
   font-size: 19px;
 }
 
-.minimal-offering .checkout-button {
-  min-height: 58px;
-  margin-top: 20px;
-  font-size: 21px;
-  transition: border-radius 180ms ease, transform 160ms ease, box-shadow 180ms ease;
-}
+  .minimal-offering .checkout-button {
+    min-height: 58px;
+    margin-top: 16px;
+    font-size: 21px;
+    transition: border-radius 180ms ease, transform 160ms ease, box-shadow 180ms ease;
+  }
+
+  .weekly-seed-toggle {
+    margin-top: 22px;
+    font-size: 16px;
+  }
 
 .minimal-offering .checkout-button.is-checkout-open {
   border-radius: 32px 32px 10px 10px;
@@ -4740,7 +4672,13 @@ legend::after {
 
   .minimal-offering .checkout-button {
     min-height: 52px;
-    margin-top: 18px;
+    margin-top: 14px;
     font-size: 19px;
+  }
+
+  .weekly-seed-toggle {
+    margin-top: 18px;
+    gap: 10px;
+    font-size: 15px;
   }
 }

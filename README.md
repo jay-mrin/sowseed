@@ -100,7 +100,7 @@ For your India-registered PayPal Business account, test with PayPal sandbox buye
 
 SuperAdmin chooses whether payments use the Admin or SuperAdmin PayPal account. The optional `$21 or more` override always routes qualifying payments to SuperAdmin. Admin uses `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, and `PAYPAL_WEBHOOK_ID`; SuperAdmin uses the corresponding `SUPER_ADMIN_PAYPAL_*` secrets.
 
-A valid email address is required at checkout so the order can be delivered. Display name and message remain optional for one-time payments; a customer name and whole seed count are required for Weekly. After form validation, the customer chooses a one-time offering or a weekly PayPal subscription.
+A valid email address is required at checkout so the order can be delivered. Display name and message remain optional for one-time payments; a customer name and whole seed count are required for Weekly. The form defaults to a one-time offering; customers can enable the **Sow Seed Every Week** switch before checkout to use a weekly PayPal subscription.
 
 Weekly subscriptions charge the selected seed amount immediately as the plan setup fee. Regular billing starts on the next applicable Monday at 6:00 PM `Asia/Kolkata`; a subscription created on Monday starts regular billing the following Monday. PayPal may retry failed renewal payments outside the Monday schedule. Failed, retrying, and suspended subscriptions remain under Pending until payment recovers or the receiving account owner cancels them.
 

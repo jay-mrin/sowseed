@@ -7,16 +7,15 @@ import { fileURLToPath } from "node:url";
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = (filePath) => readFileSync(path.join(repositoryRoot, filePath), "utf8");
 
-test("valid seed submissions open the accessible Once or Weekly dialog", () => {
+test("the form uses a weekly switch without a frequency popup", () => {
   const html = read("index.html");
   const app = read("src/app.js");
 
-  assert.match(html, /id="frequencyDialog"[\s\S]*How would you like to sow your seed\?/);
-  assert.match(html, /id="chooseOnceButton"[\s\S]*id="chooseWeeklyButton"[\s\S]*id="frequencyNotNowButton"/);
-  assert.doesNotMatch(html, /id="onceBillingDetails"|id="weeklyBillingDetails"/);
-  assert.match(app, /function submitDonation\([\s\S]*openFrequencyDialog\(\)/);
-  assert.match(app, /frequencyDialog.*addEventListener\("cancel"[\s\S]*closeFrequencyDialog\(\)/);
-  assert.match(app, /event\.target === elements\.frequencyDialog/);
+  assert.match(html, /id="weeklySeedToggle"[^>]*type="checkbox"[^>]*role="switch"[\s\S]*Sow Seed Every Week/);
+  assert.doesNotMatch(html, /id="frequencyDialog"|How would you like to sow your seed\?/);
+  assert.match(app, /frequency: elements\.weeklySeedToggle\?\.checked \? "weekly" : "once"/);
+  assert.match(app, /pendingDonation\.frequency === "weekly"[\s\S]*chooseWeeklySowing\(\)[\s\S]*chooseOneTimeSowing\(\)/);
+  assert.doesNotMatch(app, /openFrequencyDialog|closeFrequencyDialog/);
 });
 
 test("weekly checkout requires a name and whole seeds and uses subscription intent", () => {

@@ -19,7 +19,7 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="src/styles.css?v=108" />
+    <link rel="stylesheet" href="src/styles.css?v=113" />
   </head>
   <body class="app-loading">
     <div class="app-loader" id="appLoader" role="status" aria-live="polite" aria-label="Loading Seed Garden">
@@ -543,6 +543,14 @@
                 <textarea id="messageInput" maxlength="180" placeholder="Your message (optional)"></textarea>
               </label>
 
+              <label class="weekly-seed-toggle" for="weeklySeedToggle">
+                <input id="weeklySeedToggle" type="checkbox" role="switch" />
+                <span class="weekly-seed-toggle-track" aria-hidden="true">
+                  <span class="weekly-seed-toggle-thumb"></span>
+                </span>
+                <span class="weekly-seed-toggle-label">Sow Seed Every Week</span>
+              </label>
+
               <button class="button button-primary checkout-button" id="checkoutButton" type="submit" aria-expanded="false" aria-controls="inlinePaypalCheckout">
                 <span id="checkoutLabel">Sow Your Seed</span>
               </button>
@@ -605,32 +613,6 @@
         </section>
       </section>
     </main>
-
-    <dialog class="frequency-dialog" id="frequencyDialog" aria-labelledby="frequencyDialogTitle" aria-describedby="frequencyDialogDescription">
-      <div class="frequency-dialog-card">
-        <div class="frequency-dialog-mark" aria-hidden="true">🌱</div>
-        <h2 id="frequencyDialogTitle">How would you like to sow your seed?</h2>
-        <p id="frequencyDialogDescription">Choose the option that feels right for you.</p>
-        <div class="frequency-choice-list">
-          <button class="frequency-choice frequency-choice-once" id="chooseOnceButton" type="button">
-            <span class="frequency-choice-icon" aria-hidden="true">🌱</span>
-            <span class="frequency-choice-copy">
-              <strong>Sow this seed once today · One-time offering</strong>
-            </span>
-            <span class="frequency-choice-arrow" aria-hidden="true">›</span>
-          </button>
-          <button class="frequency-choice frequency-choice-weekly" id="chooseWeeklyButton" type="button">
-            <span class="frequency-choice-icon" aria-hidden="true">✨</span>
-            <span class="frequency-choice-copy">
-              <strong>A Graceful Seed Offered Every Week</strong>
-              <em id="weeklySundayWarning" hidden>Your next weekly payment is tomorrow.</em>
-            </span>
-            <span class="frequency-choice-arrow" aria-hidden="true">›</span>
-          </button>
-        </div>
-        <button class="frequency-not-now" id="frequencyNotNowButton" type="button">Not now</button>
-      </div>
-    </dialog>
 
     <dialog class="tutorial-dialog" id="tutorialDialog" aria-labelledby="tutorialDialogTitle">
       <div class="tutorial-dialog-card">
@@ -753,6 +735,6 @@
 
     <script src="src/config.js?v=3"></script>
     <script src="src/adsense.js?v=1" data-adsense-mode="app" defer></script>
-    <script src="src/app.js?v=103" defer></script>
+    <script src="src/app.js?v=104" defer></script>
   </body>
 </html>

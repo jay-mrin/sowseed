@@ -269,8 +269,6 @@ const elements = {
   cancelAdminLoginButton: document.querySelector("#cancelAdminLoginButton"),
   checkoutButton: document.querySelector("#checkoutButton"),
   checkoutLabel: document.querySelector("#checkoutLabel"),
-  chooseOnceButton: document.querySelector("#chooseOnceButton"),
-  chooseWeeklyButton: document.querySelector("#chooseWeeklyButton"),
   closeAdminButton: document.querySelector("#closeAdminButton"),
   closeReceiptButton: document.querySelector("#closeReceiptButton"),
   closeTutorialButton: document.querySelector("#closeTutorialButton"),
@@ -288,9 +286,7 @@ const elements = {
   meterHeadline: document.querySelector("#meterHeadline"),
   nameInput: document.querySelector("#nameInput"),
   nameError: document.querySelector("#nameError"),
-  frequencyDialog: document.querySelector("#frequencyDialog"),
-  frequencyNotNowButton: document.querySelector("#frequencyNotNowButton"),
-  weeklySundayWarning: document.querySelector("#weeklySundayWarning"),
+  weeklySeedToggle: document.querySelector("#weeklySeedToggle"),
   openTutorialButton: document.querySelector("#openTutorialButton"),
   emailError: document.querySelector("#emailError"),
   inlinePaypalCheckout: document.querySelector("#inlinePaypalCheckout"),
@@ -378,7 +374,6 @@ let subscriptionCalendarCursor = fromDateKey(initialSubscriptionDate);
 let selectedSubscriptionDate = initialSubscriptionDate;
 let subscriptionFilter = "active";
 let preparedSubscription = null;
-let restoreFrequencyFocus = true;
 function cloneDefaultSettings() {
   return { ...DEFAULT_SETTINGS };
 }
@@ -2661,39 +2656,10 @@ function updatePayPalVisibility() {
   return showPayPal;
 }
 
-function isSundayInIndia(now = new Date()) {
-  return new Date(now.getTime() + 330 * 60_000).getUTCDay() === 0;
-}
-
-function openFrequencyDialog() {
-  elements.weeklySundayWarning.hidden = !isSundayInIndia();
-  restoreFrequencyFocus = true;
-  document.body.classList.add("frequency-open");
-
-  if (typeof elements.frequencyDialog.showModal === "function") {
-    elements.frequencyDialog.showModal();
-  } else {
-    elements.frequencyDialog.setAttribute("open", "");
-  }
-  window.requestAnimationFrame(() => elements.chooseOnceButton?.focus());
-}
-
-function closeFrequencyDialog(options = {}) {
-  restoreFrequencyFocus = options.restoreFocus !== false;
-  document.body.classList.remove("frequency-open");
-  if (elements.frequencyDialog.open && typeof elements.frequencyDialog.close === "function") {
-    elements.frequencyDialog.close();
-  } else {
-    elements.frequencyDialog.removeAttribute("open");
-    if (restoreFrequencyFocus) elements.checkoutButton?.focus();
-  }
-}
-
 function chooseOneTimeSowing() {
   if (!pendingDonation) return;
   pendingDonation.frequency = "once";
   preparedSubscription = null;
-  closeFrequencyDialog({ restoreFocus: false });
   openInlinePayPalCheckout();
 }
 
@@ -2705,7 +2671,6 @@ function chooseWeeklySowing() {
 
   if (!name) {
     elements.nameError.textContent = "Add your name to begin weekly sowing.";
-    closeFrequencyDialog({ restoreFocus: false });
     window.requestAnimationFrame(() => {
       elements.nameInput.focus({ preventScroll: true });
       elements.nameInput.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -2714,7 +2679,6 @@ function chooseWeeklySowing() {
   }
   if (!Number.isInteger(seedUnits)) {
     elements.amountError.textContent = `Weekly sowing must use whole seeds at ${money(seedPrice)} each.`;
-    closeFrequencyDialog({ restoreFocus: false });
     window.requestAnimationFrame(() => elements.amountInput.focus());
     return;
   }
@@ -2729,7 +2693,6 @@ function chooseWeeklySowing() {
     paymentRoute: getCheckoutRoute(),
   };
   preparedSubscription = null;
-  closeFrequencyDialog({ restoreFocus: false });
   openInlinePayPalCheckout();
 }
 
@@ -2746,7 +2709,7 @@ function submitDonation(event) {
     name: elements.nameInput.value.trim(),
     email: getPaymentEmail(),
     amount: getAmount(),
-    frequency: null,
+    frequency: elements.weeklySeedToggle?.checked ? "weekly" : "once",
     message: elements.messageInput.value.trim(),
     paymentRoute: getCheckoutRoute(),
     createdAt: new Date().toISOString(),
@@ -2754,7 +2717,11 @@ function submitDonation(event) {
 
   trackCheckoutEvent("checkout_button_clicked", pendingDonation);
   closeInlinePayPalCheckout();
-  openFrequencyDialog();
+  if (pendingDonation.frequency === "weekly") {
+    chooseWeeklySowing();
+  } else {
+    chooseOneTimeSowing();
+  }
 }
 
 function isValidPayPalSdk(paypal) {
@@ -4104,27 +4071,6 @@ elements.showMoreButtons.forEach((button) => {
 });
 
 elements.supportForm.addEventListener("submit", submitDonation);
-elements.chooseOnceButton?.addEventListener("click", chooseOneTimeSowing);
-elements.chooseWeeklyButton?.addEventListener("click", chooseWeeklySowing);
-elements.frequencyNotNowButton?.addEventListener("click", () => {
-  pendingDonation = null;
-  closeFrequencyDialog();
-});
-elements.frequencyDialog?.addEventListener("cancel", (event) => {
-  event.preventDefault();
-  pendingDonation = null;
-  closeFrequencyDialog();
-});
-elements.frequencyDialog?.addEventListener("click", (event) => {
-  if (event.target === elements.frequencyDialog) {
-    pendingDonation = null;
-    closeFrequencyDialog();
-  }
-});
-elements.frequencyDialog?.addEventListener("close", () => {
-  document.body.classList.remove("frequency-open");
-  if (restoreFrequencyFocus) elements.checkoutButton?.focus();
-});
 elements.alternateCardCheckoutLink?.addEventListener("click", (event) => {
   event.preventDefault();
 
