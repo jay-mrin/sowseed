@@ -93,8 +93,10 @@ test("cleanup migrations close direct-table bypasses and remove retired schema",
   }
 });
 
-test("checkout analytics combine visits while isolating incomplete attempts by route", () => {
+test("checkout analytics combine visits while isolating all payment records by route", () => {
   const analytics = read("supabase/functions/admin-analytics/index.ts");
+  const app = read("src/app.js");
+  const html = read("index.html");
   const bootstrap = read("supabase/functions/public-bootstrap/index.ts");
   const migration = read("supabase/migrations/202608180008_admin_checkout_analytics.sql");
   const roleScopeMigration = read("supabase/migrations/202608190001_role_scoped_checkout_analytics.sql");
@@ -103,11 +105,13 @@ test("checkout analytics combine visits while isolating incomplete attempts by r
   assert.match(analytics, /adminProfile\.role === "super_admin"/);
   assert.match(analytics, /\.from\("page_views"\)[\s\S]*\.in\("payment_route", \["standard", "superadmin"\]\)/);
   assert.match(analytics, /\.eq\("payment_route", paymentRoute\)/);
-  assert.match(analytics, /\.eq\("payment_route", oppositeRoute\)[\s\S]*\.eq\("status", "confirmed"\)/);
+  assert.doesNotMatch(analytics, /oppositeRoute|oppositeCompleted/);
   assert.match(analytics, /\.from\("checkout_analytics_state"\)/);
   assert.match(analytics, /contact_email/);
-  assert.match(analytics, /paymentStartsLast24h: ownAttempts\.length/);
-  assert.match(analytics, /attempt\.payment_route === paymentRoute \? "completed" : "cancelled"/);
+  assert.match(analytics, /paymentStartsLast24h: attempts\.length/);
+  assert.doesNotMatch(analytics, /"cancelled"/);
+  assert.doesNotMatch(app, /completed \$\{oppositeRouteLabel\} payments/);
+  assert.doesNotMatch(html, /completed SuperAdmin payments/);
   assert.doesNotMatch(analytics, /checkout_button_clicked|paypal_checkout_started/);
   assert.match(bootstrap, /payment_route: paymentRoute/);
   assert.match(migration, /add column if not exists payment_route text/);

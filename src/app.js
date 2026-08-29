@@ -2135,7 +2135,6 @@ function renderAdminAnalytics() {
   const analytics = normalizeAnalytics(state.analytics);
   const isSuperAdmin = state.adminProfile?.role === "super_admin";
   const routeLabel = isSuperAdmin ? "SuperAdmin" : "Admin";
-  const oppositeRouteLabel = isSuperAdmin ? "Admin" : "SuperAdmin";
   const generatedAt = analytics.generatedAt ? new Date(analytics.generatedAt) : null;
   const hasValidDate = generatedAt && !Number.isNaN(generatedAt.getTime());
 
@@ -2143,7 +2142,7 @@ function renderAdminAnalytics() {
     elements.adminAnalyticsTitle.textContent = `3. ${routeLabel} checkout activity`;
   }
   if (elements.adminAnalyticsDescription) {
-    elements.adminAnalyticsDescription.textContent = `All page visits, ${routeLabel} checkout attempts, and completed ${oppositeRouteLabel} payments from the last 24 hours.`;
+    elements.adminAnalyticsDescription.textContent = `All page visits and ${routeLabel} checkout activity from the last 24 hours. Payment records are private to this account.`;
   }
   if (elements.adminPageViewsLabel) {
     elements.adminPageViewsLabel.textContent = "All checkout-route views last 24 hours";
@@ -2188,7 +2187,7 @@ function renderAdminAnalytics() {
             `;
           })
           .join("")
-      : `<p class="admin-payment-attempt-empty">No ${routeLabel} attempts or completed ${oppositeRouteLabel} payments in this window.</p>`;
+      : `<p class="admin-payment-attempt-empty">No ${routeLabel} payment attempts in this window.</p>`;
   }
   elements.adminAnalyticsUpdated.textContent = hasValidDate
     ? `Updated ${readableDate(generatedAt)} at ${readableTime(generatedAt)} · All page visits · ${routeLabel} checkout activity`

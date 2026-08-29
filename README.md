@@ -14,7 +14,7 @@ Then open `http://127.0.0.1:5173`.
 
 When `src/config.js` has `backendEnabled: false`, the app stays in local demo mode. When Supabase values are filled and `backendEnabled: true`, public data, goal settings, posts, orders, likes, comments, and PayPal checkout are loaded through Supabase Edge Functions.
 
-Both portals show the combined total of Admin- and SuperAdmin-route page visits from the last 24 hours. Payment-start counts and incomplete attempts remain in the portal for the checkout route that created them. A confirmed payment appears completed in its owning portal and cancelled in the other portal. Each portal uses its own reset timestamp, so resetting one dashboard does not affect the other.
+Both portals show the combined total of Admin- and SuperAdmin-route page visits from the last 24 hours. Every payment attempt and completed payment remains visible only in the portal for the checkout route that owns it. Each portal uses its own reset timestamp, so resetting one dashboard does not affect the other.
 
 The payment column includes a Blessing Wall loaded from `seed_comments`. Initial comments are imported from legacy data, and completed public Admin-routed orders can add a new comment with the captured payment timestamp.
 
@@ -131,7 +131,7 @@ Use PayPal sandbox first:
 - Weekly approval creates one subscription, and every verified subscription sale creates exactly one linked seed order.
 - Admin and SuperAdmin subscription calendars show only their own Active, Pending, and Cancelled customers.
 - Admin calendar can download a proof PDF for each digital-service order and mark orders fulfilled.
-- Both analytics portals share the total page-visit count, keep incomplete attempts with their checkout owner, and show opposite-route completed payments as cancelled. Each portal resets independently.
+- Both analytics portals share the total page-visit count while keeping every payment attempt and completed payment private to its checkout owner. Each portal resets independently.
 - Public Blessing Wall loads imported legacy comments and appends paid blessing requests after confirmed payment capture.
 - Admin login requires Supabase Auth and `admin_profiles`; Admin and SuperAdmin see only the orders routed to their respective collection account.
 - Donor comments require the same-browser donor token returned after a completed donation.
