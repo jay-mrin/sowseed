@@ -210,6 +210,112 @@ export async function getPayPalOrder(orderId: string, paymentRoute?: string) {
   return payload;
 }
 
+async function paypalJsonRequest(
+  path: string,
+  input: {
+    method?: string;
+    paymentRoute?: string;
+    body?: Record<string, unknown>;
+    requestId?: string;
+  } = {},
+) {
+  const accessToken = await getPayPalAccessToken(input.paymentRoute);
+  const response = await fetch(`${getPayPalBaseUrl()}${path}`, {
+    method: input.method || "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      ...(input.requestId ? { "PayPal-Request-Id": input.requestId } : {}),
+    },
+    body: input.body ? JSON.stringify(input.body) : undefined,
+  });
+
+  if (response.status === 204) return null;
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new PayPalApiError(path, response.status, payload);
+  }
+
+  return payload;
+}
+
+export async function createPayPalSubscriptionProduct(input: {
+  paymentRoute: string;
+}) {
+  return await paypalJsonRequest("/v1/catalogs/products", {
+    method: "POST",
+    paymentRoute: input.paymentRoute,
+    requestId: crypto.randomUUID(),
+    body: {
+      name: `Sow Your Seed Weekly Offering (${input.paymentRoute})`,
+      description: DIGITAL_ORDER_ITEM_NAME,
+      type: "SERVICE",
+    },
+  });
+}
+
+export async function createPayPalWeeklyPlan(input: {
+  amountCents: number;
+  paymentRoute: string;
+  productId: string;
+}) {
+  const currency = getPayPalCurrency();
+  const amount = formatMoneyFromCents(input.amountCents);
+
+  return await paypalJsonRequest("/v1/billing/plans", {
+    method: "POST",
+    paymentRoute: input.paymentRoute,
+    requestId: crypto.randomUUID(),
+    body: {
+      product_id: input.productId,
+      name: `${amount} ${currency} Weekly Seed`,
+      description: `${DIGITAL_ORDER_ITEM_NAME} billed every week`,
+      status: "ACTIVE",
+      billing_cycles: [{
+        frequency: { interval_unit: "WEEK", interval_count: 1 },
+        tenure_type: "REGULAR",
+        sequence: 1,
+        total_cycles: 0,
+        pricing_scheme: {
+          fixed_price: { value: amount, currency_code: currency },
+        },
+      }],
+      payment_preferences: {
+        auto_bill_outstanding: true,
+        setup_fee: { value: amount, currency_code: currency },
+        setup_fee_failure_action: "CANCEL",
+        payment_failure_threshold: 1,
+      },
+    },
+  });
+}
+
+export async function getPayPalSubscription(
+  subscriptionId: string,
+  paymentRoute?: string,
+) {
+  return await paypalJsonRequest(
+    `/v1/billing/subscriptions/${encodeURIComponent(subscriptionId)}?fields=last_failed_payment`,
+    { paymentRoute },
+  );
+}
+
+export async function cancelPayPalSubscription(
+  subscriptionId: string,
+  paymentRoute: string,
+  reason: string,
+) {
+  await paypalJsonRequest(
+    `/v1/billing/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`,
+    {
+      method: "POST",
+      paymentRoute,
+      body: { reason: String(reason || "Cancelled by account owner").slice(0, 128) },
+    },
+  );
+}
+
 function getWebhookId(paymentRoute?: string) {
   if (paymentRoute === "superadmin") {
     return Deno.env.get("SUPER_ADMIN_PAYPAL_WEBHOOK_ID") || "";

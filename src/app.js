@@ -269,6 +269,8 @@ const elements = {
   cancelAdminLoginButton: document.querySelector("#cancelAdminLoginButton"),
   checkoutButton: document.querySelector("#checkoutButton"),
   checkoutLabel: document.querySelector("#checkoutLabel"),
+  chooseOnceButton: document.querySelector("#chooseOnceButton"),
+  chooseWeeklyButton: document.querySelector("#chooseWeeklyButton"),
   closeAdminButton: document.querySelector("#closeAdminButton"),
   closeReceiptButton: document.querySelector("#closeReceiptButton"),
   closeTutorialButton: document.querySelector("#closeTutorialButton"),
@@ -285,6 +287,12 @@ const elements = {
   meterExpanded: document.querySelector("#meterExpanded"),
   meterHeadline: document.querySelector("#meterHeadline"),
   nameInput: document.querySelector("#nameInput"),
+  nameError: document.querySelector("#nameError"),
+  frequencyDialog: document.querySelector("#frequencyDialog"),
+  frequencyNotNowButton: document.querySelector("#frequencyNotNowButton"),
+  onceBillingDetails: document.querySelector("#onceBillingDetails"),
+  weeklyBillingDetails: document.querySelector("#weeklyBillingDetails"),
+  weeklySundayWarning: document.querySelector("#weeklySundayWarning"),
   openTutorialButton: document.querySelector("#openTutorialButton"),
   emailError: document.querySelector("#emailError"),
   inlinePaypalCheckout: document.querySelector("#inlinePaypalCheckout"),
@@ -327,6 +335,13 @@ const elements = {
   supportForm: document.querySelector("#supportForm"),
   supportCard: document.querySelector("#support"),
   supportTitle: document.querySelector("#supportTitle"),
+  subscriptionCalendarDetails: document.querySelector("#subscriptionCalendarDetails"),
+  subscriptionCalendarGrid: document.querySelector("#subscriptionCalendarGrid"),
+  subscriptionCalendarNext: document.querySelector("#subscriptionCalendarNext"),
+  subscriptionCalendarPrev: document.querySelector("#subscriptionCalendarPrev"),
+  subscriptionCalendarSummary: document.querySelector("#subscriptionCalendarSummary"),
+  subscriptionCalendarTitle: document.querySelector("#subscriptionCalendarTitle"),
+  subscriptionFilters: document.querySelectorAll("[data-subscription-filter]"),
   toast: document.querySelector("#toast"),
   topicPill: document.querySelector("#topicPill"),
   tutorialDialog: document.querySelector("#tutorialDialog"),
@@ -360,6 +375,12 @@ let pendingDonation = null;
 const initialAdminCalendarDate = getLatestDonationDateKey();
 let adminCalendarCursor = fromDateKey(initialAdminCalendarDate);
 let selectedAdminCalendarDate = initialAdminCalendarDate;
+const initialSubscriptionDate = toIndiaDateKey(new Date());
+let subscriptionCalendarCursor = fromDateKey(initialSubscriptionDate);
+let selectedSubscriptionDate = initialSubscriptionDate;
+let subscriptionFilter = "active";
+let preparedSubscription = null;
+let restoreFrequencyFocus = true;
 function cloneDefaultSettings() {
   return { ...DEFAULT_SETTINGS };
 }
@@ -564,6 +585,7 @@ function loadState() {
       donations: [],
       posts: [],
       seedComments: [],
+      subscriptions: [],
       settings: {
         ...cloneDefaultSettings(),
         startingSeeds: 0,
@@ -580,6 +602,7 @@ function loadState() {
       donations: seedFeed,
       posts: cloneDefaultPosts(),
       seedComments: [],
+      subscriptions: [],
       settings: cloneDefaultSettings(),
       totals: { donationSeeds: null, donationAmount: null },
     };
@@ -592,6 +615,7 @@ function loadState() {
       donations: Array.isArray(parsed.donations) ? parsed.donations : seedFeed,
       posts: normalizePosts(parsed.posts),
       seedComments: normalizeSeedComments(parsed.seedComments),
+      subscriptions: Array.isArray(parsed.subscriptions) ? parsed.subscriptions : [],
       settings: normalizeSettings(parsed.settings),
       totals: normalizeTotals(parsed.totals),
     };
@@ -601,6 +625,7 @@ function loadState() {
       donations: seedFeed,
       posts: cloneDefaultPosts(),
       seedComments: [],
+      subscriptions: [],
       settings: cloneDefaultSettings(),
       totals: { donationSeeds: null, donationAmount: null },
     };
@@ -1182,7 +1207,7 @@ function getProofPdfData(donation) {
 
   return {
     customerName: donation.name || order.customerName || "Customer",
-    frequency: donation.frequency === "monthly" ? "Monthly" : "One time",
+    frequency: donation.frequency === "weekly" ? "Weekly" : donation.frequency === "monthly" ? "Monthly" : "One time",
     createdAt,
     orderNumber,
     transactionId,
@@ -1767,7 +1792,7 @@ async function refreshAdminPortalData() {
   try {
     await loadBackendData({ throwOnError: true });
     renderApp();
-    await Promise.all([loadAdminDonations(), loadAdminAnalytics()]);
+    await Promise.all([loadAdminDonations(), loadAdminSubscriptions(), loadAdminAnalytics()]);
     setAdminStatus(`${routeLabel} portal data reloaded.`, "success");
     showToast(`${routeLabel} portal data reloaded.`);
   } catch (error) {
@@ -2203,7 +2228,7 @@ function renderCalendarDetails(context) {
         .map((donation) => {
           const name = donation.anonymous ? "Private customer" : donation.name || "Unknown customer";
           const amount = Number.parseFloat(donation.amount) || 0;
-          const frequency = donation.frequency === "monthly" ? "Monthly" : "One time";
+          const frequency = donation.frequency === "weekly" ? "Weekly" : donation.frequency === "monthly" ? "Monthly" : "One time";
           const createdAt = donation.createdAt || new Date().toISOString();
           const order = getDigitalOrder(donation);
           const orderNumber = getDigitalOrderValue(
@@ -2369,6 +2394,168 @@ function renderAdminCalendar() {
   renderCalendarGrid(getPrimaryAdminCalendarContext());
 }
 
+function getSubscriptionStatusGroup(subscription) {
+  if (["cancelled", "expired"].includes(subscription.status)) return "cancelled";
+  if (subscription.status === "active") return "active";
+  return "pending";
+}
+
+function getSubscriptionEventAt(subscription) {
+  const group = getSubscriptionStatusGroup(subscription);
+  if (group === "active") return subscription.nextBillingAt || subscription.billingAnchorAt;
+  if (group === "cancelled") return subscription.cancelledAt || subscription.optedInAt;
+  return subscription.nextRetryAt || subscription.lastFailedAt || subscription.nextBillingAt || subscription.optedInAt;
+}
+
+function toIndiaDateKey(value) {
+  const date = new Date(value || Date.now());
+  if (Number.isNaN(date.getTime())) return toDateKey(new Date());
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: "Asia/Kolkata",
+  }).formatToParts(date);
+  const part = (type) => parts.find((item) => item.type === type)?.value || "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+function getVisibleSubscriptions() {
+  return (state.subscriptions || []).filter(
+    (subscription) => getSubscriptionStatusGroup(subscription) === subscriptionFilter,
+  );
+}
+
+function renderSubscriptionCalendar() {
+  if (!elements.subscriptionCalendarGrid || !elements.subscriptionCalendarTitle) return;
+  const subscriptions = getVisibleSubscriptions();
+  const grouped = subscriptions.reduce((result, subscription) => {
+    const dateKey = toIndiaDateKey(getSubscriptionEventAt(subscription));
+    result[dateKey] = result[dateKey] || [];
+    result[dateKey].push(subscription);
+    return result;
+  }, {});
+  const year = subscriptionCalendarCursor.getFullYear();
+  const month = subscriptionCalendarCursor.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const todayKey = toIndiaDateKey(new Date());
+  const cells = [];
+
+  for (let offset = 0; offset < firstDay.getDay(); offset += 1) {
+    cells.push(`<span class="admin-calendar-day is-empty" role="presentation"></span>`);
+  }
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const date = new Date(year, month, day);
+    const dateKey = toDateKey(date);
+    const entries = grouped[dateKey] || [];
+    const total = entries.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    const classes = [
+      "admin-calendar-day",
+      entries.length ? "has-donations" : "",
+      dateKey === selectedSubscriptionDate ? "is-selected" : "",
+      dateKey === todayKey ? "is-today" : "",
+    ].filter(Boolean).join(" ");
+    cells.push(`
+      <button class="${classes}" type="button" role="gridcell"
+        aria-selected="${dateKey === selectedSubscriptionDate}"
+        aria-label="${readableDate(date)}, ${entries.length} ${subscriptionFilter} subscriptions"
+        data-subscription-calendar-date="${dateKey}">
+        <span>${day}</span>
+        ${entries.length ? `<small>${entries.length} · ${money(total)}</small>` : ""}
+      </button>
+    `);
+  }
+
+  elements.subscriptionCalendarTitle.textContent = `${subscriptionFilter[0].toUpperCase()}${subscriptionFilter.slice(1)} · ${formatMonthTitle(subscriptionCalendarCursor)}`;
+  elements.subscriptionCalendarGrid.innerHTML = cells.join("");
+  elements.subscriptionFilters.forEach((button) => {
+    const selected = button.dataset.subscriptionFilter === subscriptionFilter;
+    button.classList.toggle("is-selected", selected);
+    button.setAttribute("aria-pressed", String(selected));
+  });
+  renderSubscriptionCalendarDetails(grouped[selectedSubscriptionDate] || []);
+
+  const monthEntries = subscriptions.filter((item) => {
+    const key = toIndiaDateKey(getSubscriptionEventAt(item));
+    return key.startsWith(`${year}-${String(month + 1).padStart(2, "0")}`);
+  });
+  const recurringTotal = monthEntries.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+  elements.subscriptionCalendarSummary.innerHTML = `
+    <article><span>${subscriptionFilter} selected day</span><strong>${(grouped[selectedSubscriptionDate] || []).length}</strong><small>customer profile${(grouped[selectedSubscriptionDate] || []).length === 1 ? "" : "s"}</small></article>
+    <article><span>${formatMonthTitle(subscriptionCalendarCursor)}</span><strong>${money(recurringTotal)}</strong><small>${monthEntries.length} ${subscriptionFilter} subscription${monthEntries.length === 1 ? "" : "s"}</small></article>
+  `;
+}
+
+function renderSubscriptionCalendarDetails(subscriptions) {
+  const selectedDate = fromDateKey(selectedSubscriptionDate);
+  if (!subscriptions.length) {
+    elements.subscriptionCalendarDetails.innerHTML = `
+      <div class="admin-calendar-empty">
+        <strong>${readableDate(selectedDate)}</strong>
+        <span>No ${escapeHtml(subscriptionFilter)} subscription records on this day.</span>
+      </div>`;
+    return;
+  }
+
+  elements.subscriptionCalendarDetails.innerHTML = `
+    <div class="admin-calendar-detail-heading"><div><span>Selected day</span><strong>${readableDate(selectedDate)}</strong></div><b>${subscriptions.length} customer${subscriptions.length === 1 ? "" : "s"}</b></div>
+    <div class="admin-calendar-list">
+      ${subscriptions.map((subscription) => {
+        const group = getSubscriptionStatusGroup(subscription);
+        const nextLabel = group === "active" ? "Next renewal" : group === "pending" ? "Next retry / failure" : "Cancelled";
+        const nextValue = getSubscriptionEventAt(subscription);
+        const payments = subscription.payments || [];
+        return `
+          <article class="subscription-profile">
+            <div class="subscription-profile-heading">
+              <div><strong>${escapeHtml(subscription.name)}</strong><a href="mailto:${escapeHtml(subscription.email)}">${escapeHtml(subscription.email)}</a></div>
+              <span class="subscription-profile-status is-${group}">${escapeHtml(subscription.status.replaceAll("_", " "))}</span>
+            </div>
+            <div class="subscription-profile-data">
+              <div><span>Weekly amount</span><strong>${money(subscription.amount)} · ${subscription.seedCount} seed${subscription.seedCount === 1 ? "" : "s"}</strong></div>
+              <div><span>Started</span><strong>${readableIndiaDateTime(subscription.optedInAt)}</strong></div>
+              <div><span>Last payment</span><strong>${subscription.lastSuccessfulPaymentAt ? readableIndiaDateTime(subscription.lastSuccessfulPaymentAt) : "Awaiting first payment"}</strong></div>
+              <div><span>${nextLabel}</span><strong>${nextValue ? readableIndiaDateTime(nextValue) : "Not scheduled"}</strong></div>
+            </div>
+            ${payments.length ? `<ol class="subscription-payment-history">${payments.map((payment) => `<li>${escapeHtml(payment.kind)} · ${money(payment.amount)} · ${readableIndiaDateTime(payment.paidAt)}</li>`).join("")}</ol>` : ""}
+            ${group !== "cancelled" ? `<div class="subscription-profile-actions"><span>PayPal ${escapeHtml(subscription.paypalSubscriptionId || "approval pending")}</span><button class="subscription-cancel-button" type="button" data-cancel-subscription="${escapeHtml(subscription.id)}">Cancel subscription</button></div>` : ""}
+          </article>`;
+      }).join("")}
+    </div>`;
+}
+
+async function loadAdminSubscriptions(options = {}) {
+  if (!isBackendConfigured() || !getAdminAccessToken()) return;
+  try {
+    const payload = await callEdge("admin-subscriptions", { admin: true, method: "GET" });
+    state.subscriptions = Array.isArray(payload.subscriptions) ? payload.subscriptions : [];
+    renderSubscriptionCalendar();
+    if (options.announce) setAdminStatus("Weekly subscription calendar loaded.", "success");
+  } catch (error) {
+    setAdminStatus(error.message || "Could not load weekly subscriptions.", "error", { persist: true });
+  }
+}
+
+async function cancelAdminSubscription(membershipId, button) {
+  const subscription = (state.subscriptions || []).find((item) => item.id === membershipId);
+  if (!subscription || !window.confirm(`Cancel ${subscription.name}'s weekly subscription? Future PayPal charges will stop.`)) return;
+  await runAdminAction({
+    button,
+    busyText: "Cancelling...",
+    loadingMessage: `Cancelling ${subscription.name}'s weekly subscription...`,
+    successMessage: "Weekly subscription cancelled.",
+    errorMessage: "Could not cancel the weekly subscription.",
+  }, async () => {
+    const result = await callEdge("admin-subscriptions", {
+      admin: true,
+      body: { membershipId, reason: "Cancelled by account owner in Sowing Seed portal" },
+    });
+    await loadAdminSubscriptions();
+    return result;
+  });
+}
+
 function updateCheckoutLabel() {
   const amount = Math.max(getAmount(), 0);
   const seedUnits = getSeedUnitsFromAmount(amount, state.settings.seedPrice);
@@ -2463,7 +2650,7 @@ function setPayPalCheckoutLoading(isLoading) {
   if (isLoading) {
     elements.paypalButton.hidden = false;
     elements.paypalCardButton.hidden = false;
-    elements.cardButton.hidden = false;
+    elements.cardButton.hidden = pendingDonation?.frequency === "weekly";
   }
 }
 
@@ -2472,9 +2659,111 @@ function updatePayPalVisibility() {
 
   elements.paypalButton.hidden = !showPayPal;
   elements.paypalCardButton.hidden = !showPayPal;
-  elements.cardButton.hidden = false;
+  elements.cardButton.hidden = pendingDonation?.frequency === "weekly";
 
   return showPayPal;
+}
+
+function getNextMondayBillingAt(now = new Date()) {
+  const istClock = new Date(now.getTime() + 330 * 60_000);
+  const istDay = istClock.getUTCDay();
+  const daysUntilMonday = istDay === 1 ? 7 : (8 - istDay) % 7;
+
+  return new Date(Date.UTC(
+    istClock.getUTCFullYear(),
+    istClock.getUTCMonth(),
+    istClock.getUTCDate() + daysUntilMonday,
+    12,
+    30,
+    0,
+  ));
+}
+
+function isSundayInIndia(now = new Date()) {
+  return new Date(now.getTime() + 330 * 60_000).getUTCDay() === 0;
+}
+
+function formatIndiaBillingDate(value) {
+  const billingDay = new Intl.DateTimeFormat("en-IN", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "Asia/Kolkata",
+  }).format(value);
+  return `${billingDay} at 6:00 PM IST`;
+}
+
+function openFrequencyDialog() {
+  const amountLabel = money(getAmount());
+  const nextBillingAt = getNextMondayBillingAt();
+  elements.onceBillingDetails.textContent = `${amountLabel} today`;
+  elements.weeklyBillingDetails.textContent = `${amountLabel} today, then ${formatIndiaBillingDate(nextBillingAt)}`;
+  elements.weeklySundayWarning.hidden = !isSundayInIndia();
+  restoreFrequencyFocus = true;
+  document.body.classList.add("frequency-open");
+
+  if (typeof elements.frequencyDialog.showModal === "function") {
+    elements.frequencyDialog.showModal();
+  } else {
+    elements.frequencyDialog.setAttribute("open", "");
+  }
+  window.requestAnimationFrame(() => elements.chooseOnceButton?.focus());
+}
+
+function closeFrequencyDialog(options = {}) {
+  restoreFrequencyFocus = options.restoreFocus !== false;
+  document.body.classList.remove("frequency-open");
+  if (elements.frequencyDialog.open && typeof elements.frequencyDialog.close === "function") {
+    elements.frequencyDialog.close();
+  } else {
+    elements.frequencyDialog.removeAttribute("open");
+    if (restoreFrequencyFocus) elements.checkoutButton?.focus();
+  }
+}
+
+function chooseOneTimeSowing() {
+  if (!pendingDonation) return;
+  pendingDonation.frequency = "once";
+  preparedSubscription = null;
+  closeFrequencyDialog({ restoreFocus: false });
+  openInlinePayPalCheckout();
+}
+
+function chooseWeeklySowing() {
+  if (!pendingDonation) return;
+  const name = elements.nameInput.value.trim();
+  const seedPrice = Math.max(Number(state.settings.seedPrice) || SEED_DOLLAR_VALUE, 1);
+  const seedUnits = getAmount() / seedPrice;
+
+  if (!name) {
+    elements.nameError.textContent = "Add your name to begin weekly sowing.";
+    closeFrequencyDialog({ restoreFocus: false });
+    window.requestAnimationFrame(() => {
+      elements.nameInput.focus({ preventScroll: true });
+      elements.nameInput.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    return;
+  }
+  if (!Number.isInteger(seedUnits)) {
+    elements.amountError.textContent = `Weekly sowing must use whole seeds at ${money(seedPrice)} each.`;
+    closeFrequencyDialog({ restoreFocus: false });
+    window.requestAnimationFrame(() => elements.amountInput.focus());
+    return;
+  }
+
+  elements.nameError.textContent = "";
+  pendingDonation = {
+    ...pendingDonation,
+    name,
+    amount: getAmount(),
+    seedCount: seedUnits,
+    frequency: "weekly",
+    paymentRoute: getCheckoutRoute(),
+  };
+  preparedSubscription = null;
+  closeFrequencyDialog({ restoreFocus: false });
+  openInlinePayPalCheckout();
 }
 
 function submitDonation(event) {
@@ -2490,14 +2779,15 @@ function submitDonation(event) {
     name: elements.nameInput.value.trim(),
     email: getPaymentEmail(),
     amount: getAmount(),
-    frequency: "once",
+    frequency: null,
     message: elements.messageInput.value.trim(),
     paymentRoute: getCheckoutRoute(),
     createdAt: new Date().toISOString(),
   };
 
   trackCheckoutEvent("checkout_button_clicked", pendingDonation);
-  openInlinePayPalCheckout();
+  closeInlinePayPalCheckout();
+  openFrequencyDialog();
 }
 
 function isValidPayPalSdk(paypal) {
@@ -2527,8 +2817,9 @@ function waitForPayPalSdk(namespace, timeoutMs = 5000) {
   });
 }
 
-function getPayPalSdkNamespace(paymentRoute) {
-  return paymentRoute === "superadmin" ? "paypalSysSuperAdmin" : "paypalSysStandard";
+function getPayPalSdkNamespace(paymentRoute, frequency = pendingDonation?.frequency || "once") {
+  const routeName = paymentRoute === "superadmin" ? "SuperAdmin" : "Standard";
+  return `paypalSys${routeName}${frequency === "weekly" ? "Weekly" : "Once"}`;
 }
 
 function resetPayPalSdk(namespace) {
@@ -2548,15 +2839,18 @@ function resetPayPalSdk(namespace) {
 }
 
 function resetAllPayPalSdks() {
-  resetPayPalSdk(getPayPalSdkNamespace("standard"));
-  resetPayPalSdk(getPayPalSdkNamespace("superadmin"));
+  ["standard", "superadmin"].forEach((route) => {
+    resetPayPalSdk(getPayPalSdkNamespace(route, "once"));
+    resetPayPalSdk(getPayPalSdkNamespace(route, "weekly"));
+  });
 }
 
-function loadPayPalSdk(paymentRoute = getCheckoutRoute()) {
+function loadPayPalSdk(paymentRoute = getCheckoutRoute(), frequency = pendingDonation?.frequency || "once") {
   const route = paymentRoute === "superadmin" ? "superadmin" : "standard";
+  const billingFrequency = frequency === "weekly" ? "weekly" : "once";
   const clientId = getPayPalClientId(route);
-  const sdkKey = `${route}:${clientId}:${paymentConfig.currency || CONFIG.currency}`;
-  const namespace = getPayPalSdkNamespace(route);
+  const sdkKey = `${route}:${billingFrequency}:${clientId}:${paymentConfig.currency || CONFIG.currency}`;
+  const namespace = getPayPalSdkNamespace(route, billingFrequency);
   const activeSdkKey = paypalSdkKeysByNamespace.get(namespace) || "";
 
   if (!clientId) {
@@ -2580,11 +2874,12 @@ function loadPayPalSdk(paymentRoute = getCheckoutRoute()) {
     const params = new URLSearchParams({
       "client-id": clientId,
       currency: paymentConfig.currency || CONFIG.currency,
-      intent: "capture",
+      intent: billingFrequency === "weekly" ? "subscription" : "capture",
       components: "buttons",
       "enable-funding": "card",
       "disable-funding": "credit,paylater,venmo",
     });
+    if (billingFrequency === "weekly") params.set("vault", "true");
     const finish = (callback, value) => {
       if (settled) return;
       settled = true;
@@ -2722,6 +3017,100 @@ function buildPayPalButtonOptions(paypal, fundingSource) {
   };
 }
 
+function buildPayPalSubscriptionButtonOptions(paypal, fundingSource) {
+  return {
+    fundingSource,
+    style: {
+      layout: "horizontal",
+      shape: "pill",
+      ...(fundingSource === paypal.FUNDING.PAYPAL ? { label: "subscribe" } : {}),
+      tagline: false,
+      height: 44,
+    },
+    createSubscription: async (_data, actions) => {
+      if (!pendingDonation || pendingDonation.frequency !== "weekly") {
+        throw new Error("Weekly seed details are missing.");
+      }
+      const email = requirePaymentEmail();
+      const name = elements.nameInput.value.trim();
+      if (!name) throw new Error("Name is required for weekly sowing.");
+
+      pendingDonation = {
+        ...pendingDonation,
+        name,
+        email,
+        amount: getAmount(),
+        message: elements.messageInput.value.trim(),
+      };
+      setPaymentStatus("Preparing your weekly seed with PayPal...");
+      const payload = await callEdge("prepare-paypal-subscription", {
+        body: {
+          amount: pendingDonation.amount,
+          seedCount: pendingDonation.seedCount,
+          name: pendingDonation.name,
+          email: pendingDonation.email,
+          message: pendingDonation.message,
+          paymentRoute: getCheckoutRoute(),
+        },
+      });
+      if (payload.paymentRoute !== getCheckoutRoute()) {
+        throw new Error("The PayPal collection account changed. Please start again.");
+      }
+      preparedSubscription = payload;
+      pendingDonation.paymentRoute = payload.paymentRoute;
+      await trackCheckoutEvent("paypal_checkout_started", pendingDonation);
+
+      return actions.subscription.create({
+        plan_id: payload.planId,
+        start_time: payload.startTime,
+        custom_id: payload.checkoutToken,
+        application_context: {
+          shipping_preference: "NO_SHIPPING",
+          user_action: "SUBSCRIBE_NOW",
+        },
+      });
+    },
+    onApprove: async (data) => {
+      if (!preparedSubscription?.checkoutToken || !data.subscriptionID) {
+        throw new Error("PayPal did not return the approved weekly subscription.");
+      }
+      setPaymentStatus("Confirming your weekly seed subscription...");
+      const payload = await callEdge("confirm-paypal-subscription", {
+        body: {
+          checkoutToken: preparedSubscription.checkoutToken,
+          subscriptionId: data.subscriptionID,
+        },
+      });
+      finishVerifiedSubscription(payload);
+    },
+    onCancel: () => {
+      preparedSubscription = null;
+      setPaymentStatus("Weekly PayPal subscription cancelled. No subscription was started.", true);
+      openPaymentFailure();
+    },
+    onError: (error) => {
+      preparedSubscription = null;
+      setPaymentStatus(error?.message || "Weekly PayPal subscription could not be started.", true);
+      openPaymentFailure();
+    },
+  };
+}
+
+function finishVerifiedSubscription(payload) {
+  const subscription = payload.subscription || {};
+  const nextBillingAt = subscription.nextBillingAt || preparedSubscription?.startTime;
+  elements.receiptTitle.textContent = "Your weekly seed is scheduled 🌱";
+  elements.receiptSummary.textContent = nextBillingAt
+    ? `${money(subscription.amount || pendingDonation?.amount)} was set up today. Your next renewal is ${formatIndiaBillingDate(new Date(nextBillingAt))}.`
+    : "Your weekly seed was approved by PayPal.";
+  elements.supportForm.reset();
+  setAmount(getInitialDonationAmount());
+  pendingDonation = null;
+  preparedSubscription = null;
+  closeInlinePayPalCheckout();
+  openReceipt();
+}
+
 function renderPayPalButtons() {
   if (paypalRenderPromise) return paypalRenderPromise;
 
@@ -2742,8 +3131,12 @@ async function renderFreshPayPalButtons() {
   if (!isBackendConfigured() || !backendReady) {
     elements.paypalButton.hidden = true;
     elements.paypalCardButton.hidden = true;
-    elements.cardButton.hidden = false;
-    setPaymentStatus("PayPal is unavailable. Continue with debit or credit card instead.");
+    elements.cardButton.hidden = pendingDonation?.frequency === "weekly";
+    setPaymentStatus(
+      pendingDonation?.frequency === "weekly"
+        ? "Weekly PayPal subscriptions are unavailable right now."
+        : "PayPal is unavailable. Continue with debit or credit card instead.",
+    );
     setPayPalCheckoutLoading(false);
     return;
   }
@@ -2751,6 +3144,7 @@ async function renderFreshPayPalButtons() {
   try {
     await loadBackendData({ mode: "critical", throwOnError: true });
     const route = getCheckoutRoute();
+    const frequency = pendingDonation?.frequency === "weekly" ? "weekly" : "once";
     namespace = getPayPalSdkNamespace(route);
 
     if (!isPayPalConfigured(route)) {
@@ -2769,13 +3163,17 @@ async function renderFreshPayPalButtons() {
       throw new Error("The payment route changed while PayPal was loading.");
     }
 
-    const paypalButtons = paypal.Buttons(buildPayPalButtonOptions(paypal, paypal.FUNDING.PAYPAL));
-    const paypalCardButtons = paypal.Buttons(buildPayPalButtonOptions(paypal, paypal.FUNDING.CARD));
+    const paypalButtons = frequency === "weekly"
+      ? paypal.Buttons(buildPayPalSubscriptionButtonOptions(paypal, paypal.FUNDING.PAYPAL))
+      : paypal.Buttons(buildPayPalButtonOptions(paypal, paypal.FUNDING.PAYPAL));
+    const paypalCardButtons = frequency === "weekly"
+      ? paypal.Buttons(buildPayPalSubscriptionButtonOptions(paypal, paypal.FUNDING.CARD))
+      : paypal.Buttons(buildPayPalButtonOptions(paypal, paypal.FUNDING.CARD));
     const paypalEligible = paypalButtons.isEligible();
     const paypalCardEligible = paypalCardButtons.isEligible();
 
     if (!paypalEligible) {
-      throw new Error("PayPal did not return an eligible checkout option. Continue with debit or credit card instead.");
+      throw new Error("PayPal did not return an eligible checkout option.");
     }
 
     await paypalButtons.render(elements.paypalButtonContainer);
@@ -2792,16 +3190,22 @@ async function renderFreshPayPalButtons() {
 
     elements.paypalButton.hidden = false;
     elements.paypalCardButton.hidden = !paypalCardEligible;
-    elements.cardButton.hidden = false;
-    setPaymentStatus("Choose a debit/credit card or PayPal to continue");
+    elements.cardButton.hidden = frequency === "weekly";
+    if (frequency === "weekly") {
+      setPaymentStatus("Choose PayPal to approve your weekly seed");
+    } else {
+      setPaymentStatus("Choose a debit/credit card or PayPal to continue");
+    }
   } catch (error) {
     clearPayPalButtons();
     if (namespace) resetPayPalSdk(namespace);
     elements.paypalButton.hidden = true;
     elements.paypalCardButton.hidden = true;
-    elements.cardButton.hidden = false;
+    elements.cardButton.hidden = pendingDonation?.frequency === "weekly";
     setPaymentStatus(
-      error?.message || "PayPal could not load. Continue with debit or credit card instead.",
+      error?.message || (pendingDonation?.frequency === "weekly"
+        ? "Weekly PayPal checkout could not load."
+        : "PayPal could not load. Continue with debit or credit card instead."),
       true,
     );
   } finally {
@@ -2885,7 +3289,11 @@ function openInlinePayPalCheckout() {
     return;
   }
   setPayPalCheckoutLoading(false);
-  setPaymentStatus("PayPal is unavailable. Continue with debit or credit card instead.");
+  setPaymentStatus(
+    pendingDonation?.frequency === "weekly"
+      ? "Weekly PayPal subscriptions are unavailable right now."
+      : "PayPal is unavailable. Continue with debit or credit card instead.",
+  );
 }
 
 function closeInlinePayPalCheckout() {
@@ -3091,9 +3499,10 @@ function openAdminPanel() {
   sections.forEach(section => {
     const isSuperAdminSection = section.classList.contains("admin-super-checkout-section");
     const isCollectionCalendar = section.classList.contains("admin-donations");
+    const isSubscriptionCalendar = section.classList.contains("admin-subscriptions-section");
     const isRoleScopedAnalytics = section.classList.contains("admin-analytics-section");
     const shouldShow = isSuperAdmin
-      ? isSuperAdminSection || isCollectionCalendar || isRoleScopedAnalytics
+      ? isSuperAdminSection || isCollectionCalendar || isSubscriptionCalendar || isRoleScopedAnalytics
       : !isSuperAdminSection;
     section.hidden = !shouldShow;
     section.style.display = shouldShow ? "" : "none";
@@ -3106,6 +3515,7 @@ function openAdminPanel() {
 
   renderAdminForm();
   renderAdminCalendar();
+  renderSubscriptionCalendar();
   renderAdminAnalytics();
   
   if (isSuperAdmin) {
@@ -3563,6 +3973,7 @@ function renderApp() {
   renderPublicPosts();
   renderAdminPosts();
   renderAdminCalendar();
+  renderSubscriptionCalendar();
   renderAdminAnalytics();
   updateCheckoutLabel();
 }
@@ -3604,6 +4015,43 @@ elements.adminCalendarGrid.addEventListener("click", (event) => {
   selectedAdminCalendarDate = dateButton.dataset.adminCalendarDate;
   adminCalendarCursor = fromDateKey(selectedAdminCalendarDate);
   renderAdminCalendar();
+});
+
+elements.subscriptionCalendarPrev?.addEventListener("click", () => {
+  subscriptionCalendarCursor = new Date(subscriptionCalendarCursor.getFullYear(), subscriptionCalendarCursor.getMonth() - 1, 1);
+  selectedSubscriptionDate = toDateKey(subscriptionCalendarCursor);
+  renderSubscriptionCalendar();
+});
+
+elements.subscriptionCalendarNext?.addEventListener("click", () => {
+  subscriptionCalendarCursor = new Date(subscriptionCalendarCursor.getFullYear(), subscriptionCalendarCursor.getMonth() + 1, 1);
+  selectedSubscriptionDate = toDateKey(subscriptionCalendarCursor);
+  renderSubscriptionCalendar();
+});
+
+elements.subscriptionCalendarGrid?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-subscription-calendar-date]");
+  if (!button) return;
+  selectedSubscriptionDate = button.dataset.subscriptionCalendarDate;
+  subscriptionCalendarCursor = fromDateKey(selectedSubscriptionDate);
+  renderSubscriptionCalendar();
+});
+
+elements.subscriptionFilters.forEach((button) => {
+  button.addEventListener("click", () => {
+    subscriptionFilter = button.dataset.subscriptionFilter;
+    const first = getVisibleSubscriptions().find((item) => getSubscriptionEventAt(item));
+    if (first) {
+      selectedSubscriptionDate = toIndiaDateKey(getSubscriptionEventAt(first));
+      subscriptionCalendarCursor = fromDateKey(selectedSubscriptionDate);
+    }
+    renderSubscriptionCalendar();
+  });
+});
+
+elements.subscriptionCalendarDetails?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-cancel-subscription]");
+  if (button) cancelAdminSubscription(button.dataset.cancelSubscription, button);
 });
 
 function handleAdminCalendarDetailClick(event) {
@@ -3691,6 +4139,27 @@ elements.showMoreButtons.forEach((button) => {
 });
 
 elements.supportForm.addEventListener("submit", submitDonation);
+elements.chooseOnceButton?.addEventListener("click", chooseOneTimeSowing);
+elements.chooseWeeklyButton?.addEventListener("click", chooseWeeklySowing);
+elements.frequencyNotNowButton?.addEventListener("click", () => {
+  pendingDonation = null;
+  closeFrequencyDialog();
+});
+elements.frequencyDialog?.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  pendingDonation = null;
+  closeFrequencyDialog();
+});
+elements.frequencyDialog?.addEventListener("click", (event) => {
+  if (event.target === elements.frequencyDialog) {
+    pendingDonation = null;
+    closeFrequencyDialog();
+  }
+});
+elements.frequencyDialog?.addEventListener("close", () => {
+  document.body.classList.remove("frequency-open");
+  if (restoreFrequencyFocus) elements.checkoutButton?.focus();
+});
 elements.alternateCardCheckoutLink?.addEventListener("click", (event) => {
   event.preventDefault();
 
@@ -3708,6 +4177,9 @@ elements.paymentEmailInput?.addEventListener("input", () => {
   if (elements.emailError && isValidEmailAddress(getPaymentEmail())) {
     elements.emailError.textContent = "";
   }
+});
+elements.nameInput?.addEventListener("input", () => {
+  if (elements.nameError && elements.nameInput.value.trim()) elements.nameError.textContent = "";
 });
 
 elements.adminMenuButton.addEventListener("click", openAdminLogin);
@@ -3728,8 +4200,11 @@ elements.adminLoginForm.addEventListener("submit", async (event) => {
       await loadAdminProfile();
       closeAdminLogin();
       openAdminPanel();
-      await loadAdminDonations({ announce: true });
-      await loadAdminAnalytics({ announce: true });
+      await Promise.all([
+        loadAdminDonations({ announce: true }),
+        loadAdminSubscriptions(),
+        loadAdminAnalytics({ announce: true }),
+      ]);
     } catch (error) {
       elements.adminPasswordError.textContent = error.message || "Could not sign in.";
       elements.adminPasswordInput.select();
@@ -3809,7 +4284,7 @@ elements.saveCheckoutRouteButton?.addEventListener("click", async () => {
         saveState();
       }
 
-      resetPayPalSdk();
+      resetAllPayPalSdks();
       renderCheckoutRouteControls();
       renderApp();
     },

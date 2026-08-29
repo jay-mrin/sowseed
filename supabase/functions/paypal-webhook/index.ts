@@ -1,5 +1,9 @@
 import { errorResponse, handleOptions, jsonResponse } from "../_shared/http.ts";
 import { verifyPayPalWebhook } from "../_shared/paypal.ts";
+import {
+  handleSubscriptionWebhook,
+  isSubscriptionWebhook,
+} from "../_shared/subscriptions.ts";
 import { getSupabaseAdmin } from "../_shared/supabase.ts";
 
 Deno.serve(async (request) => {
@@ -23,6 +27,15 @@ Deno.serve(async (request) => {
 
   try {
     const eventType = String(event.event_type || "");
+    const hasSubscriptionReference = eventType.startsWith("BILLING.SUBSCRIPTION.") ||
+      Boolean(event.resource?.billing_agreement_id || event.resource?.billing_agreement?.id);
+    if (isSubscriptionWebhook(eventType) && hasSubscriptionReference) {
+      const paymentRoute = verification.paymentRoute === "superadmin"
+        ? "superadmin"
+        : "standard";
+      const result = await handleSubscriptionWebhook(event, paymentRoute);
+      return jsonResponse({ received: true, subscription: true, ...result });
+    }
     if (!eventType.startsWith("PAYMENT.CAPTURE.")) {
       return jsonResponse({ received: true, ignored: true });
     }

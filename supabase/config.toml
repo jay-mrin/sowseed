@@ -6,6 +6,12 @@ verify_jwt = false
 [functions.create-paypal-order]
 verify_jwt = false
 
+[functions.prepare-paypal-subscription]
+verify_jwt = false
+
+[functions.confirm-paypal-subscription]
+verify_jwt = false
+
 [functions.capture-paypal-order]
 verify_jwt = false
 
@@ -22,6 +28,9 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.admin-donations]
+verify_jwt = true
+
+[functions.admin-subscriptions]
 verify_jwt = true
 
 [functions.admin-analytics]

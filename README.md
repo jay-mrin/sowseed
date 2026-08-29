@@ -92,7 +92,7 @@ npm run supabase:deploy
 
 ## PayPal Notes
 
-This app uses the PayPal Orders API with the PayPal JavaScript SDK for the official PayPal wallet and native debit or credit card buttons. A separate blue card option appears above both PayPal buttons and opens the separately hosted alternate checkout website inside a same-page popup. After it is used, it turns gray and is disabled for the rest of the page session.
+This app uses PayPal Orders for one-time payments and PayPal Subscriptions for weekly sowing. A separate blue card option appears only for one-time checkout and opens the separately hosted alternate checkout website inside a same-page popup. After it is used, it turns gray and is disabled for the rest of the page session.
 
 The PayPal SDK is never preloaded. When a customer opens checkout, the app refreshes the server-selected payment route, removes any previous PayPal SDK instance, displays the rotating seed loader, and loads a new SDK instance. PayPal buttons remain hidden until each eligible button has rendered a visible iframe.
 
@@ -100,7 +100,11 @@ For your India-registered PayPal Business account, test with PayPal sandbox buye
 
 SuperAdmin chooses whether payments use the Admin or SuperAdmin PayPal account. The optional `$21 or more` override always routes qualifying payments to SuperAdmin. Admin uses `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, and `PAYPAL_WEBHOOK_ID`; SuperAdmin uses the corresponding `SUPER_ADMIN_PAYPAL_*` secrets.
 
-A valid email address is required at checkout so the order can be delivered. Display name and message are optional. Checkout creates a single PayPal payment; it does not create a recurring subscription.
+A valid email address is required at checkout so the order can be delivered. Display name and message remain optional for one-time payments; a customer name and whole seed count are required for Weekly. After form validation, the customer chooses a one-time offering or a weekly PayPal subscription.
+
+Weekly subscriptions charge the selected seed amount immediately as the plan setup fee. Regular billing starts on the next applicable Monday at 6:00 PM `Asia/Kolkata`; a subscription created on Monday starts regular billing the following Monday. PayPal may retry failed renewal payments outside the Monday schedule. Failed, retrying, and suspended subscriptions remain under Pending until payment recovers or the receiving account owner cancels them.
+
+Both PayPal apps must send `PAYMENT.SALE.COMPLETED`, `PAYMENT.SALE.REFUNDED`, `PAYMENT.SALE.REVERSED`, `BILLING.SUBSCRIPTION.CREATED`, `BILLING.SUBSCRIPTION.ACTIVATED`, `BILLING.SUBSCRIPTION.UPDATED`, `BILLING.SUBSCRIPTION.EXPIRED`, `BILLING.SUBSCRIPTION.CANCELLED`, `BILLING.SUBSCRIPTION.SUSPENDED`, and `BILLING.SUBSCRIPTION.PAYMENT.FAILED` to the deployed `paypal-webhook` URL. Keep the route-specific webhook IDs in the existing PayPal secrets.
 
 The public meter is a repeating goal cycle, separate from the complete order calendar. Admin sets the goal amount and current cycle amount in dollars. With `$7 = 1 seed` and a `$700` goal, the target is `100 seeds`; a `$7` order adds `1%`, a `$14` order adds `2%`, and custom amounts contribute as `amount / 7`. When the current cycle reaches `$700`, the visible meter resets to `0%` and starts the next cycle.
 
@@ -123,6 +127,9 @@ Use PayPal sandbox first:
 - Debit or credit card checkout redirects to the configured alternate checkout website.
 - Cancelled checkout creates no donation.
 - Duplicate capture/webhook updates do not create duplicate donations.
+- The Once/Weekly dialog opens only after valid seed details and closes through Not now, Escape, or backdrop selection.
+- Weekly approval creates one subscription, and every verified subscription sale creates exactly one linked seed order.
+- Admin and SuperAdmin subscription calendars show only their own Active, Pending, and Cancelled customers.
 - Admin calendar can download a proof PDF for each digital-service order and mark orders fulfilled.
 - Both analytics portals share the total page-visit count, keep incomplete attempts with their checkout owner, and show opposite-route completed payments as cancelled. Each portal resets independently.
 - Public Blessing Wall loads imported legacy comments and appends paid blessing requests after confirmed payment capture.

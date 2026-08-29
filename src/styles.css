@@ -623,6 +623,7 @@ a {
 }
 
 .admin-donations,
+.admin-subscriptions-section,
 .admin-settings-section {
   max-height: calc(100dvh - 128px);
   overflow: auto;
@@ -647,7 +648,8 @@ a {
 }
 
 .admin-panel.is-super-admin .admin-super-checkout-section,
-.admin-panel.is-super-admin .admin-donations {
+.admin-panel.is-super-admin .admin-donations,
+.admin-panel.is-super-admin .admin-subscriptions-section {
   grid-column: 1;
 }
 
@@ -1851,6 +1853,332 @@ main {
   transition:
     opacity 180ms ease,
     transform 180ms ease;
+}
+
+body.frequency-open {
+  overflow: hidden;
+}
+
+.frequency-dialog {
+  width: min(760px, calc(100% - 28px));
+  max-width: calc(100vw - 28px);
+  max-height: calc(100dvh - 28px);
+  padding: 0;
+  border: 0;
+  border-radius: 38px;
+  color: #ffffff;
+  background: transparent;
+  box-shadow: 0 30px 90px rgba(117, 10, 80, 0.4);
+  overflow: auto;
+}
+
+.frequency-dialog::backdrop {
+  background: rgba(30, 12, 28, 0.68);
+  backdrop-filter: blur(8px);
+}
+
+.frequency-dialog-card {
+  display: grid;
+  gap: 22px;
+  padding: clamp(26px, 5vw, 54px);
+  border: 3px solid rgba(255, 237, 248, 0.82);
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 50% 5%, rgba(255, 255, 255, 0.18), transparent 27%),
+    linear-gradient(145deg, #ee5bac 0%, #e72e94 54%, #ed4aa4 100%);
+  text-align: center;
+}
+
+.frequency-dialog-mark {
+  display: grid;
+  width: 92px;
+  height: 92px;
+  margin: 0 auto 4px;
+  place-items: center;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 44px;
+}
+
+.frequency-dialog h2 {
+  max-width: 680px;
+  margin: 0 auto;
+  color: #ffffff;
+  font-size: clamp(31px, 5vw, 50px);
+  font-weight: 900;
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+}
+
+.frequency-dialog-card > p {
+  margin: -6px 0 6px;
+  color: rgba(255, 255, 255, 0.94);
+  font-size: clamp(18px, 2.7vw, 26px);
+  line-height: 1.35;
+}
+
+.frequency-choice-list {
+  display: grid;
+  gap: 16px;
+}
+
+.frequency-choice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+  min-height: 132px;
+  padding: 20px 24px;
+  border: 3px solid;
+  border-radius: 28px;
+  text-align: left;
+  box-shadow: 0 18px 40px rgba(91, 16, 66, 0.12);
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.frequency-choice:hover,
+.frequency-choice:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 22px 48px rgba(91, 16, 66, 0.2);
+  outline: 0;
+}
+
+.frequency-choice-once {
+  border-color: #4ad3a8;
+  color: #07552f;
+  background: linear-gradient(135deg, #f7fffc, #eaf9f3);
+}
+
+.frequency-choice-weekly {
+  border-color: #ffc034;
+  color: #843900;
+  background: linear-gradient(135deg, #fffdf7, #fff6e5);
+}
+
+.frequency-choice-icon {
+  display: grid;
+  width: 86px;
+  height: 86px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 43px;
+}
+
+.frequency-choice-copy {
+  display: grid;
+  gap: 7px;
+}
+
+.frequency-choice-copy strong {
+  font-size: clamp(20px, 3vw, 28px);
+  font-weight: 900;
+  line-height: 1.16;
+}
+
+.frequency-choice-copy small,
+.frequency-choice-copy em {
+  color: currentColor;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1.35;
+  opacity: 0.78;
+}
+
+.frequency-choice-copy em {
+  color: #a64000;
+  opacity: 1;
+}
+
+.frequency-choice-arrow {
+  font-size: 54px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.frequency-not-now {
+  min-height: 66px;
+  border: 2px solid rgba(255, 255, 255, 0.48);
+  border-radius: 999px;
+  color: #240016;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 20px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.frequency-not-now:hover,
+.frequency-not-now:focus-visible {
+  background: rgba(255, 255, 255, 0.24);
+  outline: 3px solid rgba(255, 255, 255, 0.38);
+  outline-offset: 2px;
+}
+
+.subscription-calendar-heading {
+  align-items: flex-start;
+}
+
+.subscription-calendar-heading p {
+  margin: 5px 0 0;
+  color: #756f79;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.subscription-status-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.subscription-status-filters button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(217, 215, 207, 0.92);
+  border-radius: 999px;
+  color: #615b64;
+  background: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.subscription-status-filters button.is-selected {
+  border-color: rgba(232, 46, 146, 0.45);
+  color: #a31562;
+  background: #fff0f8;
+  box-shadow: inset 0 0 0 1px rgba(232, 46, 146, 0.1);
+}
+
+.subscription-profile {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(217, 215, 207, 0.78);
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.subscription-profile-heading,
+.subscription-profile-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.subscription-profile-heading div,
+.subscription-profile-data {
+  display: grid;
+  gap: 4px;
+}
+
+.subscription-profile-heading a {
+  color: #6d6670;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.subscription-profile-status {
+  padding: 6px 9px;
+  border-radius: 999px;
+  color: #19663f;
+  background: #e9f9f0;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.subscription-profile-status.is-pending {
+  color: #8a5500;
+  background: #fff4d8;
+}
+
+.subscription-profile-status.is-cancelled {
+  color: #7b3344;
+  background: #f9e9ed;
+}
+
+.subscription-profile-data {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.subscription-profile-data span {
+  color: #77717a;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.subscription-profile-data strong {
+  color: #25202a;
+  font-size: 13px;
+}
+
+.subscription-payment-history {
+  margin: 0;
+  padding-left: 18px;
+  color: #655f68;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.subscription-cancel-button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid rgba(196, 42, 72, 0.28);
+  border-radius: 999px;
+  color: #9c233b;
+  background: #fff7f8;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+@media (max-width: 680px) {
+  .frequency-dialog {
+    width: calc(100% - 18px);
+    max-width: calc(100vw - 18px);
+    max-height: calc(100dvh - 18px);
+    border-radius: 28px;
+  }
+
+  .frequency-dialog-card {
+    gap: 16px;
+    padding: 24px 16px;
+  }
+
+  .frequency-dialog-mark {
+    width: 68px;
+    height: 68px;
+    font-size: 32px;
+  }
+
+  .frequency-choice {
+    min-height: 108px;
+    gap: 12px;
+    padding: 14px;
+    border-width: 2px;
+    border-radius: 22px;
+  }
+
+  .frequency-choice-icon {
+    width: 62px;
+    height: 62px;
+    font-size: 31px;
+  }
+
+  .frequency-choice-arrow {
+    font-size: 40px;
+  }
+
+  .subscription-calendar-heading,
+  .subscription-profile-heading,
+  .subscription-profile-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }
 
 .tutorial-dialog.is-open {
@@ -3540,6 +3868,7 @@ legend::after {
   }
 
   .admin-donations,
+  .admin-subscriptions-section,
   .admin-settings-section,
   .admin-super-checkout-section,
   .admin-analytics-section {

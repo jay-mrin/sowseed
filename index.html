@@ -19,7 +19,7 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="src/styles.css?v=107" />
+    <link rel="stylesheet" href="src/styles.css?v=108" />
   </head>
   <body class="app-loading">
     <div class="app-loader" id="appLoader" role="status" aria-live="polite" aria-label="Loading Seed Garden">
@@ -212,9 +212,40 @@
           </section>
         </section>
 
+        <section class="admin-section admin-subscriptions-section" aria-labelledby="subscriptionCalendarHeading">
+          <div class="admin-donation-heading subscription-calendar-heading">
+            <div>
+              <h3 id="subscriptionCalendarHeading">2. Weekly subscription calendar</h3>
+              <p>Renewals are scheduled for Monday at 6:00 PM Asia/Kolkata.</p>
+            </div>
+            <div class="subscription-status-filters" role="group" aria-label="Filter weekly subscriptions">
+              <button class="is-selected" type="button" data-subscription-filter="active" aria-pressed="true">Active</button>
+              <button type="button" data-subscription-filter="pending" aria-pressed="false">Pending</button>
+              <button type="button" data-subscription-filter="cancelled" aria-pressed="false">Cancelled</button>
+            </div>
+          </div>
+          <section class="admin-calendar subscription-calendar" aria-labelledby="subscriptionCalendarTitle">
+            <div class="admin-calendar-header">
+              <button class="admin-calendar-nav" id="subscriptionCalendarPrev" type="button" aria-label="Previous subscription month">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+              </button>
+              <h4 id="subscriptionCalendarTitle">Weekly subscriptions</h4>
+              <button class="admin-calendar-nav" id="subscriptionCalendarNext" type="button" aria-label="Next subscription month">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+              </button>
+            </div>
+            <div class="admin-calendar-weekdays" aria-hidden="true">
+              <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+            </div>
+            <div class="admin-calendar-grid" id="subscriptionCalendarGrid" role="grid" aria-label="Weekly subscription dates"></div>
+            <div class="admin-calendar-details subscription-calendar-details" id="subscriptionCalendarDetails" aria-live="polite"></div>
+            <div class="admin-calendar-summary" id="subscriptionCalendarSummary" aria-live="polite"></div>
+          </section>
+        </section>
+
         <div class="admin-right-column">
           <section class="admin-section admin-settings-section">
-            <h3>2. Site settings</h3>
+            <h3>3. Site settings</h3>
             <div class="admin-grid">
               <label>
                 <span>Goal amount ($)</span>
@@ -503,7 +534,8 @@
 
               <label class="field minimal-text-field">
                 <span class="visually-hidden">Display name</span>
-                <input id="nameInput" type="text" placeholder="Display name (optional)" maxlength="48" autocomplete="name" />
+                <input id="nameInput" type="text" placeholder="Display name (optional)" maxlength="48" autocomplete="name" aria-describedby="nameError" />
+                <small id="nameError" class="error-message"></small>
               </label>
 
               <label class="field minimal-text-field textarea-field">
@@ -573,6 +605,34 @@
         </section>
       </section>
     </main>
+
+    <dialog class="frequency-dialog" id="frequencyDialog" aria-labelledby="frequencyDialogTitle" aria-describedby="frequencyDialogDescription">
+      <div class="frequency-dialog-card">
+        <div class="frequency-dialog-mark" aria-hidden="true">🌱</div>
+        <h2 id="frequencyDialogTitle">How would you like to sow your seed?</h2>
+        <p id="frequencyDialogDescription">Choose the option that feels right for you.</p>
+        <div class="frequency-choice-list">
+          <button class="frequency-choice frequency-choice-once" id="chooseOnceButton" type="button">
+            <span class="frequency-choice-icon" aria-hidden="true">🌱</span>
+            <span class="frequency-choice-copy">
+              <strong>Sow this seed once today · One-time offering</strong>
+              <small id="onceBillingDetails">$7.00 today</small>
+            </span>
+            <span class="frequency-choice-arrow" aria-hidden="true">›</span>
+          </button>
+          <button class="frequency-choice frequency-choice-weekly" id="chooseWeeklyButton" type="button">
+            <span class="frequency-choice-icon" aria-hidden="true">✨</span>
+            <span class="frequency-choice-copy">
+              <strong>A Graceful Seed Offered Every Week</strong>
+              <small id="weeklyBillingDetails">$7.00 today, then every Monday at 6:00 PM IST</small>
+              <em id="weeklySundayWarning" hidden>Your next weekly payment is tomorrow.</em>
+            </span>
+            <span class="frequency-choice-arrow" aria-hidden="true">›</span>
+          </button>
+        </div>
+        <button class="frequency-not-now" id="frequencyNotNowButton" type="button">Not now</button>
+      </div>
+    </dialog>
 
     <dialog class="tutorial-dialog" id="tutorialDialog" aria-labelledby="tutorialDialogTitle">
       <div class="tutorial-dialog-card">
@@ -695,6 +755,6 @@
 
     <script src="src/config.js?v=3"></script>
     <script src="src/adsense.js?v=1" data-adsense-mode="app" defer></script>
-    <script src="src/app.js?v=100" defer></script>
+    <script src="src/app.js?v=101" defer></script>
   </body>
 </html>
