@@ -290,8 +290,6 @@ const elements = {
   nameError: document.querySelector("#nameError"),
   frequencyDialog: document.querySelector("#frequencyDialog"),
   frequencyNotNowButton: document.querySelector("#frequencyNotNowButton"),
-  onceBillingDetails: document.querySelector("#onceBillingDetails"),
-  weeklyBillingDetails: document.querySelector("#weeklyBillingDetails"),
   weeklySundayWarning: document.querySelector("#weeklySundayWarning"),
   openTutorialButton: document.querySelector("#openTutorialButton"),
   emailError: document.querySelector("#emailError"),
@@ -2663,41 +2661,11 @@ function updatePayPalVisibility() {
   return showPayPal;
 }
 
-function getNextMondayBillingAt(now = new Date()) {
-  const istClock = new Date(now.getTime() + 330 * 60_000);
-  const istDay = istClock.getUTCDay();
-  const daysUntilMonday = istDay === 1 ? 7 : (8 - istDay) % 7;
-
-  return new Date(Date.UTC(
-    istClock.getUTCFullYear(),
-    istClock.getUTCMonth(),
-    istClock.getUTCDate() + daysUntilMonday,
-    12,
-    30,
-    0,
-  ));
-}
-
 function isSundayInIndia(now = new Date()) {
   return new Date(now.getTime() + 330 * 60_000).getUTCDay() === 0;
 }
 
-function formatIndiaBillingDate(value) {
-  const billingDay = new Intl.DateTimeFormat("en-IN", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: "Asia/Kolkata",
-  }).format(value);
-  return `${billingDay} at 6:00 PM IST`;
-}
-
 function openFrequencyDialog() {
-  const amountLabel = money(getAmount());
-  const nextBillingAt = getNextMondayBillingAt();
-  elements.onceBillingDetails.textContent = `${amountLabel} today`;
-  elements.weeklyBillingDetails.textContent = `${amountLabel} today, then ${formatIndiaBillingDate(nextBillingAt)}`;
   elements.weeklySundayWarning.hidden = !isSundayInIndia();
   restoreFrequencyFocus = true;
   document.body.classList.add("frequency-open");
@@ -3074,13 +3042,13 @@ function buildPayPalSubscriptionButtonOptions(paypal, fundingSource) {
         throw new Error("PayPal did not return the approved weekly subscription.");
       }
       setPaymentStatus("Confirming your weekly seed subscription...");
-      const payload = await callEdge("confirm-paypal-subscription", {
+      await callEdge("confirm-paypal-subscription", {
         body: {
           checkoutToken: preparedSubscription.checkoutToken,
           subscriptionId: data.subscriptionID,
         },
       });
-      finishVerifiedSubscription(payload);
+      finishVerifiedSubscription();
     },
     onCancel: () => {
       preparedSubscription = null;
@@ -3095,13 +3063,10 @@ function buildPayPalSubscriptionButtonOptions(paypal, fundingSource) {
   };
 }
 
-function finishVerifiedSubscription(payload) {
-  const subscription = payload.subscription || {};
-  const nextBillingAt = subscription.nextBillingAt || preparedSubscription?.startTime;
+function finishVerifiedSubscription() {
   elements.receiptTitle.textContent = "Your weekly seed is scheduled 🌱";
-  elements.receiptSummary.textContent = nextBillingAt
-    ? `${money(subscription.amount || pendingDonation?.amount)} was set up today. Your next renewal is ${formatIndiaBillingDate(new Date(nextBillingAt))}.`
-    : "Your weekly seed was approved by PayPal.";
+  elements.receiptSummary.textContent = "";
+  elements.receiptSummary.hidden = true;
   elements.supportForm.reset();
   setAmount(getInitialDonationAmount());
   pendingDonation = null;
@@ -3263,6 +3228,7 @@ async function finishVerifiedDonation(payload) {
   renderApp();
   elements.receiptTitle.textContent = "Your fortune for today";
   elements.receiptSummary.textContent = fortuneMessage;
+  elements.receiptSummary.hidden = false;
   elements.supportForm.reset();
   if (elements.paymentEmailInput) {
     elements.paymentEmailInput.value = "";

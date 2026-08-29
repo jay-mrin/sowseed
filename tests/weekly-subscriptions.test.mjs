@@ -13,6 +13,7 @@ test("valid seed submissions open the accessible Once or Weekly dialog", () => {
 
   assert.match(html, /id="frequencyDialog"[\s\S]*How would you like to sow your seed\?/);
   assert.match(html, /id="chooseOnceButton"[\s\S]*id="chooseWeeklyButton"[\s\S]*id="frequencyNotNowButton"/);
+  assert.doesNotMatch(html, /id="onceBillingDetails"|id="weeklyBillingDetails"/);
   assert.match(app, /function submitDonation\([\s\S]*openFrequencyDialog\(\)/);
   assert.match(app, /frequencyDialog.*addEventListener\("cancel"[\s\S]*closeFrequencyDialog\(\)/);
   assert.match(app, /event\.target === elements\.frequencyDialog/);
@@ -27,6 +28,9 @@ test("weekly checkout requires a name and whole seeds and uses subscription inte
   assert.match(app, /params\.set\("vault", "true"\)/);
   assert.match(app, /createSubscription:[\s\S]*prepare-paypal-subscription[\s\S]*confirm-paypal-subscription/);
   assert.match(app, /elements\.cardButton\.hidden = frequency === "weekly"/);
+  assert.match(app, /finishVerifiedSubscription[\s\S]*receiptSummary\.hidden = true/);
+  assert.match(app, /finishVerifiedDonation[\s\S]*receiptSummary\.hidden = false/);
+  assert.doesNotMatch(app, /was set up today\. Your next renewal/);
 });
 
 test("weekly plan preparation pins routing and Monday 6 PM IST", () => {
