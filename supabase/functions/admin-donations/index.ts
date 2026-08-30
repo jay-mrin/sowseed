@@ -58,10 +58,15 @@ function applyDateRange(query: any, fromDate: string, toDate: string) {
 
 function applyAdminDonationScope(query: any, role: "admin" | "super_admin") {
   if (role === "super_admin") {
-    return query.eq("visibility_scope", "superadmin_private");
+    return query
+      .eq("payment_route", "superadmin")
+      .eq("visibility_scope", "superadmin_private");
   }
 
-  return query.eq("visibility_scope", "public").eq("payment_method", "paypal");
+  return query
+    .eq("payment_route", "standard")
+    .eq("visibility_scope", "public")
+    .eq("payment_method", "paypal");
 }
 
 function mapDigitalOrder(value: any) {

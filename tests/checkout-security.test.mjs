@@ -33,8 +33,8 @@ test("Admin order reads and mutations share the same role scope", () => {
   const scopeCalls = source.match(/applyAdminDonationScope\(/g) || [];
 
   assert.ok(scopeCalls.length >= 4, "GET, PUT, DELETE, and the helper must all use the shared role scope");
-  assert.match(source, /role === "super_admin"[\s\S]*visibility_scope", "superadmin_private"/);
-  assert.match(source, /visibility_scope", "public"[\s\S]*payment_method", "paypal"/);
+  assert.match(source, /role === "super_admin"[\s\S]*payment_route", "superadmin"[\s\S]*visibility_scope", "superadmin_private"/);
+  assert.match(source, /payment_route", "standard"[\s\S]*visibility_scope", "public"[\s\S]*payment_method", "paypal"/);
 });
 
 test("webhooks can recover completed captures without trusting browser metadata", () => {
@@ -110,6 +110,8 @@ test("checkout analytics combine visits while isolating all payment records by r
   assert.match(analytics, /contact_email/);
   assert.match(analytics, /paymentStartsLast24h: attempts\.length/);
   assert.doesNotMatch(analytics, /"cancelled"/);
+  assert.doesNotMatch(app, /displayStatus === "cancelled"/);
+  assert.doesNotMatch(app, /\["completed", "cancelled", "not_completed"\]/);
   assert.doesNotMatch(app, /completed \$\{oppositeRouteLabel\} payments/);
   assert.doesNotMatch(html, /completed SuperAdmin payments/);
   assert.doesNotMatch(analytics, /checkout_button_clicked|paypal_checkout_started/);

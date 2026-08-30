@@ -545,19 +545,25 @@ function normalizeAnalytics(analytics) {
   const defaults = createEmptyAnalytics();
   const paymentAttempts = Array.isArray(analytics?.paymentAttempts)
     ? analytics.paymentAttempts
-        .map((attempt) => ({
-          id: String(attempt?.id || ""),
-          name: String(attempt?.name || "Customer").trim().slice(0, 80) || "Customer",
-          email: String(attempt?.email || "").trim().slice(0, 160),
-          amount: Math.max(Number(attempt?.amount) || 0, 0),
-          currency: String(attempt?.currency || "USD").trim().slice(0, 3).toUpperCase() || "USD",
-          displayStatus: ["completed", "cancelled", "not_completed"].includes(attempt?.displayStatus)
-            ? attempt.displayStatus
-            : attempt?.completed === true ? "completed" : "not_completed",
-          startedAt: attempt?.startedAt || null,
-          completedAt: attempt?.completedAt || null,
-        }))
-        .filter((attempt) => attempt.id && attempt.email)
+        .map((attempt) => {
+          const displayStatus = attempt?.displayStatus === "completed" || attempt?.completed === true
+            ? "completed"
+            : attempt?.displayStatus === "not_completed" ? "not_completed" : null;
+
+          if (!displayStatus) return null;
+
+          return {
+            id: String(attempt?.id || ""),
+            name: String(attempt?.name || "Customer").trim().slice(0, 80) || "Customer",
+            email: String(attempt?.email || "").trim().slice(0, 160),
+            amount: Math.max(Number(attempt?.amount) || 0, 0),
+            currency: String(attempt?.currency || "USD").trim().slice(0, 3).toUpperCase() || "USD",
+            displayStatus,
+            startedAt: attempt?.startedAt || null,
+            completedAt: attempt?.completedAt || null,
+          };
+        })
+        .filter((attempt) => attempt?.id && attempt.email)
     : [];
 
   return {
@@ -2159,9 +2165,7 @@ function renderAdminAnalytics() {
             const startedAt = attempt.startedAt ? new Date(attempt.startedAt) : null;
             const hasValidStartedAt = startedAt && !Number.isNaN(startedAt.getTime());
             const isCompleted = attempt.displayStatus === "completed";
-            const statusLabel = isCompleted
-              ? "Completed"
-              : attempt.displayStatus === "cancelled" ? "Cancelled" : "Not completed";
+            const statusLabel = isCompleted ? "Completed" : "Not completed";
 
             return `
               <article class="admin-payment-attempt">
