@@ -448,13 +448,14 @@ a {
   z-index: 70;
   display: block;
   width: 100%;
-  padding: 28px;
+  padding: clamp(18px, 2.4vw, 32px);
   border: 0;
   border-radius: 0;
   background: #faeef5;
   box-shadow: 0 24px 70px rgba(25, 25, 25, 0.16);
   opacity: 0;
   overflow: auto;
+  overscroll-behavior: contain;
   pointer-events: none;
   transform: translateY(14px);
   transition:
@@ -483,6 +484,7 @@ a {
 .admin-panel-header,
 .admin-form {
   width: min(1440px, 100%);
+  min-width: 0;
   margin: 0 auto 22px;
 }
 
@@ -610,12 +612,14 @@ a {
 
 .admin-right-column {
   display: grid;
+  min-width: 0;
   grid-column: 3;
   gap: 22px;
   align-self: start;
 }
 
 .admin-section {
+  min-width: 0;
   padding: 16px;
   border: 1px solid rgba(217, 215, 207, 0.72);
   border-radius: 20px;
@@ -653,6 +657,11 @@ a {
   grid-column: 1;
 }
 
+.admin-panel.is-super-admin .admin-right-column {
+  grid-column: 1;
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .admin-panel.is-super-admin .admin-super-checkout-section {
   max-height: none;
 }
@@ -669,6 +678,7 @@ a {
   color: #706a75;
   font-size: 13px;
   font-weight: 800;
+  overflow-wrap: anywhere;
 }
 
 .checkout-route-options {
@@ -697,6 +707,7 @@ a {
   background: rgba(255, 255, 255, 0.72);
   box-shadow: 0 14px 34px rgba(29, 35, 44, 0.05);
   text-align: left;
+  overflow-wrap: anywhere;
   transition:
     border-color 160ms ease,
     box-shadow 160ms ease,
@@ -916,6 +927,53 @@ a {
   color: #1d232c;
   font-size: 24px;
   line-height: 1;
+}
+
+.admin-analytics-value-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-page-view-minus {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(230, 39, 39, 0.3);
+  border-radius: 50%;
+  color: #a7193d;
+  background: #fff4f7;
+  box-shadow: 0 8px 18px rgba(230, 39, 80, 0.1);
+  font: inherit;
+  font-size: 23px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease;
+}
+
+.admin-page-view-minus:hover:not(:disabled) {
+  border-color: rgba(230, 39, 39, 0.58);
+  background: #ffe5ec;
+  transform: translateY(-1px);
+}
+
+.admin-page-view-minus:focus-visible {
+  outline: 3px solid rgba(30, 147, 171, 0.22);
+  outline-offset: 2px;
+}
+
+.admin-page-view-minus:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
 }
 
 .admin-analytics-reset-button {
@@ -3598,6 +3656,59 @@ legend::after {
   .main-stack {
     grid-row: 2;
   }
+
+  .admin-portal-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-donations {
+    grid-column: 1;
+  }
+
+  .admin-subscriptions-section {
+    grid-column: 2;
+  }
+
+  .admin-right-column {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-posts-section {
+    grid-column: 1 / -1;
+  }
+
+  .admin-panel.is-super-admin .admin-portal-grid,
+  .admin-panel.is-super-admin .admin-right-column {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-panel.is-super-admin .admin-right-column,
+  .admin-panel.is-super-admin .admin-donations,
+  .admin-panel.is-super-admin .admin-subscriptions-section {
+    grid-column: 1;
+  }
+
+  .admin-donations,
+  .admin-subscriptions-section,
+  .admin-settings-section,
+  .admin-analytics-section {
+    max-height: none;
+  }
+}
+
+@media (max-width: 840px) {
+  .admin-portal-grid,
+  .admin-right-column {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-donations,
+  .admin-subscriptions-section,
+  .admin-right-column,
+  .admin-super-checkout-section {
+    grid-column: 1;
+  }
 }
 
 @media (max-width: 680px) {
@@ -3646,6 +3757,10 @@ legend::after {
     border-radius: 0;
   }
 
+  .admin-panel-header {
+    align-items: flex-start;
+  }
+
   .admin-panel-header h2 {
     font-size: 23px;
   }
@@ -3683,6 +3798,10 @@ legend::after {
 
   .admin-super-checkout-heading {
     display: grid;
+  }
+
+  .admin-super-checkout-heading .button {
+    width: 100%;
   }
 
   .admin-actions {
@@ -4028,6 +4147,57 @@ legend::after {
   .payment-choice {
     min-height: 44px;
     border-radius: var(--button-radius);
+  }
+}
+
+@media (max-width: 520px) {
+  .admin-panel {
+    padding: 12px;
+  }
+
+  .admin-panel-header,
+  .admin-form {
+    margin-bottom: 16px;
+  }
+
+  .admin-panel-header h2 {
+    font-size: 21px;
+  }
+
+  .admin-header-actions {
+    gap: 6px;
+  }
+
+  .admin-refresh-button {
+    width: 44px;
+    padding: 0;
+  }
+
+  .admin-refresh-button span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .admin-section {
+    padding: 13px;
+    border-radius: 16px;
+  }
+
+  .superadmin-purge-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-payment-attempt {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-payment-attempt-meta {
+    justify-items: start;
+    text-align: left;
   }
 }
 

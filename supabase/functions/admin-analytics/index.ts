@@ -67,7 +67,32 @@ Deno.serve(async (request) => {
       );
     }
 
-    if (request.method !== "GET") {
+    if (request.method === "POST") {
+      if (adminProfile.role !== "super_admin") {
+        return errorResponse("Only SuperAdmin can subtract page views.", 403);
+      }
+
+      const { since } = await getAnalyticsSince(supabase, paymentRoute);
+      const { data: latestView, error: latestViewError } = await supabase
+        .from("page_views")
+        .select("id")
+        .gte("last_seen_at", since)
+        .in("payment_route", ["standard", "superadmin"])
+        .order("last_seen_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (latestViewError) throw latestViewError;
+
+      if (latestView?.id) {
+        const { error: deleteError } = await supabase
+          .from("page_views")
+          .delete()
+          .eq("id", latestView.id);
+
+        if (deleteError) throw deleteError;
+      }
+    } else if (request.method !== "GET") {
       return errorResponse("Method not allowed.", 405);
     }
 

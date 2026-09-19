@@ -109,6 +109,10 @@ test("checkout analytics combine visits while isolating all payment records by r
   assert.match(analytics, /\.from\("checkout_analytics_state"\)/);
   assert.match(analytics, /contact_email/);
   assert.match(analytics, /paymentStartsLast24h: attempts\.length/);
+  assert.match(analytics, /Only SuperAdmin can subtract page views/);
+  assert.match(analytics, /\.from\("page_views"\)[\s\S]*\.delete\(\)[\s\S]*\.eq\("id", latestView\.id\)/);
+  assert.match(app, /decrementPageViewButton/);
+  assert.match(html, /aria-label="Subtract one page view"/);
   assert.doesNotMatch(analytics, /"cancelled"/);
   assert.doesNotMatch(app, /displayStatus === "cancelled"/);
   assert.doesNotMatch(app, /\["completed", "cancelled", "not_completed"\]/);

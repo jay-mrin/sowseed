@@ -274,6 +274,7 @@ const elements = {
   closeTutorialButton: document.querySelector("#closeTutorialButton"),
   doneButton: document.querySelector("#doneButton"),
   decreaseSeedButton: document.querySelector("#decreaseSeedButton"),
+  decrementPageViewButton: document.querySelector("#decrementPageViewButton"),
   followersText: document.querySelector("#followersText"),
   fulfillmentCancelButton: document.querySelector("#cancelFulfillmentButton"),
   fulfillmentDateInput: document.querySelector("#fulfillmentDateInput"),
@@ -1775,6 +1776,48 @@ async function resetAdminAnalytics() {
   );
 }
 
+async function decrementPageView() {
+  if (state.adminProfile?.role !== "super_admin") return;
+
+  const currentViews = normalizeAnalytics(state.analytics).pageViewsLast24h;
+  if (currentViews <= 0) {
+    showToast("There are no page views to subtract.");
+    renderAdminAnalytics();
+    return;
+  }
+
+  if (!isBackendConfigured() || !getAdminAccessToken()) {
+    state.analytics = {
+      ...normalizeAnalytics(state.analytics),
+      generatedAt: new Date().toISOString(),
+      pageViewsLast24h: currentViews - 1,
+    };
+    renderAdminAnalytics();
+    showToast("One page view subtracted locally.");
+    return;
+  }
+
+  await runAdminAction(
+    {
+      button: elements.decrementPageViewButton,
+      busyText: "…",
+      loadingMessage: "Subtracting one page view...",
+      successMessage: "One page view subtracted.",
+      errorMessage: "Could not subtract the page view.",
+    },
+    async () => {
+      const payload = await callEdge("admin-analytics", {
+        admin: true,
+        method: "POST",
+      });
+
+      state.analytics = normalizeAnalytics(payload);
+      renderAdminAnalytics();
+      return payload;
+    },
+  );
+}
+
 async function refreshAdminPortalData() {
   if (!isBackendConfigured() || !getAdminAccessToken()) {
     setAdminStatus("Sign in as admin before reloading portal data.", "error", { persist: true });
@@ -2154,6 +2197,10 @@ function renderAdminAnalytics() {
   }
 
   elements.adminPageViews24h.textContent = formatCompactNumber(analytics.pageViewsLast24h);
+  if (elements.decrementPageViewButton) {
+    elements.decrementPageViewButton.hidden = !isSuperAdmin;
+    elements.decrementPageViewButton.disabled = !isSuperAdmin || analytics.pageViewsLast24h <= 0;
+  }
   elements.adminPaymentStarts24h.textContent = formatCompactNumber(analytics.paymentStartsLast24h);
   if (elements.adminPaymentsCompleted24h) {
     elements.adminPaymentsCompleted24h.textContent = formatCompactNumber(analytics.completedPaymentsLast24h);
@@ -4039,6 +4086,7 @@ elements.profileTabs.forEach((tab) => {
 elements.adminPublishPostButton.addEventListener("click", publishAdminPost);
 elements.refreshAdminButton.addEventListener("click", refreshAdminPortalData);
 elements.resetAdminAnalyticsButton.addEventListener("click", resetAdminAnalytics);
+elements.decrementPageViewButton?.addEventListener("click", decrementPageView);
 elements.purgeAllOrdersButton?.addEventListener("click", () => purgeAllPaymentRecords(elements.purgeAllOrdersButton));
 elements.adminNewPostImage.addEventListener("change", previewAdminUpload);
 elements.adminForm.addEventListener("input", (event) => {

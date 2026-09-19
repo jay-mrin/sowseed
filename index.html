@@ -19,7 +19,7 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="src/styles.css?v=113" />
+    <link rel="stylesheet" href="src/styles.css?v=115" />
   </head>
   <body class="app-loading">
     <div class="app-loader" id="appLoader" role="status" aria-live="polite" aria-label="Loading Seed Garden">
@@ -290,9 +290,19 @@
               </button>
             </div>
             <div class="admin-analytics-grid">
-              <article>
+              <article class="admin-page-views-card">
                 <span>No. of page visits</span>
-                <strong id="adminPageViews24h">0</strong>
+                <div class="admin-analytics-value-row">
+                  <strong id="adminPageViews24h">0</strong>
+                  <button
+                    class="admin-page-view-minus"
+                    id="decrementPageViewButton"
+                    type="button"
+                    aria-label="Subtract one page view"
+                    title="Subtract one page view"
+                    hidden
+                  >−</button>
+                </div>
                 <small id="adminPageViewsLabel">All checkout-route views last 24 hours</small>
               </article>
               <article>
@@ -735,6 +745,6 @@
 
     <script src="src/config.js?v=3"></script>
     <script src="src/adsense.js?v=1" data-adsense-mode="app" defer></script>
-    <script src="src/app.js?v=105" defer></script>
+    <script src="src/app.js?v=106" defer></script>
   </body>
 </html>
