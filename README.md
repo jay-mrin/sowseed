@@ -1,6 +1,6 @@
 # Sow Your Seed
 
-A personalised digital-writing order page with Supabase backend support, dual-account PayPal Checkout, role-based admin controls, posts, likes, comments, order calendars, and a fortune message after confirmed payment capture.
+A personalised digital-writing and digital-book buying platform with five-page book previews, Supabase backend support, dual-account PayPal Checkout, role-based admin controls, posts, likes, comments, order calendars, and fulfillment tracking.
 
 ## What Runs Locally
 

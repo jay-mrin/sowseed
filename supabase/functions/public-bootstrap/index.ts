@@ -142,7 +142,7 @@ async function loadPublicContent(
         donation.raw_payment && typeof donation.raw_payment === "object"
           ? donation.raw_payment
           : {};
-      return rawPayment.mode !== "test";
+      return rawPayment.mode !== "test" && rawPayment.product?.type !== "book";
     })
     .slice(0, 50);
   const seedComments = (seedCommentsResult.data || []).filter(

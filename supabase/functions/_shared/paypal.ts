@@ -124,13 +124,14 @@ export async function getPayPalAccessToken(paymentRoute?: string) {
 export async function createPayPalOrder(input: {
   amountCents: number;
   paymentRoute?: string;
+  itemName?: string;
 }) {
   const accessToken = await getPayPalAccessToken(input.paymentRoute);
   const currency = getPayPalCurrency();
   const amount = formatMoneyFromCents(input.amountCents);
   const orderNumber = createDigitalOrderNumber();
   const purchaseUnit: Record<string, any> = {
-    description: DIGITAL_ORDER_ITEM_NAME,
+    description: String(input.itemName || DIGITAL_ORDER_ITEM_NAME).slice(0, 127),
     custom_id: orderNumber,
     amount: {
       currency_code: currency,

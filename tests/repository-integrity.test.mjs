@@ -86,6 +86,37 @@ test("frontend ID selectors and static asset paths resolve", () => {
   }
 });
 
+test("the shop exposes three five-page book previews and a seven-dollar checkout", () => {
+  const html = readRepositoryFile("index.html");
+  const app = readRepositoryFile("src/app.js");
+
+  assert.match(html, /href="#about"[\s\S]*href="#shop"[\s\S]*href="#posts"/);
+  assert.equal((html.match(/data-book-card=/g) || []).length, 3);
+  assert.equal((html.match(/-preview\.pdf#toolbar=0/g) || []).length, 3);
+  assert.match(html, /id="bookAmountInput"[^>]*min="7"[^>]*step="7"[^>]*value="7"/);
+  assert.match(html, /id="bookEmailInput"[^>]*required/);
+  assert.match(app, /productType: "book"/);
+  assert.match(app, /Your Book Will be Delivered by Mail/);
+});
+
+test("public and legal copy describes both personalised writing and digital books", () => {
+  const home = readRepositoryFile("index.html");
+  const about = readRepositoryFile("about-us.html");
+  const terms = readRepositoryFile("terms-and-conditions.html");
+  const privacy = readRepositoryFile("privacy-policy.html");
+  const delivery = readRepositoryFile("delivery-fulfillment-policy.html");
+  const app = readRepositoryFile("src/app.js");
+
+  for (const source of [home, about, terms, privacy, delivery, app]) {
+    assert.match(source, /personalis(?:ed|ed)/i);
+    assert.match(source, /digital[- ]book/i);
+  }
+  assert.match(terms, /Book previews are limited samples/);
+  assert.match(terms, /may not reproduce, upload, share, resell, commercially distribute/);
+  assert.match(app, /LEGACY_ABOUT_COLLAPSED/);
+  assert.match(app, /LEGACY_ABOUT_EXPANDED/);
+});
+
 test("public startup loads checkout settings before deferred community content", () => {
   const app = readRepositoryFile("src/app.js");
   const bootstrap = readRepositoryFile("supabase/functions/public-bootstrap/index.ts");
@@ -218,12 +249,12 @@ test("the separate alternate card link opens a same-page popup and then disables
   assert.match(app, /await loadBackendData\(\{ mode: "critical", throwOnError: true \}\)/);
   assert.match(app, /resetAllPayPalSdks\(\)[\s\S]*const paypal = await loadPayPalSdk\(route\)/);
   assert.match(app, /const paypal = await loadPayPalSdk\(route\)/);
-  assert.match(app, /await paypalButtons\.render\(elements\.paypalButtonContainer\)/);
+  assert.match(app, /await paypalButtons\.render\(ui\.paypalButtonContainer\)/);
   assert.match(app, /waitForRenderedPayPalButton/);
   assert.match(app, /querySelector\("iframe"\)/);
   assert.match(app, /paypal\.Buttons\(buildPayPalButtonOptions\(paypal, paypal\.FUNDING\.CARD\)\)/);
-  assert.match(app, /await paypalCardButtons\.render\(elements\.paypalCardButtonContainer\)/);
-  assert.match(app, /waitForRenderedPayPalButton\(elements\.paypalCardButtonContainer/);
+  assert.match(app, /await paypalCardButtons\.render\(ui\.paypalCardButtonContainer\)/);
+  assert.match(app, /waitForRenderedPayPalButton\(ui\.paypalCardButtonContainer/);
   assert.match(
     html,
     /id="alternateCardCheckoutLink"[\s\S]*href="https:\/\/sowseed-receiver-seed-alternate-server\.vercel\.app\/"[\s\S]*aria-haspopup="dialog"[\s\S]*aria-controls="alternateCheckoutDialog"/,
@@ -235,7 +266,7 @@ test("the separate alternate card link opens a same-page popup and then disables
   assert.doesNotMatch(html, /Server Busy Try Other|id="alternateCardStatus"/);
   assert.doesNotMatch(app, /resetPayPalCardReveal|is-covered|is-fading/);
   assert.match(app, /function openAlternateCheckout\(\)[\s\S]*alternateCheckoutFrame\.src = checkoutUrl[\s\S]*alternateCheckoutDialog\.showModal\(\)/);
-  assert.match(app, /alternateCardCheckoutLink\?\.addEventListener\("click", \(event\)[\s\S]*event\.preventDefault\(\)[\s\S]*classList\.contains\("is-disabled"\)[\s\S]*classList\.add\("is-disabled"\)[\s\S]*setAttribute\("aria-disabled", "true"\)[\s\S]*openAlternateCheckout\(\)/);
+  assert.match(app, /\[elements\.alternateCardCheckoutLink, elements\.bookAlternateCardCheckoutLink\][\s\S]*link\?\.addEventListener\("click", \(event\)[\s\S]*event\.preventDefault\(\)[\s\S]*classList\.contains\("is-disabled"\)[\s\S]*classList\.add\("is-disabled"\)[\s\S]*setAttribute\("aria-disabled", "true"\)[\s\S]*openAlternateCheckout\(\)/);
   assert.match(app, /setPaymentStatus\("Choose a debit\/credit card or PayPal to continue"\)/);
   assert.match(styles, /\.alternate-card-link\s*\{/);
   assert.match(styles, /\.alternate-card-link\s*\{[^}]*background: #0070ba[\s\S]*font-family: Arial, Helvetica, sans-serif[\s\S]*font-weight: 600/s);

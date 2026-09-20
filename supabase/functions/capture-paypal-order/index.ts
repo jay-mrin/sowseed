@@ -14,6 +14,7 @@ import {
   parseMoneyToCents,
   PayPalApiError,
 } from "../_shared/paypal.ts";
+import { getBookProduct } from "../_shared/products.ts";
 import {
   createRandomToken,
   getSupabaseAdmin,
@@ -98,6 +99,7 @@ async function ensureDigitalOrder(
     currency: string;
     personalizedRequest?: string | null;
     blessingMessage?: string | null;
+    itemName?: string | null;
   },
 ) {
   const { data: existing, error: existingError } = await supabase
@@ -115,7 +117,8 @@ async function ensureDigitalOrder(
     const shouldRefresh = contactEmail !== existing.contact_email ||
       payerEmail !== existing.payer_email ||
       input.paypalOrderId !== existing.paypal_order_id ||
-      input.paypalCaptureId !== existing.paypal_capture_id;
+      input.paypalCaptureId !== existing.paypal_capture_id ||
+      (input.itemName && input.itemName !== existing.item_name);
 
     if (!shouldRefresh) return existing;
 
@@ -128,6 +131,7 @@ async function ensureDigitalOrder(
           existing.paypal_capture_id || null,
         contact_email: contactEmail,
         payer_email: payerEmail,
+        item_name: input.itemName || existing.item_name,
       })
       .eq("id", existing.id)
       .select(
@@ -152,7 +156,7 @@ async function ensureDigitalOrder(
       payer_email: input.payerEmail || null,
       amount: input.amount,
       currency: input.currency,
-      item_name: DIGITAL_ORDER_ITEM_NAME,
+      item_name: input.itemName || DIGITAL_ORDER_ITEM_NAME,
       personalized_request: input.personalizedRequest || null,
       blessing_message: input.blessingMessage || null,
       fulfillment_status: "paid_awaiting_personalized_writing",
@@ -262,7 +266,10 @@ Deno.serve(async (request) => {
         : {};
       const rawRow = rawPayment.row && typeof rawPayment.row === "object"
         ? rawPayment.row
-        : {};
+          : {};
+      const isBookOrder = rawPayment.product?.type === "book";
+      const itemName = rawPayment.digitalOrder?.itemName ||
+        rawPayment.product?.itemName || DIGITAL_ORDER_ITEM_NAME;
       const contactEmail = String(
         rawPayment.digitalOrder?.contactEmail ||
           existing.paypal_payer_email || "",
@@ -282,8 +289,9 @@ Deno.serve(async (request) => {
         personalizedRequest: rawPayment.digitalOrder?.personalizedRequest ||
           existing.supporter_message,
         blessingMessage: existing.fortune_message,
+        itemName,
       });
-      const seedComment = paymentRoute === "superadmin"
+      const seedComment = paymentRoute === "superadmin" || isBookOrder
         ? null
         : await ensureSeedComment(supabase, {
           donationId: existing.id,
@@ -294,7 +302,7 @@ Deno.serve(async (request) => {
             seedCountFromAmount(Number(existing.amount) || 0),
           createdAt: existing.created_at,
         });
-      const meterCurrentAmount = paymentRoute === "superadmin"
+      const meterCurrentAmount = paymentRoute === "superadmin" || isBookOrder
         ? undefined
         : await applyDonationToMeter(
           supabase,
@@ -323,6 +331,7 @@ Deno.serve(async (request) => {
         donorAccessToken: null,
         meterCurrentAmount,
         paymentRoute,
+        productType: isBookOrder ? "book" : "seed",
         duplicate: true,
       });
     }
@@ -330,7 +339,7 @@ Deno.serve(async (request) => {
     const { data: paymentAttempt, error: attemptError } = await supabase
       .from("payment_attempts")
       .select(
-        "id, paypal_order_id, payment_route, amount, currency, display_name, contact_email, customer_request, supporter_message, status, failure_reason, raw_payment, expires_at",
+        "id, paypal_order_id, payment_route, amount, currency, display_name, contact_email, customer_request, supporter_message, product_type, product_id, status, failure_reason, raw_payment, expires_at",
       )
       .eq("paypal_order_id", orderId)
       .maybeSingle();
@@ -348,17 +357,34 @@ Deno.serve(async (request) => {
       );
     }
 
-    const { data: fortunes, error: fortuneError } = await supabase
-      .from("fortunes")
-      .select("id, message")
-      .eq("active", true)
-      .limit(200);
-
-    if (fortuneError || !fortunes?.length) {
-      throw fortuneError || new Error("No active fortune messages found.");
+    const attemptRawPayment =
+      paymentAttempt.raw_payment && typeof paymentAttempt.raw_payment === "object" &&
+        !Array.isArray(paymentAttempt.raw_payment)
+        ? paymentAttempt.raw_payment
+        : {};
+    const book = paymentAttempt.product_type === "book"
+      ? getBookProduct(paymentAttempt.product_id)
+      : null;
+    if (paymentAttempt.product_type === "book" && !book) {
+      return errorResponse("The selected book is no longer available.", 422);
     }
+    const isBookOrder = Boolean(book);
+    const itemName = book?.itemName || DIGITAL_ORDER_ITEM_NAME;
 
-    const fortune = fortunes[Math.floor(Math.random() * fortunes.length)];
+    let fortune: { id: number; message: string } | null = null;
+    if (!isBookOrder) {
+      const { data: fortunes, error: fortuneError } = await supabase
+        .from("fortunes")
+        .select("id, message")
+        .eq("active", true)
+        .limit(200);
+
+      if (fortuneError || !fortunes?.length) {
+        throw fortuneError || new Error("No active fortune messages found.");
+      }
+
+      fortune = fortunes[Math.floor(Math.random() * fortunes.length)];
+    }
 
     const paymentRoute = paymentAttempt.payment_route === "superadmin"
       ? "superadmin"
@@ -444,6 +470,13 @@ Deno.serve(async (request) => {
         order,
       );
     }
+    if (isBookOrder && capturedAmountCents % MIN_AMOUNT_CENTS !== 0) {
+      return errorResponse(
+        "Book payments must be in multiples of $7.",
+        422,
+        order,
+      );
+    }
 
     const displayName = String(
       paymentAttempt.display_name || order.payer?.name?.given_name ||
@@ -490,14 +523,17 @@ Deno.serve(async (request) => {
         visibility_scope: paymentRoute === "superadmin"
           ? "superadmin_private"
           : "public",
-        fortune_id: fortune.id,
-        fortune_message: fortune.message,
+        fortune_id: fortune?.id || null,
+        fortune_message: fortune?.message || null,
         donor_token_id: donorToken.id,
         raw_payment: {
           provider: "PayPal",
           routing: {
             route: paymentRoute,
           },
+          product: book
+            ? { type: "book", id: book.id, title: book.title, itemName }
+            : { type: "seed", itemName },
           order,
           digitalOrder: {
             orderNumber,
@@ -508,7 +544,7 @@ Deno.serve(async (request) => {
             paypalCaptureId: capture.id,
             amount: capturedAmount,
             currency,
-            itemName: DIGITAL_ORDER_ITEM_NAME,
+            itemName,
             personalizedRequest,
             fulfillmentStatus: "paid_awaiting_personalized_writing",
             createdAt: capture.create_time || order.create_time ||
@@ -517,7 +553,7 @@ Deno.serve(async (request) => {
         },
       })
       .select(
-        "id, display_name, amount, seed_count, frequency, supporter_message, fortune_message, created_at",
+        "id, display_name, amount, seed_count, frequency, supporter_message, fortune_message, raw_payment, created_at",
       )
       .single();
     if (donationError) throw donationError;
@@ -533,9 +569,10 @@ Deno.serve(async (request) => {
       amount: capturedAmount,
       currency,
       personalizedRequest,
-      blessingMessage: fortune.message,
+      blessingMessage: fortune?.message || (book ? `Deliver ${book.title} by email.` : null),
+      itemName,
     });
-    const seedComment = paymentRoute === "superadmin"
+    const seedComment = paymentRoute === "superadmin" || isBookOrder
       ? null
       : await ensureSeedComment(supabase, {
         donationId: donation.id,
@@ -558,14 +595,14 @@ Deno.serve(async (request) => {
         status: "confirmed",
         paypal_capture_id: capture.id,
         failure_reason: null,
-        raw_payment: { order, capture },
+        raw_payment: { ...attemptRawPayment, order, capture },
         confirmed_at: new Date().toISOString(),
       })
       .eq("paypal_order_id", orderId);
     if (attemptConfirmError) throw attemptConfirmError;
 
     let meterCurrentAmount = undefined;
-    if (paymentRoute !== "superadmin") {
+    if (paymentRoute !== "superadmin" && !isBookOrder) {
       meterCurrentAmount = await applyDonationToMeter(
         supabase,
         donation.id,
@@ -578,12 +615,14 @@ Deno.serve(async (request) => {
         ...donation,
         paymentRoute,
       },
-      fortune: fortune.message,
+      fortune: fortune?.message || null,
       digitalOrder: mapDigitalOrder(digitalOrder),
       seedComment: seedComment ? mapSeedComment(seedComment) : null,
       donorAccessToken: rawDonorToken,
       meterCurrentAmount,
       paymentRoute,
+      productType: isBookOrder ? "book" : "seed",
+      product: book ? { id: book.id, title: book.title, itemName } : null,
     });
   } catch (error) {
     return errorResponse("Could not capture PayPal order.", 500, String(error));

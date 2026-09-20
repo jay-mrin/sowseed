@@ -25,7 +25,19 @@ test("PayPal creation rejects a stale SDK route and persists checkout metadata",
   assert.match(source, /sdkRoute !== paymentRoute/);
   assert.match(source, /\.from\("payment_attempts"\)\s*\.insert/);
   assert.match(source, /customer_request: personalizedRequest/);
-  assert.match(source, /supporter_message: supporterMessage/);
+  assert.match(source, /supporter_message: book \? `Book order: \$\{book\.title\}` : supporterMessage/);
+  assert.match(source, /product_type: book \? "book" : "personalized_seed_writing"/);
+  assert.match(source, /book && amountCents % MIN_AMOUNT_CENTS !== 0/);
+});
+
+test("book captures remain private from the seed feed and meter", () => {
+  const capture = read("supabase/functions/capture-paypal-order/index.ts");
+  const bootstrap = read("supabase/functions/public-bootstrap/index.ts");
+
+  assert.match(capture, /paymentAttempt\.product_type === "book"/);
+  assert.match(capture, /paymentRoute === "superadmin" \|\| isBookOrder[\s\S]*ensureSeedComment/);
+  assert.match(capture, /paymentRoute !== "superadmin" && !isBookOrder[\s\S]*applyDonationToMeter/);
+  assert.match(bootstrap, /rawPayment\.product\?\.type !== "book"/);
 });
 
 test("Admin order reads and mutations share the same role scope", () => {

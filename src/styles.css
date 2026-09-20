@@ -1821,6 +1821,377 @@ main {
   padding-top: 18px;
 }
 
+.shop-view {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding-top: 18px;
+}
+
+.shop-shell {
+  display: grid;
+  gap: 24px;
+}
+
+.shop-heading {
+  padding: clamp(22px, 4vw, 42px);
+  border: 1px solid rgba(111, 77, 55, 0.12);
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(248, 50, 184, 0.09), transparent 30%),
+    linear-gradient(135deg, #fffefa, #f7f0e7);
+  text-align: center;
+}
+
+.shop-heading h2,
+.shop-heading p {
+  margin: 0;
+}
+
+.shop-heading h2 {
+  margin-top: 7px;
+  color: #442718;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: clamp(32px, 5vw, 52px);
+  line-height: 1;
+}
+
+.shop-heading > p:last-child {
+  max-width: 680px;
+  margin: 14px auto 0;
+  color: #75665d;
+  font-weight: 700;
+}
+
+.book-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+.book-card {
+  display: grid;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(111, 77, 55, 0.14);
+  border-radius: 26px;
+  background: #fffdfa;
+  box-shadow: 0 18px 44px rgba(82, 50, 32, 0.09);
+}
+
+.book-card > img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1103 / 1426;
+  object-fit: cover;
+  background: #f4eee5;
+}
+
+.book-card-copy {
+  display: grid;
+  gap: 9px;
+  padding: 20px;
+}
+
+.book-card-copy h3,
+.book-card-copy p {
+  margin: 0;
+}
+
+.book-card-copy h3 {
+  color: #4d2a18;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.book-card-copy > p:not(.section-kicker) {
+  min-height: 48px;
+  color: #776960;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.book-card-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  margin-top: 8px;
+}
+
+.book-card-actions .button {
+  min-height: 44px;
+  padding-inline: 12px;
+  font-size: 13px;
+}
+
+.book-card.is-preview-open {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
+}
+
+.book-card.is-preview-open .book-card-copy {
+  align-content: center;
+  padding: clamp(24px, 5vw, 54px);
+}
+
+.book-preview {
+  grid-column: 1 / -1;
+  padding: 16px;
+  border-top: 1px solid rgba(111, 77, 55, 0.14);
+  background: #ede6dd;
+}
+
+.book-preview iframe {
+  display: block;
+  width: 100%;
+  height: min(76vh, 760px);
+  border: 0;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.book-preview p {
+  margin: 10px 4px 0;
+  color: #675a52;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.book-checkout {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.72fr) minmax(0, 1.28fr);
+  gap: 24px;
+  padding: clamp(18px, 3vw, 32px);
+  border: 1px solid rgba(248, 50, 184, 0.16);
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(248, 50, 184, 0.1), transparent 34%),
+    #ffffff;
+  box-shadow: 0 22px 54px rgba(91, 49, 74, 0.1);
+}
+
+.book-checkout[hidden] {
+  display: none !important;
+}
+
+.book-checkout-selection {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 16px;
+}
+
+.book-checkout-selection > img {
+  width: min(260px, 100%);
+  aspect-ratio: 1103 / 1426;
+  border-radius: 18px;
+  object-fit: cover;
+  box-shadow: 0 18px 38px rgba(82, 50, 32, 0.16);
+}
+
+.book-checkout-selection h2,
+.book-checkout-selection p {
+  margin: 0;
+}
+
+.book-checkout-selection h2 {
+  margin-top: 5px;
+  color: #4d2a18;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: clamp(31px, 4vw, 42px);
+  line-height: 1;
+}
+
+.book-checkout-selection #bookCheckoutDescription {
+  margin-top: 10px;
+  color: #74675e;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.book-checkout-selection .secure-pill {
+  display: flex;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.book-order-form {
+  align-content: start;
+  padding: 4px 0;
+}
+
+.book-order-form .seed-quantity-row {
+  display: grid;
+  grid-template-columns: 66px 58px minmax(0, 1fr) 58px;
+  gap: 10px;
+  margin: 0 0 16px;
+}
+
+.book-order-form .compact-amount-field {
+  display: flex;
+  height: 58px;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 1px solid rgba(153, 137, 143, 0.24);
+  border-radius: 17px;
+  background: #f6f3f3;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.book-order-form .compact-amount-field input {
+  width: 38px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  appearance: textfield;
+}
+
+.book-order-form .seed-stepper-button {
+  width: 58px;
+  height: 58px;
+}
+
+.book-order-form .book-price {
+  gap: 8px;
+}
+
+.book-order-form .book-price strong {
+  font-size: 20px;
+  white-space: nowrap;
+}
+
+.book-order-form .field {
+  margin-top: 14px;
+}
+
+.book-order-form .minimal-text-field input,
+.book-order-form .minimal-text-field textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 15px 17px;
+  border: 1px solid rgba(153, 137, 143, 0.2);
+  border-radius: 14px;
+  outline: 0;
+  color: #171717;
+  background: #f6f3f3;
+  font: inherit;
+  font-size: 17px;
+}
+
+.book-order-form .minimal-text-field input {
+  min-height: 54px;
+}
+
+.book-order-form .minimal-text-field textarea {
+  min-height: 94px;
+  resize: vertical;
+}
+
+.book-order-form .minimal-text-field input:focus,
+.book-order-form .minimal-text-field textarea:focus {
+  border-color: rgba(248, 50, 184, 0.5);
+  box-shadow: 0 0 0 4px rgba(248, 50, 184, 0.09);
+}
+
+.book-order-form .checkout-button {
+  min-height: 58px;
+  margin-top: 16px;
+  font-size: 19px;
+}
+
+@media (max-width: 900px) {
+  .book-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .book-checkout {
+    grid-template-columns: minmax(220px, 0.62fr) minmax(0, 1.38fr);
+  }
+}
+
+@media (max-width: 680px) {
+  .shop-view {
+    width: 100%;
+    padding: 16px;
+  }
+
+  .book-grid,
+  .book-card.is-preview-open,
+  .book-checkout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .book-card.is-preview-open {
+    grid-column: 1;
+  }
+
+  .book-card.is-preview-open > img {
+    max-height: 520px;
+    object-fit: contain;
+  }
+
+  .book-preview iframe {
+    height: 68vh;
+  }
+
+  .book-checkout-selection {
+    grid-template-columns: 104px minmax(0, 1fr);
+    align-items: center;
+  }
+
+  .book-checkout-selection > img {
+    width: 104px;
+    grid-row: 1 / span 2;
+  }
+
+  .book-checkout-selection .secure-pill {
+    display: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .shop-view {
+    padding-inline: 12px;
+  }
+
+  .shop-heading,
+  .book-checkout {
+    border-radius: 22px;
+  }
+
+  .book-card-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .book-order-form .seed-quantity-row {
+    grid-template-columns: 58px 50px minmax(0, 1fr) 50px;
+    gap: 7px;
+  }
+
+  .book-order-form .seed-stepper-button {
+    width: 50px;
+    height: 50px;
+  }
+
+  .book-order-form .compact-amount-field {
+    height: 50px;
+  }
+
+  .book-order-form .book-price strong {
+    font-size: 17px;
+  }
+}
+
 .main-stack,
 .support-column {
   display: grid;

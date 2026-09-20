@@ -26,7 +26,7 @@ test("weekly checkout requires a name and whole seeds and uses subscription inte
   assert.match(app, /intent: billingFrequency === "weekly" \? "subscription" : "capture"/);
   assert.match(app, /params\.set\("vault", "true"\)/);
   assert.match(app, /createSubscription:[\s\S]*prepare-paypal-subscription[\s\S]*confirm-paypal-subscription/);
-  assert.match(app, /elements\.cardButton\.hidden = frequency === "weekly"/);
+  assert.match(app, /ui\.cardButton\.hidden = frequency === "weekly"/);
   assert.match(app, /finishVerifiedSubscription[\s\S]*receiptSummary\.hidden = true/);
   assert.match(app, /finishVerifiedDonation[\s\S]*receiptSummary\.hidden = false/);
   assert.doesNotMatch(app, /was set up today\. Your next renewal/);

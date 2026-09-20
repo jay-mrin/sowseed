@@ -30,9 +30,35 @@ const LEGACY_SUPPORT_TITLES = new Set([
   "Buy a Seed to Sow for the Love You’ve Been Waiting For in 💕Christ Pradise garden💫",
   "Buy a Seed to Sow for the Love You’ve Been Waiting For💕💕 for Sow Your Seed Here for Your Soulmate 💫",
 ]);
+const LEGACY_ABOUT_COLLAPSED = new Set([
+  "🌱✨ Personalised Digital Writing Made for Your Request ✨🌱\nShare your intention and receive a custom writing created with care...",
+]);
+const LEGACY_ABOUT_EXPANDED = new Set([
+  "🌱✨ Personalised Digital Writing Made for Your Request ✨🌱\n\nShare your prayer, intention, or message and receive a heartfelt custom writing created especially for your order.\n\nEvery personalised mail is prepared with care, faith, and thoughtful attention to what you asked for.",
+]);
 const MAX_LOCAL_POST_IMAGE_BYTES = 2 * 1024 * 1024;
 const MAX_REMOTE_POST_IMAGE_BYTES = 5 * 1024 * 1024;
 const DIGITAL_ORDER_ITEM_NAME = "Personalised Digital Writing - Custom Order Made Writing";
+const BOOK_PRODUCTS = Object.freeze({
+  "love-and-protection": {
+    id: "love-and-protection",
+    title: "Love & Protection",
+    description: "Learning to love with courage and pray with trust.",
+    cover: "assets/books/love-and-protection-cover.jpg",
+  },
+  "my-soulmate": {
+    id: "my-soulmate",
+    title: "My Soulmate",
+    description: "Seeking a loving partnership with faith and discernment.",
+    cover: "assets/books/my-soulmate-cover.jpg",
+  },
+  "jesus-and-love": {
+    id: "jesus-and-love",
+    title: "Jesus & Love",
+    description: "Receiving the love of Christ and learning to live it.",
+    cover: "assets/books/jesus-and-love-cover.jpg",
+  },
+});
 const CUSTOM_ORDER_STRING_KEYS = new Set([
   "aboutCollapsed",
   "aboutExpanded",
@@ -163,10 +189,10 @@ const DEFAULT_SETTINGS = {
     "Welcome, beloved seeker of love. 💗 You didn’t arrive by accident. Make an order\n\nWith every seed you sow you get a personalised mail of your request, prepared with care and intention. 🌱💫🌹",
   aboutTitle: "About",
   aboutCollapsed:
-    "🌱✨ Personalised Digital Writing Made for Your Request ✨🌱\nShare your intention and receive a custom writing created with care...",
+    "🌱✨ Personalised Writing & Digital Books for Your Journey ✨📖\nOrder a writing made for your request or preview and buy a complete digital book...",
   aboutExpanded:
-    "🌱✨ Personalised Digital Writing Made for Your Request ✨🌱\n\nShare your prayer, intention, or message and receive a heartfelt custom writing created especially for your order.\n\nEvery personalised mail is prepared with care, faith, and thoughtful attention to what you asked for.",
-  topicLabel: "Digital writing",
+    "🌱✨ Personalised Writing & Digital Books for Your Journey ✨📖\n\nSeed Garden is a personalised writing and digital book-buying platform. Share your prayer, intention, or message to order a heartfelt writing prepared especially for you and delivered by email.\n\nYou can also visit the Shop, preview the first five pages of each book, and purchase the complete digital book for delivery to your email after successful payment.",
+  topicLabel: "Writing & digital books",
   supportTitle: MINIMAL_SUPPORT_TITLE,
   postAuthorName: "Sow Your Seed 💫",
   postTitle: "༺💗༻ A Divine Invitation: Sow Your Seed 🌱💫🌹",
@@ -265,6 +291,30 @@ const elements = {
   adminUploadPreviewImage: document.querySelector("#adminUploadPreviewImage"),
   amountError: document.querySelector("#amountError"),
   amountInput: document.querySelector("#amountInput"),
+  bookAlternateCardCheckoutLink: document.querySelector("#bookAlternateCardCheckoutLink"),
+  bookAmountError: document.querySelector("#bookAmountError"),
+  bookAmountInput: document.querySelector("#bookAmountInput"),
+  bookCardButton: document.querySelector("#bookCardButton"),
+  bookCheckout: document.querySelector("#bookCheckout"),
+  bookCheckoutButton: document.querySelector("#bookCheckoutButton"),
+  bookCheckoutCover: document.querySelector("#bookCheckoutCover"),
+  bookCheckoutDescription: document.querySelector("#bookCheckoutDescription"),
+  bookCheckoutLabel: document.querySelector("#bookCheckoutLabel"),
+  bookCheckoutTitle: document.querySelector("#bookCheckoutTitle"),
+  bookEmailError: document.querySelector("#bookEmailError"),
+  bookEmailInput: document.querySelector("#bookEmailInput"),
+  bookGrid: document.querySelector("#bookGrid"),
+  bookInlinePaypalCheckout: document.querySelector("#bookInlinePaypalCheckout"),
+  bookMessageInput: document.querySelector("#bookMessageInput"),
+  bookNameInput: document.querySelector("#bookNameInput"),
+  bookOrderForm: document.querySelector("#bookOrderForm"),
+  bookPaymentStatus: document.querySelector("#bookPaymentStatus"),
+  bookPaypalButton: document.querySelector("#bookPaypalButton"),
+  bookPaypalButtonContainer: document.querySelector("#bookPaypalButtonContainer"),
+  bookPaypalCardButton: document.querySelector("#bookPaypalCardButton"),
+  bookPaypalCardButtonContainer: document.querySelector("#bookPaypalCardButtonContainer"),
+  bookPaypalCheckoutLoader: document.querySelector("#bookPaypalCheckoutLoader"),
+  bookPriceLabel: document.querySelector("#bookPriceLabel"),
   brandTitle: document.querySelector("#brandTitle"),
   cancelAdminLoginButton: document.querySelector("#cancelAdminLoginButton"),
   checkoutButton: document.querySelector("#checkoutButton"),
@@ -274,6 +324,7 @@ const elements = {
   closeTutorialButton: document.querySelector("#closeTutorialButton"),
   doneButton: document.querySelector("#doneButton"),
   decreaseSeedButton: document.querySelector("#decreaseSeedButton"),
+  decreaseBookAmountButton: document.querySelector("#decreaseBookAmountButton"),
   decrementPageViewButton: document.querySelector("#decrementPageViewButton"),
   followersText: document.querySelector("#followersText"),
   fulfillmentCancelButton: document.querySelector("#cancelFulfillmentButton"),
@@ -306,6 +357,7 @@ const elements = {
   cardButton: document.querySelector("#cardButton"),
   postAuthorName: document.querySelector("#postAuthorName"),
   increaseSeedButton: document.querySelector("#increaseSeedButton"),
+  increaseBookAmountButton: document.querySelector("#increaseBookAmountButton"),
   postsPageList: document.querySelector("#postsPageList"),
   profileTitle: document.querySelector("#profileTitle"),
   profileTabs: document.querySelectorAll("[data-section-tab]"),
@@ -367,6 +419,7 @@ let paymentConfig = {
   currency: PUBLIC_CONFIG.paypalCurrency || CONFIG.currency,
 };
 let pendingDonation = null;
+let selectedBook = null;
 const initialAdminCalendarDate = getLatestDonationDateKey();
 let adminCalendarCursor = fromDateKey(initialAdminCalendarDate);
 let selectedAdminCalendarDate = initialAdminCalendarDate;
@@ -441,6 +494,18 @@ function normalizeSettings(settings) {
 
   if (LEGACY_SUPPORT_TITLES.has(next.supportTitle)) {
     next.supportTitle = defaults.supportTitle;
+  }
+
+  if (LEGACY_ABOUT_COLLAPSED.has(next.aboutCollapsed)) {
+    next.aboutCollapsed = defaults.aboutCollapsed;
+  }
+
+  if (LEGACY_ABOUT_EXPANDED.has(next.aboutExpanded)) {
+    next.aboutExpanded = defaults.aboutExpanded;
+  }
+
+  if (next.topicLabel === "Digital writing") {
+    next.topicLabel = defaults.topicLabel;
   }
 
   return Object.fromEntries(Object.keys(defaults).map((key) => [key, next[key]]));
@@ -1057,8 +1122,10 @@ function getDigitalOrderValue(donation, key, fallback = "") {
   return value === undefined || value === null || value === "" ? fallback : value;
 }
 
-function getFulfillmentStatusLabel(status) {
-  return status === "fulfilled" ? "Fulfilled" : "Paid, awaiting personalized writing";
+function getFulfillmentStatusLabel(status, itemName = "") {
+  const isBook = String(itemName).startsWith("Digital Book -");
+  if (status === "fulfilled") return isBook ? "Delivered by email" : "Fulfilled";
+  return isBook ? "Paid, awaiting email delivery" : "Paid, awaiting personalized writing";
 }
 
 function readableIndiaDateTime(dateString) {
@@ -1310,7 +1377,7 @@ function buildPremiumOrderPdf(donation) {
 
   pdfRoundedRect(commands, 50, 512, 238, 40, 12, "#f3f0ee");
   pdfText(commands, "STATUS", 62, 536, 8.5, "F2", "#969daa");
-  pdfText(commands, getFulfillmentStatusLabel(data.fulfillmentStatus), 62, 521, 11.5, "F2", "#232833");
+  pdfText(commands, getFulfillmentStatusLabel(data.fulfillmentStatus, data.itemName), 62, 521, 11.5, "F2", "#232833");
   pdfRoundedRect(commands, 307, 512, 238, 40, 12, "#f3f0ee");
   pdfText(commands, "PAYMENT PROVIDER", 319, 536, 8.5, "F2", "#969daa");
   pdfText(commands, data.provider, 319, 521, 11.5, "F2", "#232833");
@@ -2274,6 +2341,7 @@ function renderCalendarDetails(context) {
           const frequency = donation.frequency === "weekly" ? "Weekly" : donation.frequency === "monthly" ? "Monthly" : "One time";
           const createdAt = donation.createdAt || new Date().toISOString();
           const order = getDigitalOrder(donation);
+          const isBookOrder = String(order?.itemName || "").startsWith("Digital Book -");
           const orderNumber = getDigitalOrderValue(
             donation,
             "orderNumber",
@@ -2303,9 +2371,9 @@ function renderCalendarDetails(context) {
                 <span><strong>Transaction ID</strong>${escapeHtml(captureId)}</span>
                 <span><strong>Contact email</strong>${escapeHtml(contactEmail || "Not provided")}</span>
                 <span><strong>Item</strong>${escapeHtml(order?.itemName || DIGITAL_ORDER_ITEM_NAME)}</span>
-                <span><strong>Status</strong>${escapeHtml(getFulfillmentStatusLabel(status))}</span>
+                <span><strong>Status</strong>${escapeHtml(getFulfillmentStatusLabel(status, order?.itemName))}</span>
               </div>
-              <p class="admin-order-request"><strong>Request:</strong> ${escapeHtml(request)}</p>
+              <p class="admin-order-request"><strong>${isBookOrder ? "Customer message" : "Request"}:</strong> ${escapeHtml(request)}</p>
               <label class="admin-fulfillment-field">
                 <span>Fulfillment note</span>
                 <textarea data-fulfillment-note="${escapeHtml(donation.id)}" placeholder="Write proof notes, delivery details, or custom writing summary.">${escapeHtml(note)}</textarea>
@@ -2313,7 +2381,7 @@ function renderCalendarDetails(context) {
               <div class="admin-order-actions">
                 <button class="button button-secondary" type="button" data-download-order-proof="${escapeHtml(donation.id)}" ${isFulfilled ? "" : "disabled title=\"Available after the order is fulfilled\""}>Download PDF</button>
                 <button class="button button-primary" type="button" data-save-fulfillment="${escapeHtml(donation.id)}">
-                  ${isFulfilled ? "Reopen order" : "Mark fulfilled"}
+                  ${isFulfilled ? "Reopen order" : isBookOrder ? "Mark delivered" : "Mark fulfilled"}
                 </button>
                 ${
                   context.allowDelete
@@ -2608,8 +2676,60 @@ function updateCheckoutLabel() {
   elements.seedPriceLabel.textContent = formatSeedUnits(seedUnits);
 }
 
+function isBookCheckout(donation = pendingDonation) {
+  return donation?.productType === "book";
+}
+
+function getCheckoutUi(donation = pendingDonation) {
+  if (isBookCheckout(donation)) {
+    return {
+      alternateCardCheckoutLink: elements.bookAlternateCardCheckoutLink,
+      amountError: elements.bookAmountError,
+      amountInput: elements.bookAmountInput,
+      cardButton: elements.bookCardButton,
+      checkoutButton: elements.bookCheckoutButton,
+      emailError: elements.bookEmailError,
+      emailInput: elements.bookEmailInput,
+      form: elements.bookOrderForm,
+      inlinePaypalCheckout: elements.bookInlinePaypalCheckout,
+      messageInput: elements.bookMessageInput,
+      nameInput: elements.bookNameInput,
+      paypalButton: elements.bookPaypalButton,
+      paypalButtonContainer: elements.bookPaypalButtonContainer,
+      paypalCardButton: elements.bookPaypalCardButton,
+      paypalCardButtonContainer: elements.bookPaypalCardButtonContainer,
+      paypalCheckoutLoader: elements.bookPaypalCheckoutLoader,
+      paymentStatus: elements.bookPaymentStatus,
+    };
+  }
+
+  return {
+    alternateCardCheckoutLink: elements.alternateCardCheckoutLink,
+    amountError: elements.amountError,
+    amountInput: elements.amountInput,
+    cardButton: elements.cardButton,
+    checkoutButton: elements.checkoutButton,
+    emailError: elements.emailError,
+    emailInput: elements.paymentEmailInput,
+    form: elements.supportForm,
+    inlinePaypalCheckout: elements.inlinePaypalCheckout,
+    messageInput: elements.messageInput,
+    nameInput: elements.nameInput,
+    paypalButton: elements.paypalButton,
+    paypalButtonContainer: elements.paypalButtonContainer,
+    paypalCardButton: elements.paypalCardButton,
+    paypalCardButtonContainer: elements.paypalCardButtonContainer,
+    paypalCheckoutLoader: elements.paypalCheckoutLoader,
+    paymentStatus: elements.paymentStatus,
+  };
+}
+
+function getActiveCheckoutAmount() {
+  return Number.parseFloat(getCheckoutUi().amountInput?.value) || 0;
+}
+
 function getPaymentEmail() {
-  return String(elements.paymentEmailInput?.value || "").trim();
+  return String(getCheckoutUi().emailInput?.value || "").trim();
 }
 
 function getPayPalClientId(paymentRoute = getCheckoutRoute()) {
@@ -2627,16 +2747,17 @@ function isValidEmailAddress(value) {
 }
 
 function requirePaymentEmail() {
+  const ui = getCheckoutUi();
   const email = getPaymentEmail();
 
   if (isValidEmailAddress(email)) {
-    if (elements.emailError) elements.emailError.textContent = "";
+    if (ui.emailError) ui.emailError.textContent = "";
     return email;
   }
 
-  if (elements.emailError) elements.emailError.textContent = "Add a valid email.";
+  if (ui.emailError) ui.emailError.textContent = "Add a valid email.";
   setPaymentStatus("Add a valid email to continue with PayPal.", true);
-  elements.paymentEmailInput?.focus();
+  ui.emailInput?.focus();
   throw new Error("A valid email is required for your order detail.");
 }
 
@@ -2652,6 +2773,43 @@ function setAmount(amount) {
   elements.amountInput.value = safeAmount;
   elements.amountError.textContent = "";
   updateCheckoutLabel();
+}
+
+function setBookAmount(amount) {
+  const units = Math.max(Math.round((Number.parseFloat(amount) || MIN_DONATION_AMOUNT) / SEED_DOLLAR_VALUE), 1);
+  const safeAmount = units * SEED_DOLLAR_VALUE;
+  elements.bookAmountInput.value = safeAmount;
+  elements.bookAmountError.textContent = "";
+  elements.bookPriceLabel.textContent = `${money(safeAmount)} Book`;
+  if (selectedBook) elements.bookCheckoutLabel.textContent = `Buy ${selectedBook.title}`;
+}
+
+function stepBookAmount(direction) {
+  const currentUnits = Math.max(Math.round((Number.parseFloat(elements.bookAmountInput.value) || 7) / SEED_DOLLAR_VALUE), 1);
+  setBookAmount(Math.max(currentUnits + direction, 1) * SEED_DOLLAR_VALUE);
+}
+
+function validateBookForm() {
+  const amount = Number.parseFloat(elements.bookAmountInput.value) || 0;
+  let isValid = true;
+
+  elements.bookAmountError.textContent = "";
+  elements.bookEmailError.textContent = "";
+
+  if (amount < MIN_DONATION_AMOUNT || amount % SEED_DOLLAR_VALUE !== 0) {
+    elements.bookAmountError.textContent = "Choose $7 or a multiple of $7.";
+    isValid = false;
+  }
+  if (!selectedBook) {
+    elements.bookAmountError.textContent = "Choose a book first.";
+    isValid = false;
+  }
+  if (!isValidEmailAddress(elements.bookEmailInput.value)) {
+    elements.bookEmailError.textContent = "Add a valid delivery email.";
+    isValid = false;
+  }
+
+  return isValid;
 }
 
 function validateForm() {
@@ -2680,29 +2838,32 @@ function getRandomFortuneMessage() {
 }
 
 function setPaymentStatus(message, isError = false) {
-  if (!elements.paymentStatus) return;
-  elements.paymentStatus.textContent = message;
-  elements.paymentStatus.classList.toggle("is-error", isError);
-  elements.paymentStatus.hidden = !message;
+  const status = getCheckoutUi().paymentStatus;
+  if (!status) return;
+  status.textContent = message;
+  status.classList.toggle("is-error", isError);
+  status.hidden = !message;
 }
 
 function setPayPalCheckoutLoading(isLoading) {
-  elements.inlinePaypalCheckout.classList.toggle("is-loading", isLoading);
-  if (elements.paypalCheckoutLoader) elements.paypalCheckoutLoader.hidden = !isLoading;
+  const ui = getCheckoutUi();
+  ui.inlinePaypalCheckout.classList.toggle("is-loading", isLoading);
+  if (ui.paypalCheckoutLoader) ui.paypalCheckoutLoader.hidden = !isLoading;
 
   if (isLoading) {
-    elements.paypalButton.hidden = false;
-    elements.paypalCardButton.hidden = false;
-    elements.cardButton.hidden = pendingDonation?.frequency === "weekly";
+    ui.paypalButton.hidden = false;
+    ui.paypalCardButton.hidden = false;
+    ui.cardButton.hidden = pendingDonation?.frequency === "weekly";
   }
 }
 
 function updatePayPalVisibility() {
+  const ui = getCheckoutUi();
   const showPayPal = isPayPalConfigured();
 
-  elements.paypalButton.hidden = !showPayPal;
-  elements.paypalCardButton.hidden = !showPayPal;
-  elements.cardButton.hidden = pendingDonation?.frequency === "weekly";
+  ui.paypalButton.hidden = !showPayPal;
+  ui.paypalCardButton.hidden = !showPayPal;
+  ui.cardButton.hidden = pendingDonation?.frequency === "weekly";
 
   return showPayPal;
 }
@@ -2773,6 +2934,75 @@ function submitDonation(event) {
   } else {
     chooseOneTimeSowing();
   }
+}
+
+function selectBook(bookId) {
+  const book = BOOK_PRODUCTS[bookId];
+  if (!book) return;
+
+  closeInlinePayPalCheckout();
+  pendingDonation = null;
+  selectedBook = book;
+  elements.bookCheckout.hidden = false;
+  elements.bookCheckoutCover.src = book.cover;
+  elements.bookCheckoutCover.alt = `${book.title} book cover`;
+  elements.bookCheckoutTitle.textContent = book.title;
+  elements.bookCheckoutDescription.textContent = `${book.description} The complete 23-page PDF will be delivered to your email after successful payment.`;
+  setBookAmount(elements.bookAmountInput.value || MIN_DONATION_AMOUNT);
+  elements.bookCheckout.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function toggleBookPreview(bookId, button) {
+  const preview = elements.bookGrid?.querySelector(`[data-book-preview="${bookId}"]`);
+  const card = elements.bookGrid?.querySelector(`[data-book-card="${bookId}"]`);
+  if (!preview || !card) return;
+
+  const willOpen = preview.hidden;
+  elements.bookGrid.querySelectorAll("[data-book-preview]").forEach((item) => {
+    item.hidden = true;
+    item.closest(".book-card")?.classList.remove("is-preview-open");
+  });
+  elements.bookGrid.querySelectorAll("[data-preview-book]").forEach((item) => {
+    item.setAttribute("aria-expanded", "false");
+    item.textContent = "Preview 5 pages";
+  });
+
+  if (!willOpen) return;
+
+  const frame = preview.querySelector("iframe[data-preview-src]");
+  if (frame && !frame.hasAttribute("src")) frame.src = frame.dataset.previewSrc;
+  preview.hidden = false;
+  card.classList.add("is-preview-open");
+  button.setAttribute("aria-expanded", "true");
+  button.textContent = "Close preview";
+  window.requestAnimationFrame(() => card.scrollIntoView({ behavior: "smooth", block: "start" }));
+}
+
+function submitBookOrder(event) {
+  event.preventDefault();
+
+  if (!validateBookForm()) {
+    closeInlinePayPalCheckout();
+    pendingDonation = null;
+    return;
+  }
+
+  pendingDonation = {
+    name: elements.bookNameInput.value.trim(),
+    email: String(elements.bookEmailInput.value || "").trim(),
+    amount: Number.parseFloat(elements.bookAmountInput.value),
+    frequency: "once",
+    message: elements.bookMessageInput.value.trim(),
+    paymentRoute: getCheckoutRoute(),
+    productType: "book",
+    productId: selectedBook.id,
+    bookTitle: selectedBook.title,
+    createdAt: new Date().toISOString(),
+  };
+
+  trackCheckoutEvent("checkout_button_clicked", pendingDonation);
+  closeInlinePayPalCheckout();
+  openInlinePayPalCheckout();
 }
 
 function isValidPayPalSdk(paypal) {
@@ -2903,6 +3133,8 @@ function loadPayPalSdk(paymentRoute = getCheckoutRoute(), frequency = pendingDon
 function clearPayPalButtons() {
   if (elements.paypalButtonContainer) elements.paypalButtonContainer.innerHTML = "";
   if (elements.paypalCardButtonContainer) elements.paypalCardButtonContainer.innerHTML = "";
+  if (elements.bookPaypalButtonContainer) elements.bookPaypalButtonContainer.innerHTML = "";
+  if (elements.bookPaypalCardButtonContainer) elements.bookPaypalCardButtonContainer.innerHTML = "";
 }
 
 function hasRenderedPayPalButton(container) {
@@ -2936,13 +3168,14 @@ function buildPayPalButtonOptions(paypal, fundingSource) {
     },
     createOrder: async () => {
       if (!pendingDonation) throw new Error("Order details are missing.");
+      const ui = getCheckoutUi();
       const email = requirePaymentEmail();
       pendingDonation = {
         ...pendingDonation,
-        name: elements.nameInput.value.trim(),
+        name: ui.nameInput.value.trim(),
         email,
-        amount: getAmount(),
-        message: elements.messageInput.value.trim(),
+        amount: getActiveCheckoutAmount(),
+        message: ui.messageInput.value.trim(),
       };
       setPaymentStatus("Opening secure international PayPal checkout...");
       const payload = await callEdge("create-paypal-order", {
@@ -2952,6 +3185,8 @@ function buildPayPalButtonOptions(paypal, fundingSource) {
           message: pendingDonation.message,
           email: pendingDonation.email,
           paymentRoute: getCheckoutRoute(),
+          productType: pendingDonation.productType || "seed",
+          productId: pendingDonation.productId || null,
         },
       });
       pendingDonation.paymentRoute = payload.paymentRoute;
@@ -2979,20 +3214,22 @@ function buildPayPalButtonOptions(paypal, fundingSource) {
       }
     },
     onCancel: () => {
+      const ui = getCheckoutUi();
       clearPayPalButtons();
       resetAllPayPalSdks();
-      elements.paypalButton.hidden = true;
-      elements.paypalCardButton.hidden = true;
-      elements.cardButton.hidden = false;
+      ui.paypalButton.hidden = true;
+      ui.paypalCardButton.hidden = true;
+      ui.cardButton.hidden = false;
       setPaymentStatus("PayPal payment cancelled. You can continue with debit or credit card instead.", true);
       openPaymentFailure();
     },
     onError: (error) => {
+      const ui = getCheckoutUi();
       clearPayPalButtons();
       resetAllPayPalSdks();
-      elements.paypalButton.hidden = true;
-      elements.paypalCardButton.hidden = true;
-      elements.cardButton.hidden = false;
+      ui.paypalButton.hidden = true;
+      ui.paypalCardButton.hidden = true;
+      ui.cardButton.hidden = false;
       setPaymentStatus(
         error?.message || "PayPal checkout failed. Continue with debit or credit card instead.",
         true,
@@ -3105,15 +3342,16 @@ function renderPayPalButtons() {
 
 async function renderFreshPayPalButtons() {
   let namespace = "";
+  const ui = getCheckoutUi();
 
   clearPayPalButtons();
   setPaymentStatus("");
   setPayPalCheckoutLoading(true);
 
   if (!isBackendConfigured() || !backendReady) {
-    elements.paypalButton.hidden = true;
-    elements.paypalCardButton.hidden = true;
-    elements.cardButton.hidden = pendingDonation?.frequency === "weekly";
+    ui.paypalButton.hidden = true;
+    ui.paypalCardButton.hidden = true;
+    ui.cardButton.hidden = pendingDonation?.frequency === "weekly";
     setPaymentStatus(
       pendingDonation?.frequency === "weekly"
         ? "Weekly PayPal subscriptions are unavailable right now."
@@ -3158,21 +3396,21 @@ async function renderFreshPayPalButtons() {
       throw new Error("PayPal did not return an eligible checkout option.");
     }
 
-    await paypalButtons.render(elements.paypalButtonContainer);
-    await waitForRenderedPayPalButton(elements.paypalButtonContainer, "The PayPal button");
+    await paypalButtons.render(ui.paypalButtonContainer);
+    await waitForRenderedPayPalButton(ui.paypalButtonContainer, "The PayPal button");
 
     if (paypalCardEligible) {
-      await paypalCardButtons.render(elements.paypalCardButtonContainer);
-      await waitForRenderedPayPalButton(elements.paypalCardButtonContainer, "The PayPal debit or credit card button");
+      await paypalCardButtons.render(ui.paypalCardButtonContainer);
+      await waitForRenderedPayPalButton(ui.paypalCardButtonContainer, "The PayPal debit or credit card button");
     }
 
     if (route !== getCheckoutRoute()) {
       throw new Error("The payment route changed while PayPal was rendering.");
     }
 
-    elements.paypalButton.hidden = false;
-    elements.paypalCardButton.hidden = !paypalCardEligible;
-    elements.cardButton.hidden = frequency === "weekly";
+    ui.paypalButton.hidden = false;
+    ui.paypalCardButton.hidden = !paypalCardEligible;
+    ui.cardButton.hidden = frequency === "weekly";
     if (frequency === "weekly") {
       setPaymentStatus("Choose PayPal to approve your weekly seed");
     } else {
@@ -3181,9 +3419,9 @@ async function renderFreshPayPalButtons() {
   } catch (error) {
     clearPayPalButtons();
     if (namespace) resetPayPalSdk(namespace);
-    elements.paypalButton.hidden = true;
-    elements.paypalCardButton.hidden = true;
-    elements.cardButton.hidden = pendingDonation?.frequency === "weekly";
+    ui.paypalButton.hidden = true;
+    ui.paypalCardButton.hidden = true;
+    ui.cardButton.hidden = pendingDonation?.frequency === "weekly";
     setPaymentStatus(
       error?.message || (pendingDonation?.frequency === "weekly"
         ? "Weekly PayPal checkout could not load."
@@ -3197,6 +3435,9 @@ async function renderFreshPayPalButtons() {
 
 async function finishVerifiedDonation(payload) {
   const donation = payload.donation;
+  const completedBookOrder = isBookCheckout();
+  const completedBook = completedBookOrder ? BOOK_PRODUCTS[pendingDonation?.productId] : null;
+  const completedEmail = pendingDonation?.email || payload.digitalOrder?.contactEmail || "your email";
   const fortuneMessage = payload.fortune || donation?.fortune_message || getRandomFortuneMessage();
   const paymentRoute = donation?.paymentRoute || payload.paymentRoute || pendingDonation?.paymentRoute || "standard";
 
@@ -3204,7 +3445,7 @@ async function finishVerifiedDonation(payload) {
     setDonorToken(payload.donorAccessToken);
   }
 
-  if (donation && paymentRoute !== "superadmin") {
+  if (donation && paymentRoute !== "superadmin" && !completedBookOrder) {
     state.donations.unshift({
       id: donation.id,
       name: donation.display_name || donation.name || pendingDonation?.name || "Customer",
@@ -3222,7 +3463,7 @@ async function finishVerifiedDonation(payload) {
 
   if (payload.seedComment) {
     state.seedComments = normalizeSeedComments([payload.seedComment, ...(state.seedComments || [])]);
-  } else if (!isBackendConfigured() && pendingDonation?.message) {
+  } else if (!completedBookOrder && !isBackendConfigured() && pendingDonation?.message) {
     state.seedComments = normalizeSeedComments([
       {
         id: `seed-comment-${Date.now()}`,
@@ -3244,27 +3485,37 @@ async function finishVerifiedDonation(payload) {
   }
 
   renderApp();
-  elements.receiptTitle.textContent = "Your fortune for today";
-  elements.receiptSummary.textContent = fortuneMessage;
+  elements.receiptTitle.textContent = completedBookOrder
+    ? "Your Book Will be Delivered by Mail"
+    : "Your fortune for today";
+  elements.receiptSummary.textContent = completedBookOrder
+    ? `${completedBook?.title || "Your book"} will be delivered to ${completedEmail}. Order ID: ${payload.digitalOrder?.orderNumber || "confirmed"}.`
+    : fortuneMessage;
   elements.receiptSummary.hidden = false;
-  elements.supportForm.reset();
-  if (elements.paymentEmailInput) {
-    elements.paymentEmailInput.value = "";
+  const ui = getCheckoutUi();
+  ui.form.reset();
+  if (ui.emailInput) {
+    ui.emailInput.value = "";
   }
-  setAmount(getInitialDonationAmount());
-  updateCheckoutLabel();
-  pendingDonation = null;
+  if (completedBookOrder) {
+    setBookAmount(MIN_DONATION_AMOUNT);
+  } else {
+    setAmount(getInitialDonationAmount());
+    updateCheckoutLabel();
+  }
   closeInlinePayPalCheckout();
+  pendingDonation = null;
   closePaymentFailure();
   openReceipt();
 }
 
 function openInlinePayPalCheckout() {
+  const ui = getCheckoutUi();
   setPaymentStatus("");
   const showPayPal = updatePayPalVisibility();
-  elements.inlinePaypalCheckout.hidden = false;
-  elements.checkoutButton.classList.add("is-checkout-open");
-  elements.checkoutButton.setAttribute("aria-expanded", "true");
+  ui.inlinePaypalCheckout.hidden = false;
+  ui.checkoutButton.classList.add("is-checkout-open");
+  ui.checkoutButton.setAttribute("aria-expanded", "true");
 
   if (showPayPal) {
     setPayPalCheckoutLoading(true);
@@ -3280,15 +3531,16 @@ function openInlinePayPalCheckout() {
 }
 
 function closeInlinePayPalCheckout() {
+  const ui = getCheckoutUi();
   clearPayPalButtons();
   resetAllPayPalSdks();
   setPayPalCheckoutLoading(false);
-  elements.paypalButton.hidden = true;
-  elements.paypalCardButton.hidden = true;
-  elements.cardButton.hidden = true;
-  elements.inlinePaypalCheckout.hidden = true;
-  elements.checkoutButton.classList.remove("is-checkout-open");
-  elements.checkoutButton.setAttribute("aria-expanded", "false");
+  ui.paypalButton.hidden = true;
+  ui.paypalCardButton.hidden = true;
+  ui.cardButton.hidden = true;
+  ui.inlinePaypalCheckout.hidden = true;
+  ui.checkoutButton.classList.remove("is-checkout-open");
+  ui.checkoutButton.setAttribute("aria-expanded", "false");
   setPaymentStatus("");
 }
 
@@ -3334,7 +3586,21 @@ function closePaymentFailure(returnToSupport = false) {
 }
 
 function openAlternateCheckout() {
-  const checkoutUrl = elements.alternateCardCheckoutLink?.href;
+  const ui = getCheckoutUi();
+  const rawCheckoutUrl = ui.alternateCardCheckoutLink?.href;
+  let checkoutUrl = rawCheckoutUrl;
+  if (rawCheckoutUrl && pendingDonation) {
+    const url = new URL(rawCheckoutUrl);
+    url.searchParams.set("amount", String(pendingDonation.amount || getActiveCheckoutAmount()));
+    url.searchParams.set("email", pendingDonation.email || getPaymentEmail());
+    url.searchParams.set("name", pendingDonation.name || ui.nameInput?.value.trim() || "");
+    if (isBookCheckout()) {
+      url.searchParams.set("productType", "book");
+      url.searchParams.set("productId", pendingDonation.productId || "");
+      url.searchParams.set("itemName", pendingDonation.bookTitle || "Digital book");
+    }
+    checkoutUrl = url.toString();
+  }
   if (!checkoutUrl || !elements.alternateCheckoutDialog || !elements.alternateCheckoutFrame) return;
 
   elements.alternateCheckoutFrame.src = checkoutUrl;
@@ -3834,6 +4100,7 @@ function handlePostCommentSubmit(event) {
 
 function getViewIdFromHash() {
   if (window.location.hash === "#posts") return "postsView";
+  if (window.location.hash === "#shop") return "shopView";
   return "aboutView";
 }
 
@@ -3976,6 +4243,16 @@ elements.decreaseSeedButton?.addEventListener("click", () => {
 elements.increaseSeedButton?.addEventListener("click", () => {
   stepSeedAmount(1);
 });
+elements.bookAmountInput?.addEventListener("input", () => {
+  elements.bookAmountError.textContent = "";
+  const amount = Number.parseFloat(elements.bookAmountInput.value) || 0;
+  elements.bookPriceLabel.textContent = `${money(amount)} Book`;
+});
+elements.bookAmountInput?.addEventListener("blur", () => {
+  setBookAmount(elements.bookAmountInput.value);
+});
+elements.decreaseBookAmountButton?.addEventListener("click", () => stepBookAmount(-1));
+elements.increaseBookAmountButton?.addEventListener("click", () => stepBookAmount(1));
 
 elements.adminCalendarPrev.addEventListener("click", () => {
   adminCalendarCursor = new Date(adminCalendarCursor.getFullYear(), adminCalendarCursor.getMonth() - 1, 1);
@@ -4123,22 +4400,38 @@ elements.showMoreButtons.forEach((button) => {
 });
 
 elements.supportForm.addEventListener("submit", submitDonation);
-elements.alternateCardCheckoutLink?.addEventListener("click", (event) => {
-  event.preventDefault();
-
-  if (elements.cardButton.classList.contains("is-disabled")) {
+elements.bookOrderForm?.addEventListener("submit", submitBookOrder);
+elements.bookGrid?.addEventListener("click", (event) => {
+  const previewButton = event.target.closest("[data-preview-book]");
+  if (previewButton) {
+    toggleBookPreview(previewButton.dataset.previewBook, previewButton);
     return;
   }
 
-  elements.cardButton.classList.add("is-disabled");
-  elements.alternateCardCheckoutLink.setAttribute("aria-disabled", "true");
-  elements.alternateCardCheckoutLink.setAttribute("tabindex", "-1");
-  elements.alternateCardCheckoutLink.blur();
-  openAlternateCheckout();
+  const buyButton = event.target.closest("[data-buy-book]");
+  if (buyButton) selectBook(buyButton.dataset.buyBook);
+});
+[elements.alternateCardCheckoutLink, elements.bookAlternateCardCheckoutLink].forEach((link) => {
+  link?.addEventListener("click", (event) => {
+    event.preventDefault();
+    const cardButton = link.closest(".card-choice");
+    if (cardButton?.classList.contains("is-disabled")) return;
+
+    cardButton?.classList.add("is-disabled");
+    link.setAttribute("aria-disabled", "true");
+    link.setAttribute("tabindex", "-1");
+    link.blur();
+    openAlternateCheckout();
+  });
 });
 elements.paymentEmailInput?.addEventListener("input", () => {
-  if (elements.emailError && isValidEmailAddress(getPaymentEmail())) {
+  if (elements.emailError && isValidEmailAddress(elements.paymentEmailInput.value)) {
     elements.emailError.textContent = "";
+  }
+});
+elements.bookEmailInput?.addEventListener("input", () => {
+  if (elements.bookEmailError && isValidEmailAddress(elements.bookEmailInput.value)) {
+    elements.bookEmailError.textContent = "";
   }
 });
 elements.nameInput?.addEventListener("input", () => {
