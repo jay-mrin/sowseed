@@ -18,7 +18,7 @@
   let submitting = false;
   const donorTokenKey = "sow-your-seed-dodo-donor-token";
 
-  const getUnitPrice = () => Number(totalOutput.dataset.unitPrice) || 7;
+  const getUnitPrice = () => Math.max(Number(totalOutput.dataset.unitPrice) || 11, 11);
   const updateTotal = () => {
     countOutput.value = String(seedCount);
     totalOutput.textContent = new Intl.NumberFormat("en-US", {

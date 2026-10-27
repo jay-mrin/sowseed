@@ -20,14 +20,15 @@ import {
   hashText,
 } from "../_shared/supabase.ts";
 
-const MIN_AMOUNT_CENTS = 700;
+const MIN_AMOUNT_CENTS = 1100;
+const LEGACY_BOOK_UNIT_CENTS = 700;
 
 type CaptureBody = {
   orderId?: string;
 };
 
 function seedCountFromAmount(amount: number) {
-  return Math.max(1, Math.round(amount / 7));
+  return Math.max(1, Math.round(amount / 11));
 }
 
 function captureFromOrder(order: Record<string, any>) {
@@ -437,14 +438,16 @@ Deno.serve(async (request) => {
         order,
       );
     }
-    if (capturedAmountCents < MIN_AMOUNT_CENTS) {
+    if (capturedAmountCents < (isBookOrder ? LEGACY_BOOK_UNIT_CENTS : MIN_AMOUNT_CENTS)) {
       return errorResponse(
-        "PayPal captured amount is below the $7 minimum.",
+        isBookOrder
+          ? "PayPal captured amount is below the $7 book minimum."
+          : "PayPal captured amount is below the $11 seed minimum.",
         422,
         order,
       );
     }
-    if (isBookOrder && capturedAmountCents % MIN_AMOUNT_CENTS !== 0) {
+    if (isBookOrder && capturedAmountCents % LEGACY_BOOK_UNIT_CENTS !== 0) {
       return errorResponse(
         "Book payments must be in multiples of $7.",
         422,

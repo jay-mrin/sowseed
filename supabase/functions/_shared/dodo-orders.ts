@@ -172,7 +172,7 @@ export async function finalizeDodoPayment(paymentId: string, presentedDonorToken
     }
     const fortune = fortunes[Math.floor(Math.random() * fortunes.length)];
     fortuneMessage = fortune.message;
-    const seedCount = Math.max(1, Number(metadata.seed_count) || Math.round(expectedCents / 700));
+    const seedCount = Math.max(1, Number(metadata.seed_count) || Math.round(expectedCents / 1100));
     const rawPayment = {
       provider: "Dodo Payments",
       routing: { route: "standard" },

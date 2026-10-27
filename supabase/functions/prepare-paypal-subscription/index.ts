@@ -23,7 +23,7 @@ type PrepareBody = {
   paymentRoute?: string;
 };
 
-const MIN_AMOUNT_CENTS = 700;
+const MIN_AMOUNT_CENTS = 1100;
 const IST_OFFSET_MINUTES = 330;
 
 function isValidEmail(value: string) {
@@ -145,7 +145,7 @@ Deno.serve(async (request) => {
     const settings = settingsRow?.settings && typeof settingsRow.settings === "object"
       ? settingsRow.settings as Record<string, unknown>
       : {};
-    const seedPriceCents = Math.round(Math.max(Number(settings.seedPrice) || 7, 1) * 100);
+    const seedPriceCents = Math.round(Math.max(Number(settings.seedPrice) || 11, 11) * 100);
     if (amountCents !== seedCount * seedPriceCents) {
       return errorResponse("Weekly sowing requires a whole seed count at the current seed price.", 422);
     }

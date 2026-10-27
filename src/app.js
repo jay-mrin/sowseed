@@ -8,8 +8,8 @@ const ADMIN_SESSION_KEY = "sow-your-seed:admin-session";
 const DONOR_TOKEN_KEY = "sow-your-seed:donor-token";
 const VISITOR_KEY_KEY = "sow-your-seed:visitor-key";
 const ADMIN_PASSWORD = "sowseed";
-const SEED_DOLLAR_VALUE = 7;
-const MIN_DONATION_AMOUNT = 7;
+const SEED_DOLLAR_VALUE = 11;
+const MIN_DONATION_AMOUNT = 11;
 const PAYPAL_SDK_LOAD_TIMEOUT_MS = 8000;
 const TOP_BRAND_TITLE = "Seed Garden";
 const MINIMAL_SUPPORT_TITLE = "Buy a Seed to Sow for the Love 💗💕";
@@ -141,7 +141,7 @@ const FORTUNE_MESSAGES = [
 const DEFAULT_SETTINGS = {
   profileTitle: "Sow Your Seed 💫",
   followersText: "167 Followers",
-  seedPrice: 7,
+  seedPrice: 11,
   aboutTitle: "About",
   aboutCollapsed: "🌱✨ Personalised Writing for Your Journey ✨\nOrder a writing made for your request and delivered by email...",
   aboutExpanded: "Share your prayer, intention, or message to order a heartfelt writing prepared especially for you and delivered by email.",
@@ -1713,7 +1713,9 @@ function renderRecentDonations() {
     ? donations
         .map((donation) => {
           const name = donation.anonymous ? "Private customer" : donation.name || "Seed Garden customer";
-          const seedCount = getSeedCountFromAmount(donation.amount);
+          const seedCount = Number(donation.seedCount) > 0
+            ? Number(donation.seedCount)
+            : getSeedCountFromAmount(donation.amount);
           const createdAt = donation.createdAt || new Date().toISOString();
 
           return `

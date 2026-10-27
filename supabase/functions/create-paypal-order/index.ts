@@ -26,7 +26,7 @@ function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-const MIN_AMOUNT_CENTS = 700;
+const MIN_AMOUNT_CENTS = 1100;
 
 Deno.serve(async (request) => {
   const options = handleOptions(request);
@@ -47,7 +47,7 @@ Deno.serve(async (request) => {
       supporterMessage;
 
     if (amountCents < MIN_AMOUNT_CENTS) {
-      return errorResponse("Amount must be at least $7.", 422);
+      return errorResponse("Amount must be at least $11.", 422);
     }
     if (!isValidEmail(contactEmail)) {
       return errorResponse(

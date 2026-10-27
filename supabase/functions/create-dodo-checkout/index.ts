@@ -40,9 +40,9 @@ Deno.serve(async (request) => {
     const { data: settingsRow, error: settingsError } = await supabase
       .from("site_settings").select("settings").eq("id", true).maybeSingle();
     if (settingsError) throw settingsError;
-    const unitPrice = Number(settingsRow?.settings?.seedPrice) || 7;
+    const unitPrice = Math.max(Number(settingsRow?.settings?.seedPrice) || 11, 11);
     const amountCents = Math.round(unitPrice * seedCount * 100);
-    if (amountCents < 700) return errorResponse("Amount must be at least $7.", 422);
+    if (amountCents < 1100) return errorResponse("Amount must be at least $11.", 422);
 
     attemptId = crypto.randomUUID();
     const supporterMessage = message || getRandomOrderRequest();

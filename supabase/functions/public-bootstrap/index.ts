@@ -98,7 +98,8 @@ async function loadPublicContent(
         donation.raw_payment && typeof donation.raw_payment === "object"
           ? donation.raw_payment
           : {};
-      return rawPayment.mode !== "test" && !["book", "bundle"].includes(rawPayment.product?.type);
+      return rawPayment.mode !== "test" &&
+        rawPayment.product?.type !== "book" && rawPayment.product?.type !== "bundle";
     })
     .slice(0, 50);
   const seedComments = (seedCommentsResult.data || []).filter(
@@ -125,6 +126,7 @@ async function loadPublicContent(
       id: donation.id,
       name: donation.display_name,
       amount: Number(donation.amount),
+      seedCount: donation.seed_count,
       frequency: donation.frequency,
       message: donation.supporter_message,
       createdAt: donation.created_at,
