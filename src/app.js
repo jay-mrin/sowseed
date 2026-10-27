@@ -1704,6 +1704,7 @@ function renderRecentDonations() {
   }
 
   const donations = state.donations
+    .filter((donation) => donation.bundleOrder !== true)
     .slice()
     .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
     .slice(0, 50);
@@ -1886,6 +1887,7 @@ function renderCalendarDetails(context) {
           const frequency = donation.frequency === "weekly" ? "Weekly" : donation.frequency === "monthly" ? "Monthly" : "One time";
           const createdAt = donation.createdAt || new Date().toISOString();
           const order = getDigitalOrder(donation);
+          const isBundleOrder = donation.bundleOrder === true;
           const isBookOrder = String(order?.itemName || "").startsWith("Digital Book -");
           const orderNumber = getDigitalOrderValue(
             donation,
@@ -1926,11 +1928,11 @@ function renderCalendarDetails(context) {
                 <span><strong>Transaction ID</strong>${escapeHtml(captureId)}</span>
                 <span><strong>Contact email</strong>${escapeHtml(contactEmail || "Not provided")}</span>
                 <span><strong>Item</strong>${escapeHtml(itemLabel)}</span>
-                <span><strong>Status</strong>${escapeHtml(getFulfillmentStatusLabel(status, order?.itemName))}</span>
-                ${context.isAdminPortal ? `<span><strong>Reedemed</strong>${redeemedBookTitle ? escapeHtml(redeemedBookTitle) : "&#160;"}</span>` : ""}
+                ${isBundleOrder ? "" : `<span><strong>Status</strong>${escapeHtml(getFulfillmentStatusLabel(status, order?.itemName))}</span>`}
+                ${context.isAdminPortal && !isBundleOrder ? `<span><strong>Reedemed</strong>${redeemedBookTitle ? escapeHtml(redeemedBookTitle) : "&#160;"}</span>` : ""}
               </div>
               ${context.isAdminPortal ? "" : `<p class="admin-order-request"><strong>${isBookOrder ? "Customer message" : "Request"}:</strong> ${escapeHtml(request)}</p>`}
-              ${donation.isPreview ? "" : `<label class="admin-fulfillment-field">
+              ${donation.isPreview || isBundleOrder ? "" : `<label class="admin-fulfillment-field">
                 <span>Fulfillment note</span>
                 <textarea data-fulfillment-note="${escapeHtml(donation.id)}" placeholder="Write proof notes, delivery details, or custom writing summary.">${escapeHtml(note)}</textarea>
               </label>

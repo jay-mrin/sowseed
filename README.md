@@ -87,6 +87,8 @@ Use the deployed website origin for `SITE_ORIGIN` outside local development.
 
 In Dodo Payments, create a one-time USD product, enable **Pay What You Want**, and set its minimum to $7. Configure the deployed `dodo-webhook` URL for `payment.succeeded`, `payment.failed`, and `payment.cancelled` events. Dodo checkout sessions and verified orders are always scoped to the Admin portal.
 
+The four library bundle buttons use Dodo's live product links. A verified `payment.succeeded` webhook for one of those product IDs creates an order in the existing Admin order calendar with the bundle name as Item. Bundle orders are excluded from public seed activity and the seed meter; their calendar cards omit status, redeemed ebook, and writing fulfillment controls. No new database migration is required. Deploy the updated `dodo-webhook`, `admin-donations`, and `public-bootstrap` functions. The live Dodo webhook must point to the deployed `dodo-webhook` function, and the deployed `DODO_PAYMENTS_ENV` and `DODO_PAYMENTS_API_KEY` must use live mode so the webhook can verify those payments.
+
 7. Deploy functions:
 
 ```bash

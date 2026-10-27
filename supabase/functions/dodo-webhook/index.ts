@@ -1,6 +1,7 @@
 import { errorResponse, handleOptions, jsonResponse } from "../_shared/http.ts";
 import { verifyDodoWebhook } from "../_shared/dodo.ts";
 import { finalizeDodoPayment } from "../_shared/dodo-orders.ts";
+import { recordDodoBundlePayment } from "../_shared/dodo-bundle-orders.ts";
 import { getSupabaseAdmin } from "../_shared/supabase.ts";
 
 Deno.serve(async (request) => {
@@ -29,7 +30,9 @@ Deno.serve(async (request) => {
     const eventType = String(event.type || "");
     const paymentId = String(event.data?.payment_id || "").trim();
     if (eventType === "payment.succeeded" && paymentId) {
-      await finalizeDodoPayment(paymentId);
+      if (!await recordDodoBundlePayment(paymentId)) {
+        await finalizeDodoPayment(paymentId);
+      }
     } else if (["payment.failed", "payment.cancelled"].includes(eventType)) {
       const sessionId = String(event.data?.checkout_session_id || "").trim();
       if (sessionId) {

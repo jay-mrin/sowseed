@@ -98,7 +98,7 @@ async function loadPublicContent(
         donation.raw_payment && typeof donation.raw_payment === "object"
           ? donation.raw_payment
           : {};
-      return rawPayment.mode !== "test" && rawPayment.product?.type !== "book";
+      return rawPayment.mode !== "test" && !["book", "bundle"].includes(rawPayment.product?.type);
     })
     .slice(0, 50);
   const seedComments = (seedCommentsResult.data || []).filter(

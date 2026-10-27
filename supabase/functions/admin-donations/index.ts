@@ -454,6 +454,7 @@ Deno.serve(async (request) => {
         visibilityScope: donation.visibility_scope || "public",
         fortuneMessage: donation.fortune_message,
         rawPayment: donation.raw_payment,
+        bundleOrder: donation.raw_payment?.product?.type === "bundle",
         digitalOrder: mapDigitalOrder(donation.digital_orders),
         createdAt: donation.created_at,
       })),
