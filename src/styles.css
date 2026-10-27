@@ -3646,6 +3646,24 @@ legend::after {
 
 .shop-collection-title { font-size: 10px; letter-spacing: .1em; margin-bottom: 16px; }
 
+.shop-bundles { margin-bottom: 44px; }
+.shop-bundles-heading { border-color: #b3945d; }
+.shop-bundle-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.shop-bundle { display: flex; flex-direction: column; min-width: 0; min-height: 260px; padding: 22px; border: 1px solid #e5dcd6; border-top: 4px solid #aaa6a0; border-radius: 10px; background: #fffdf7; box-shadow: 0 6px 18px #38291e08; }
+.shop-bundle-peach { border-top-color: #c47d65; }
+.shop-bundle-blue { border-top-color: #91aab8; }
+.shop-bundle-gold { border-top-color: #b3945d; }
+.shop-bundle-eyebrow { margin: 0 0 13px; color: #6d6047; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.shop-bundle h4 { margin: 0 0 4px; font-family: "Cormorant Garamond", Georgia, serif; font-size: clamp(22px, 2vw, 27px); line-height: 1.1; }
+.shop-bundle-subtitle { margin: 0 0 12px; color: #8b631f; font-size: 12px; font-weight: 700; }
+.shop-bundle-description { margin: 0 0 22px; color: #6d6047; font-size: 13px; line-height: 1.5; }
+.shop-bundle-footer { display: flex; align-items: end; justify-content: space-between; gap: 10px; margin-top: auto; }
+.shop-bundle-footer strong { color: #8b631f; font-size: 23px; line-height: 1; }
+.shop-bundle-footer a { color: #664c20; font-size: 12px; font-weight: 700; text-align: right; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.shop-bundle-footer a:focus-visible { outline: 2px solid #8b631f; outline-offset: 3px; }
+@media (max-width: 1000px) { .shop-bundle-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 550px) { .shop-bundle-grid { grid-template-columns: 1fr; } .shop-bundle { min-height: 0; } }
+
 .home-welcome { width: min(980px, calc(100% - 32px)); margin: 0 auto; padding: clamp(44px, 9vw, 110px) 0; }
 .home-welcome .section-kicker { margin: 0 0 10px; }
 .home-welcome h2 { max-width: 720px; margin: 0; font-family: "Cormorant Garamond", Georgia, serif; font-size: clamp(40px, 7vw, 76px); line-height: .98; }
