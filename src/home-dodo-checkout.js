@@ -13,12 +13,30 @@
   const paymentStatus = document.querySelector("#dodoPaymentStatus");
   const emailInput = document.querySelector("#dodoCustomerEmail");
   const nameInput = document.querySelector("#dodoCustomerName");
-  const messageInput = document.querySelector("#dodoCustomerMessage");
+  const bookChoice = document.querySelector("#dodoBookChoice");
+  const books = [...document.querySelectorAll("#libraryView .shop-book")].map((book) => ({
+    title: book.querySelector("h4")?.textContent.trim() || "",
+    minimumSeeds: Number.parseInt(book.querySelector(".shop-seed-cost")?.textContent.match(/\d+/)?.[0] || "", 10),
+  })).filter((book) => book.title && Number.isSafeInteger(book.minimumSeeds));
   let seedCount = 1;
   let submitting = false;
   const donorTokenKey = "sow-your-seed-dodo-donor-token";
 
   const getUnitPrice = () => Math.max(Number(totalOutput.dataset.unitPrice) || 11, 11);
+  const makeOption = (label, value) => {
+    const option = document.createElement("option");
+    option.textContent = label;
+    option.value = value;
+    return option;
+  };
+  const updateBookChoices = () => {
+    const previous = bookChoice.value;
+    bookChoice.replaceChildren(makeOption("Choose an ebook for your seeds", ""));
+    for (const book of books.filter((item) => item.minimumSeeds <= seedCount)) {
+      bookChoice.add(makeOption(`${book.title} (${book.minimumSeeds}+ ${book.minimumSeeds === 1 ? "Seed" : "Seeds"})`, book.title));
+    }
+    if ([...bookChoice.options].some((option) => option.value === previous)) bookChoice.value = previous;
+  };
   const updateTotal = () => {
     countOutput.value = String(seedCount);
     totalOutput.textContent = new Intl.NumberFormat("en-US", {
@@ -28,6 +46,7 @@
       maximumFractionDigits: 2,
     }).format(getUnitPrice() * seedCount);
     totalSeedsOutput.textContent = `(${seedCount} ${seedCount === 1 ? "Seed" : "Seeds"})`;
+    updateBookChoices();
   };
 
   const setStatus = (message, isError = false) => {
@@ -137,7 +156,7 @@
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
-    if (submitting || !emailInput.reportValidity()) return;
+    if (submitting || !emailInput.reportValidity() || !bookChoice.reportValidity()) return;
 
     setStatus("");
     paymentPanel.hidden = false;
@@ -147,7 +166,7 @@
   });
 
   dodoPayButton.addEventListener("click", async () => {
-    if (submitting || !emailInput.reportValidity()) return;
+    if (submitting || !emailInput.reportValidity() || !bookChoice.reportValidity()) return;
 
     setStatus("");
     setLoading(true);
@@ -161,7 +180,7 @@
           seedCount,
           email: emailInput.value.trim(),
           name: nameInput.value.trim(),
-          message: messageInput.value.trim(),
+          message: `Selected ebook: ${bookChoice.value}`,
           donorAccessToken,
         },
       });

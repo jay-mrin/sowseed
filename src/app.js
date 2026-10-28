@@ -11,7 +11,7 @@ const ADMIN_PASSWORD = "sowseed";
 const SEED_DOLLAR_VALUE = 11;
 const MIN_DONATION_AMOUNT = 11;
 const PAYPAL_SDK_LOAD_TIMEOUT_MS = 8000;
-const TOP_BRAND_TITLE = "Seed Garden";
+const TOP_BRAND_TITLE = "Christ Garden Library";
 const MINIMAL_SUPPORT_TITLE = "Buy a Seed to Sow for the Love 💗💕";
 const LEGACY_SUPPORT_TITLES = new Set([
   "Choose a Seed Writing from the Seed Garden 🌱💗",
@@ -139,7 +139,7 @@ const FORTUNE_MESSAGES = [
 ];
 
 const DEFAULT_SETTINGS = {
-  profileTitle: "Sow Your Seed 💫",
+  profileTitle: "Christ Garden Library",
   followersText: "167 Followers",
   seedPrice: 11,
   aboutTitle: "About",
@@ -380,6 +380,10 @@ function normalizeSettings(settings) {
 
   if (LEGACY_SUPPORT_TITLES.has(next.supportTitle)) {
     next.supportTitle = defaults.supportTitle;
+  }
+
+  if (next.profileTitle === "Sow Your Seed 💫") {
+    next.profileTitle = defaults.profileTitle;
   }
 
   for (const key of ["aboutCollapsed", "aboutExpanded", "topicLabel"]) {
@@ -1670,7 +1674,7 @@ function renderParagraphs(element, value) {
 function renderSettings() {
   const settings = state.settings;
 
-  document.title = `${TOP_BRAND_TITLE} | Custom Order Writing`;
+  document.title = TOP_BRAND_TITLE;
   elements.brandTitle.textContent = TOP_BRAND_TITLE;
   elements.profileTitle.textContent = settings.profileTitle;
   elements.followersText.textContent = settings.followersText;
