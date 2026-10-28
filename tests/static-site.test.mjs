@@ -30,5 +30,7 @@ test("book request form and Library use the same eligible book data", () => {
   assert.equal(books.filter(([, , minimum]) => Number(minimum) <= 4).length, 5);
   assert.match(html, /id="dodoBookChoice" required/);
   assert.match(checkout, /item\.minimumSeeds <= seedCount/);
-  assert.match(checkout, /mailto:sowyourseed@christgarden\.church/);
+  assert.match(checkout, /checkout\.dodopayments\.com\/buy\/pdt_0Nq0zMUDbiKtD9EKOLkMD/);
+  assert.match(checkout, /searchParams\.set\("quantity", String\(seedCount\)\)/);
+  assert.match(checkout, /searchParams\.set\("metadata_bookTitle", bookChoice\.value\)/);
 });

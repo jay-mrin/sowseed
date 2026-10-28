@@ -8,6 +8,7 @@
   const bookChoice = document.querySelector("#dodoBookChoice");
   const emailInput = document.querySelector("#dodoCustomerEmail");
   const nameInput = document.querySelector("#dodoCustomerName");
+  const seedPaymentLink = "https://checkout.dodopayments.com/buy/pdt_0Nq0zMUDbiKtD9EKOLkMD?quantity=1";
   const books = [...document.querySelectorAll("#libraryView .shop-book")].map((book) => ({
     title: book.querySelector("h4")?.textContent.trim() || "",
     minimumSeeds: Number.parseInt(book.querySelector(".shop-seed-cost")?.textContent.match(/\d+/)?.[0] || "", 10),
@@ -54,15 +55,13 @@
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     if (!emailInput.reportValidity() || !bookChoice.reportValidity()) return;
-    const subject = `Christ Garden Library request: ${bookChoice.value}`;
-    const body = [
-      `Ebook: ${bookChoice.value}`,
-      `Seeds: ${seedCount}`,
-      `Seed value shown: ${totalOutput.textContent}`,
-      `Name: ${nameInput.value.trim() || "Not provided"}`,
-      `Email: ${emailInput.value.trim()}`,
-    ].join("\n");
-    window.location.href = `mailto:sowyourseed@christgarden.church?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    const checkoutUrl = new URL(seedPaymentLink);
+    checkoutUrl.searchParams.set("quantity", String(seedCount));
+    checkoutUrl.searchParams.set("email", emailInput.value.trim());
+    checkoutUrl.searchParams.set("metadata_bookTitle", bookChoice.value);
+    checkoutUrl.searchParams.set("metadata_seedCount", String(seedCount));
+    if (nameInput.value.trim()) checkoutUrl.searchParams.set("fullName", nameInput.value.trim());
+    window.location.assign(checkoutUrl.toString());
   });
 
   update();
