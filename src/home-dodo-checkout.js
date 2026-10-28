@@ -6,7 +6,6 @@
   const totalOutput = document.querySelector("#dodoTotalAmount");
   const totalSeedsOutput = document.querySelector("#dodoTotalSeeds");
   const bookChoice = document.querySelector("#dodoBookChoice");
-  const emailInput = document.querySelector("#dodoCustomerEmail");
   const nameInput = document.querySelector("#dodoCustomerName");
   const seedPaymentLink = "https://checkout.dodopayments.com/buy/pdt_0Nq0zMUDbiKtD9EKOLkMD?quantity=1";
   const books = [...document.querySelectorAll("#libraryView .shop-book")].map((book) => ({
@@ -54,10 +53,9 @@
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
-    if (!emailInput.reportValidity() || !bookChoice.reportValidity()) return;
+    if (!bookChoice.reportValidity()) return;
     const checkoutUrl = new URL(seedPaymentLink);
     checkoutUrl.searchParams.set("quantity", String(seedCount));
-    checkoutUrl.searchParams.set("email", emailInput.value.trim());
     checkoutUrl.searchParams.set("metadata_bookTitle", bookChoice.value);
     checkoutUrl.searchParams.set("metadata_seedCount", String(seedCount));
     if (nameInput.value.trim()) checkoutUrl.searchParams.set("fullName", nameInput.value.trim());

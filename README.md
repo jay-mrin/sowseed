@@ -14,7 +14,7 @@ Open `http://127.0.0.1:5173`.
 ## Current order flow
 
 - The Home form filters ebooks by the selected seed count. At 4 seeds it offers books marked 1, 2, 3, or 4 seeds.
-- **Continue to Dodo Payment** opens the Seed product's hosted checkout with the selected seed count as `quantity`. The visitor's email and chosen book are passed through the payment link.
+- **Get Book** opens the Seed product's hosted checkout with the selected seed count as `quantity` and the chosen book as metadata. Dodo collects the customer's email during checkout.
 - The four bundle buttons in the Library open their hosted Dodo checkout pages.
 - The first ebook in each series has a free PDF preview and download.
 
