@@ -8,7 +8,7 @@ document.querySelectorAll(".shop-get-button").forEach((button) => {
     }
     status.textContent = button.closest(".shop-book")?.dataset.bookNumber === "1"
       ? "This first ebook in the series is free. Open its cover to read the preview."
-      : "To receive this ebook as a digital download, sow the required number of Seeds and choose the ebook. We’ll also send it to you by email.";
+      : "Choose the required number of Seeds on Home, select this ebook, and email your request.";
     status.hidden = false;
   });
 });

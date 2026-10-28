@@ -1,6 +1,7 @@
 const browserGlobals = Object.fromEntries(
   [
     "Blob",
+    "CustomEvent",
     "FileReader",
     "FormData",
     "Image",
@@ -21,7 +22,7 @@ const browserGlobals = Object.fromEntries(
 
 export default [
   {
-    ignores: ["node_modules/**", "supabase/.branches/**", "supabase/.temp/**"],
+    ignores: ["node_modules/**"],
   },
   {
     files: ["src/*.js"],

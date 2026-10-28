@@ -5,26 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Seed Garden is a personalised digital-writing platform with secure online checkout and email delivery."
+      content="Browse Christ Garden Library ebooks, read free previews, and request a book by email."
     />
     <title>Christ Garden Library</title>
     <link rel="icon" type="image/svg+xml" href="assets/seed-favicon.svg?v=1" />
     <link rel="shortcut icon" type="image/svg+xml" href="assets/seed-favicon.svg?v=1" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preconnect" href="https://www.paypal.com" />
-    <link rel="preconnect" href="https://www.paypalobjects.com" />
     <link
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="src/styles.css?v=159" />
+    <link rel="stylesheet" href="src/styles.css?v=160" />
   </head>
   <body class="app-loading">
-    <div class="app-loader" id="appLoader" role="status" aria-live="polite" aria-label="Loading Seed Garden">
+    <div class="app-loader" id="appLoader" role="status" aria-live="polite" aria-label="Loading Christ Garden Library">
       <div class="app-loader-card">
         <div class="app-loader-seed" aria-hidden="true">🌱</div>
-        <p>Welcome to Seed Garden✨</p>
+        <p>Welcome to Christ Garden Library ✨</p>
       </div>
     </div>
     <header class="topbar">
@@ -32,239 +30,7 @@
         <img class="brand-avatar" src="assets/golden-cross-seedling-emblem.png" width="512" height="512" decoding="async" alt="Golden cross and seedling emblem" />
         <span class="brand-title" id="brandTitle">Christ Garden Library</span>
       </a>
-      <button class="menu-button" id="adminMenuButton" type="button" aria-label="Open admin portal" aria-controls="adminPanel" aria-expanded="false">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M4 7h16M4 12h16M4 17h16" />
-        </svg>
-      </button>
     </header>
-
-    <dialog class="admin-login-dialog" id="adminLoginDialog" aria-labelledby="adminLoginTitle">
-      <form class="admin-login-card" id="adminLoginForm">
-        <div>
-          <p class="section-kicker">Admin login</p>
-          <h2 id="adminLoginTitle">Enter admin password</h2>
-        </div>
-        <label>
-          <span>Email</span>
-          <input id="adminEmailInput" type="email" autocomplete="email" placeholder="admin@example.com" />
-        </label>
-        <label>
-          <span>Password</span>
-          <input id="adminPasswordInput" type="password" autocomplete="current-password" placeholder="Password" />
-          <small id="adminPasswordError" class="error-message"></small>
-        </label>
-        <div class="admin-login-actions">
-          <button class="button button-secondary" id="cancelAdminLoginButton" type="button">Cancel</button>
-          <button class="button button-primary" type="submit">Enter portal</button>
-        </div>
-      </form>
-    </dialog>
-
-    <dialog class="fulfillment-dialog" id="fulfillmentDialog" aria-labelledby="fulfillmentDialogTitle">
-      <form class="fulfillment-card" id="fulfillmentForm">
-        <div>
-          <p class="section-kicker">Order fulfillment</p>
-          <h2 id="fulfillmentDialogTitle">When was this order fulfilled?</h2>
-          <p class="fulfillment-dialog-copy">Choose the date and local time the personalised writing was completed and delivered.</p>
-        </div>
-        <div class="fulfillment-dialog-fields">
-          <label>
-            <span>Fulfilled date</span>
-            <input id="fulfillmentDateInput" type="date" required />
-          </label>
-          <label>
-            <span>Fulfilled time</span>
-            <input id="fulfillmentTimeInput" type="time" required />
-          </label>
-        </div>
-        <div class="fulfillment-dialog-actions">
-          <button class="button button-secondary" id="cancelFulfillmentButton" type="button">Cancel</button>
-          <button class="button button-primary" type="submit">Mark fulfilled</button>
-        </div>
-      </form>
-    </dialog>
-
-    <div class="admin-backdrop" id="adminBackdrop" hidden></div>
-    <section class="admin-panel" id="adminPanel" aria-labelledby="adminTitle" aria-hidden="true">
-      <div class="admin-panel-header">
-        <div>
-          <p class="section-kicker">Admin portal</p>
-          <h2 id="adminTitle">Order controls</h2>
-        </div>
-        <div class="admin-header-actions">
-          <button class="button button-secondary admin-refresh-button" id="refreshAdminButton" type="button">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M21 12a9 9 0 0 1-15.3 6.4L3 16" />
-              <path d="M3 21v-5h5" />
-              <path d="M3 12a9 9 0 0 1 15.3-6.4L21 8" />
-              <path d="M21 3v5h-5" />
-            </svg>
-            <span>Reload data</span>
-          </button>
-          <button class="icon-button admin-close-button" id="closeAdminButton" type="button" aria-label="Close admin portal">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="m6 6 12 12M18 6 6 18" />
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <div class="admin-status" id="adminActionStatus" role="status" aria-live="polite" hidden></div>
-
-      <form class="admin-form admin-portal-grid" id="adminForm">
-
-
-        <section class="admin-section admin-donations">
-          <div class="admin-donation-heading">
-            <h3 id="adminDonationHeading">1. Admin PayPal order calendar</h3>
-          </div>
-          <section class="admin-calendar" aria-labelledby="adminCalendarTitle">
-            <div class="admin-calendar-header">
-              <button
-                class="admin-calendar-nav"
-                id="adminCalendarPrev"
-                type="button"
-                aria-label="Previous order month"
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="m15 18-6-6 6-6" />
-                </svg>
-              </button>
-              <h4 id="adminCalendarTitle">Custom order calendar</h4>
-              <button
-                class="admin-calendar-nav"
-                id="adminCalendarNext"
-                type="button"
-                aria-label="Next order month"
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="m9 18 6-6-6-6" />
-                </svg>
-              </button>
-            </div>
-            <div class="admin-calendar-weekdays" aria-hidden="true">
-              <span>Sun</span>
-              <span>Mon</span>
-              <span>Tue</span>
-              <span>Wed</span>
-              <span>Thu</span>
-              <span>Fri</span>
-              <span>Sat</span>
-            </div>
-            <div class="admin-calendar-grid" id="adminCalendarGrid" role="grid" aria-label="Daily Admin PayPal order records"></div>
-            <div class="admin-calendar-details" id="adminCalendarDetails" aria-live="polite"></div>
-            <div class="admin-calendar-summary" id="adminCalendarSummary" aria-live="polite"></div>
-          </section>
-        </section>
-
-        <div class="admin-right-column">
-          <section class="admin-section admin-settings-section">
-            <h3>2. Site settings</h3>
-            <div class="admin-grid">
-              <label>
-                <span>Seed price ($)</span>
-                <input id="adminSeedPrice" type="number" min="11" step="1" />
-              </label>
-            </div>
-            <label class="admin-toggle">
-              <input id="adminBlessingWallEnabled" type="checkbox" />
-              <span>
-                <strong>Blessing Wall</strong>
-                Show or hide the public community blessing comments section.
-              </span>
-            </label>
-            <div class="admin-actions">
-              <button class="button button-primary" id="saveAdminButton" type="submit">Save site settings</button>
-            </div>
-          </section>
-
-          <section class="admin-section admin-analytics-section">
-            <details class="admin-analytics-details">
-              <summary class="admin-analytics-summary">
-                <span><strong id="adminAnalyticsTitle">3. Admin checkout activity</strong><small>Page visits, checkout activity, and payment history</small></span>
-                <span class="analytics-chevron" aria-hidden="true">⌄</span>
-              </summary>
-              <div class="admin-analytics-content">
-                <div class="admin-analytics-heading">
-                  <p id="adminAnalyticsDescription">All page visits and Admin checkout activity from the last 24 hours. Payment records are private to this account.</p>
-                  <button class="button button-secondary admin-analytics-reset-button" id="resetAdminAnalyticsButton" type="button">Reset data</button>
-                </div>
-                <div class="admin-analytics-grid">
-                  <article class="admin-page-views-card">
-                    <span>No. of page visits</span>
-                    <div class="admin-analytics-value-row">
-                      <strong id="adminPageViews24h">0</strong>
-                      <button class="admin-page-view-minus" id="decrementPageViewButton" type="button" aria-label="Subtract one page view" title="Subtract one page view" hidden>−</button>
-                    </div>
-                    <small id="adminPageViewsLabel">All checkout-route views last 24 hours</small>
-                  </article>
-                  <article>
-                    <span>No. who started payment</span>
-                    <strong id="adminPaymentStarts24h">0</strong>
-                    <small id="adminPaymentStartsLabel">Persisted Admin checkout attempts</small>
-                  </article>
-                  <article>
-                    <span>No. of payments completed</span>
-                    <strong id="adminPaymentsCompleted24h">0</strong>
-                    <small id="adminPaymentsCompletedLabel">Server-verified Admin payments</small>
-                  </article>
-                </div>
-                <div class="admin-payment-attempts">
-                  <div class="admin-payment-attempts-heading">
-                    <h4>People who started payment</h4>
-                    <span>Name, email, amount, and completion status</span>
-                  </div>
-                  <div class="admin-payment-attempt-list" id="adminPaymentAttemptList" aria-live="polite">
-                    <p class="admin-payment-attempt-empty">No Admin payment attempts in this window.</p>
-                  </div>
-                </div>
-                <p class="admin-analytics-updated" id="adminAnalyticsUpdated">Waiting for analytics...</p>
-              </div>
-            </details>
-          </section>
-
-        <section class="admin-section admin-super-checkout-section" id="adminSuperCheckoutSection" hidden>
-          <details class="checkout-routing-details">
-            <summary class="admin-super-checkout-heading">
-              <span class="checkout-routing-summary-copy">
-                <strong>Checkout display</strong>
-                <small>Choose which checkout forms appear on Home</small>
-              </span>
-              <span class="checkout-routing-chevron" aria-hidden="true">⌄</span>
-            </summary>
-            <div class="checkout-routing-content">
-              <div class="checkout-routing-override">
-                <label class="admin-toggle checkout-routing-toggle">
-                  <input id="dodoCheckoutVisible" type="checkbox" checked />
-                  <span>
-                    <strong>Show Dodo checkout on Home</strong>
-                    Controls whether the Dodo checkout form is visible to visitors.
-                  </span>
-                </label>
-                <label class="admin-toggle checkout-routing-toggle">
-                  <input id="paypalCheckoutVisible" type="checkbox" checked />
-                  <span>
-                    <strong>Show PayPal checkout on Home</strong>
-                    Controls whether the PayPal checkout form is visible to visitors.
-                  </span>
-                </label>
-                <label class="admin-toggle checkout-routing-toggle">
-                  <input id="alternateCardCheckoutVisible" type="checkbox" checked />
-                  <span>
-                    <strong>Show Debit or Credit Card button</strong>
-                    Controls this card checkout button in both Dodo and PayPal checkout.
-                  </span>
-                </label>
-              </div>
-              <button class="button button-primary" id="saveCheckoutDisplayButton" type="button">Save display settings</button>
-            </div>
-          </details>
-        </section>
-        </div>
-
-      </form>
-    </section>
 
     <main id="home">
       <section class="creator-shell">
@@ -272,23 +38,22 @@
           <img class="cover-image" src="assets/sower-sunlit-cover.jpg" width="2048" height="768" decoding="async" alt="A sower scattering seeds across a sunlit landscape" />
         </div>
 
-        <section class="profile-bar" aria-label="Seed Garden profile">
+        <section class="profile-bar" aria-label="Christ Garden Library profile">
           <div class="profile-copy">
             <h1 id="profileTitle">Christ Garden Library</h1>
-            <p id="followersText">167 Followers</p>
           </div>
         </section>
 
-        <nav class="profile-tabs" aria-label="Seed Garden sections">
+        <nav class="profile-tabs" aria-label="Christ Garden Library sections">
           <a class="active" href="#home" data-section-tab="homeView" aria-current="page">Home</a>
           <a href="#library" data-section-tab="libraryView">Library</a>
           <a href="#about" data-section-tab="aboutView">About</a>
         </nav>
       </section>
 
-      <section class="section-view is-active home-checkout-view" id="homeView" data-section-view aria-label="Seed checkout">
+      <section class="section-view is-active home-checkout-view" id="homeView" data-section-view aria-label="Book requests">
 
-        <section class="dodo-checkout-card" aria-label="Seed selection and checkout details">
+        <section class="dodo-checkout-card" aria-label="Seed selection and book request">
           <form id="dodoCheckoutForm" novalidate>
             <div class="dodo-checkout-summary">
               <div class="dodo-quantity-control" aria-label="Seed quantity">
@@ -296,115 +61,19 @@
                 <strong><output id="dodoSeedCount">1</output> <span>🌱 Seeds</span></strong>
                 <button type="button" id="dodoIncreaseSeeds" aria-label="Add one seed">+</button>
               </div>
-              <div class="dodo-total"><span>Total Amount</span><strong id="dodoTotalAmount">$11.00</strong><small id="dodoTotalSeeds">(1 Seed)</small></div>
+              <div class="dodo-total"><span>Seed value</span><strong id="dodoTotalAmount">$11.00</strong><small id="dodoTotalSeeds">(1 Seed)</small></div>
             </div>
             <label class="dodo-field"><span class="visually-hidden">Email for your order</span><input id="dodoCustomerEmail" type="email" inputmode="email" autocomplete="email" placeholder="Email" required /></label>
             <label class="dodo-field"><span class="visually-hidden">Display name</span><input id="dodoCustomerName" type="text" autocomplete="name" maxlength="48" placeholder="Display name (optional)" /></label>
             <label class="dodo-field dodo-book-field"><span>Choose your ebook</span><select id="dodoBookChoice" required><option value="">Choose an ebook for your seeds</option></select></label>
-            <button class="dodo-proceed-button" id="dodoCheckoutButton" type="submit" aria-expanded="false" aria-controls="dodoPaymentPanel">Sow Your Seed</button>
-            <section class="dodo-payment-panel" id="dodoPaymentPanel" aria-label="Seed payment options" hidden>
-              <div class="paypal-checkout-loader dodo-checkout-loader" id="dodoCheckoutLoader" role="status" aria-live="polite" aria-label="Opening secure payment" hidden>
-                <span id="dodoCheckoutLoaderText">Opening Secure Payment for Your Seed.....</span>
-              </div>
-              <p class="payment-status" id="dodoPaymentStatus" role="status" aria-live="polite" hidden></p>
-              <div class="payment-choice card-choice" id="dodoCardButton">
-                <span>Alternate debit or credit card</span>
-                <small class="preferred-payment-label">Preferred</small>
-                <a
-                  class="alternate-card-link"
-                  id="dodoAlternateCardCheckoutLink"
-                  href="https://sowseed-receiver-seed-alternate-server.vercel.app/"
-                  aria-label="Open debit or credit card checkout popup"
-                  aria-haspopup="dialog"
-                  aria-controls="alternateCheckoutDialog"
-                >Debit or Credit Card</a>
-                <p class="alternate-card-retry" aria-live="polite">Try Again</p>
-              </div>
-              <div class="payment-choice dodo-choice">
-                <span>Dodo</span>
-                <button class="dodo-pay-button" id="dodoPayButton" type="button">Paypal / Credit &amp; Debit Card / Dodo</button>
-              </div>
-              <p class="dodo-payment-guidance">Complete the payment for Your Seed</p>
-            </section>
+            <p class="checkout-request-note">This opens your email app with the book request. No payment is taken on this page.</p>
+            <button class="dodo-proceed-button" id="dodoCheckoutButton" type="submit">Email Book Request</button>
           </form>
         </section>
-        <section class="donation-card minimal-offering" id="support" aria-label="PayPal checkout">
-            <form class="minimal-offering-form" id="supportForm" novalidate>
-              <div class="seed-quantity-row" aria-label="Seed quantity and amount">
-                <div class="paypal-quantity-control">
-                  <button class="seed-stepper-button" id="decreaseSeedButton" type="button" aria-label="Decrease seed quantity">−</button>
-                  <div class="seed-price">
-                    <span class="seed-icon" aria-hidden="true">🌱</span>
-                    <strong id="seedPriceLabel">1 Seed</strong>
-                  </div>
-                  <button class="seed-stepper-button seed-stepper-button-plus" id="increaseSeedButton" type="button" aria-label="Increase seed quantity">+</button>
-                </div>
-                <label class="compact-amount-field">
-                  <span>Total Amount</span>
-                  <span class="paypal-total-value">
-                    <span aria-hidden="true">$</span>
-                    <input id="amountInput" type="number" min="11" step="0.01" value="11.00" inputmode="decimal" aria-label="Total amount in US dollars" aria-describedby="amountError" />
-                  </span>
-                  <small id="paypalTotalSeeds">(1 Seed)</small>
-                </label>
-              </div>
-              <small id="amountError" class="error-message compact-amount-error"></small>
-
-              <label class="field minimal-text-field">
-                <span class="visually-hidden">Email for your order</span>
-                <input id="paymentEmailInput" type="email" inputmode="email" autocomplete="email" placeholder="Email" aria-describedby="emailError" required />
-                <small id="emailError" class="error-message"></small>
-              </label>
-
-              <label class="field minimal-text-field">
-                <span class="visually-hidden">Display name</span>
-                <input id="nameInput" type="text" placeholder="Display name (optional)" maxlength="48" autocomplete="name" aria-describedby="nameError" />
-                <small id="nameError" class="error-message"></small>
-              </label>
-
-              <label class="field minimal-text-field textarea-field">
-                <span class="visually-hidden">Your message</span>
-                <textarea id="messageInput" maxlength="180" placeholder="Your message (optional)"></textarea>
-              </label>
-
-              <button class="button button-primary checkout-button" id="checkoutButton" type="submit" aria-expanded="false" aria-controls="inlinePaypalCheckout">
-                <span id="checkoutLabel">Sow Your Seed</span>
-              </button>
-
-              <section class="inline-paypal-checkout" id="inlinePaypalCheckout" aria-label="PayPal checkout" hidden>
-                <p class="payment-status" id="paymentStatus" role="status" aria-live="polite" hidden></p>
-                <div class="paypal-checkout-loader" id="paypalCheckoutLoader" role="status" aria-live="polite" aria-label="Loading secure PayPal checkout" hidden>
-                  <span class="paypal-checkout-loader-seed" aria-hidden="true">🌱</span>
-                  <span>Preparing your seed…</span>
-                </div>
-                <div class="payment-choice card-choice" id="cardButton">
-                  <span>Alternate debit or credit card</span>
-                  <small class="preferred-payment-label">Preferred</small>
-                  <a
-                    class="alternate-card-link"
-                    id="alternateCardCheckoutLink"
-                    href="https://sowseed-receiver-seed-alternate-server.vercel.app/"
-                    aria-label="Open debit or credit card checkout popup"
-                    aria-haspopup="dialog"
-                    aria-controls="alternateCheckoutDialog"
-                  >Debit or Credit Card</a>
-                  <p class="alternate-card-retry" aria-live="polite">Try Again</p>
-                </div>
-                <div class="payment-choice paypal-choice" id="paypalButton">
-                  <span>PayPal</span>
-                  <div class="paypal-button-slot" id="paypalButtonContainer"></div>
-                </div>
-                <div class="payment-choice paypal-card-choice" id="paypalCardButton">
-                  <span>PayPal debit or credit card</span>
-                  <div class="paypal-button-slot" id="paypalCardButtonContainer"></div>
-                </div>
-              </section>
-            </form>
-          </section>
         <details class="what-is-seed">
           <summary><span>What is Seed</span><span class="what-is-seed-chevron" aria-hidden="true">⌄</span></summary>
           <div class="what-is-seed-copy">
-            <p>A Seed is love set in motion, strengthened by faith, and guided by wisdom. With each Seed, receive a personalised writing made for your heart—and choose an ebook from our collection to carry its message with you.</p>
+            <p>A Seed is love set in motion, strengthened by faith, and guided by wisdom. Choose an eligible ebook from our collection and email your request. Bundle purchases use the hosted checkout links in the Library.</p>
           </div>
         </details>
         <section class="home-books-preview" aria-labelledby="homeBooksTitle">
@@ -640,42 +309,27 @@
       </section>
 
       <section class="app-grid section-view" id="aboutView" data-section-view hidden>
-        <section class="panel recent-donations-panel" id="recentSeeds" aria-label="Recent custom orders">
-            <div class="section-heading">
-              <p class="section-kicker">Recent custom orders</p>
-            </div>
-            <div class="recent-donation-list" id="recentDonationList"></div>
-          </section>
-
         <section class="panel about-panel collapsible-card" id="about">
             <h2 id="aboutTitle">About</h2>
             <div class="about-copy collapsible-content" id="aboutContent">
               <p class="collapsed-preview" id="aboutCollapsed">
-                🌱✨ Personalised Writing for Your Journey ✨📖<br />
-                Order a writing made for your request and delivered by email...
+                🌱✨ Stories for Your Journey ✨📖<br />
+                Explore the collection, read a free ebook, or request a title by email...
               </p>
               <div class="expanded-copy" id="aboutExpanded">
                 <p>
-                  🌱✨ Personalised Writing for Your Journey ✨📖
+                  🌱✨ Stories for Your Journey ✨📖
                 </p>
                 <p>
-                  Seed Garden is a personalised writing platform. Share your prayer, intention,
-                  or message to order a heartfelt writing prepared especially for you and delivered by email.
+                  Christ Garden Library shares ebooks about everyday life, hope, and faith.
+                  Read the free first book in each series, browse the collections, and email us to request an individual title.
                 </p>
               </div>
             </div>
             <button class="show-more-button" type="button" data-toggle-target="aboutContent" aria-expanded="false">
               Show more
             </button>
-            <span class="topic-pill" id="topicPill">Personalised writing</span>
-          </section>
-
-        <section class="panel seed-comments-panel" id="seedCommentsPanel" aria-labelledby="seedCommentsTitle">
-            <div class="section-heading">
-              <p class="section-kicker">Blessing wall</p>
-              <h2 id="seedCommentsTitle">Comments from the community</h2>
-            </div>
-            <div class="seed-comments-list" id="seedCommentsList" aria-live="polite"></div>
+            <span class="topic-pill" id="topicPill">Ebook library</span>
           </section>
 
       </section>
@@ -705,83 +359,10 @@
           <h2 id="bookPreviewTitle"></h2>
           <section aria-labelledby="bookPreviewSummaryHeading"><h3 id="bookPreviewSummaryHeading">Summary</h3><p id="bookPreviewSummary"></p></section>
           <section aria-labelledby="bookPreviewDescriptionHeading"><h3 id="bookPreviewDescriptionHeading">About this ebook</h3><p id="bookPreviewDescription"></p></section>
-          <a class="book-preview-price" id="bookPreviewGetLink" href="#support">To Get: 2+ 🌱</a>
+          <a class="book-preview-price" id="bookPreviewGetLink" href="#home">Request this ebook</a>
         </div>
       </article>
     </dialog>
-
-    <dialog class="alternate-checkout-dialog" id="alternateCheckoutDialog" aria-labelledby="alternateCheckoutTitle">
-      <div class="alternate-checkout-card">
-        <div class="alternate-checkout-heading">
-          <div>
-            <p class="section-kicker">Secure checkout</p>
-            <h2 id="alternateCheckoutTitle">Debit or Credit Card</h2>
-          </div>
-          <button class="icon-button alternate-checkout-close" id="closeAlternateCheckoutButton" type="button" aria-label="Close card checkout">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="m6 6 12 12M18 6 6 18" />
-            </svg>
-          </button>
-        </div>
-        <iframe
-          class="alternate-checkout-frame"
-          id="alternateCheckoutFrame"
-          src="about:blank"
-          title="Debit or credit card checkout"
-          allow="payment"
-          referrerpolicy="strict-origin-when-cross-origin"
-        ></iframe>
-        <p class="alternate-checkout-fallback">
-          <strong>If the server is down try other debit card payment button</strong>
-        </p>
-      </div>
-    </dialog>
-
-    <dialog class="receipt-dialog" id="receiptDialog" aria-labelledby="receiptTitle">
-      <div class="receipt-card">
-        <button class="icon-button close-receipt" id="closeReceiptButton" type="button" aria-label="Close receipt">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="m6 6 12 12M18 6 6 18" />
-          </svg>
-        </button>
-        <div class="receipt-icon" aria-hidden="true">
-          <svg viewBox="0 0 64 64">
-            <path class="seed-core" d="M45.7 7.4C31.7 9.7 17.2 23.6 14.1 38.3c-2.4 11.5 4.9 19 16.4 16.8 14.4-2.7 27.5-17.3 29-31.5.9-8.7-4.2-17.8-13.8-16.2Z" />
-            <path class="seed-shine" d="M24.4 41.5c4.6-11.2 12.6-19.2 24-24" />
-            <path class="seed-sprout" d="M25.5 46.7c6.8-2.2 11.4-6.9 13.9-13.8" />
-          </svg>
-        </div>
-        <p class="section-kicker">Fortune received</p>
-        <h2 id="receiptTitle">Your fortune for today</h2>
-        <p id="receiptSummary">A blessing will appear here after your custom order is complete.</p>
-        <div class="receipt-actions">
-          <button class="button amen-button" id="doneButton" type="button">Amen</button>
-        </div>
-      </div>
-    </dialog>
-
-    <dialog class="payment-failure-dialog" id="paymentFailureDialog" aria-labelledby="paymentFailureTitle">
-      <div class="payment-failure-card">
-        <button class="icon-button payment-failure-close" id="closePaymentFailureButton" type="button" aria-label="Close payment message">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="m6 6 12 12M18 6 6 18" />
-          </svg>
-        </button>
-        <div class="payment-failure-icon" aria-hidden="true">🥀</div>
-        <h2 id="paymentFailureTitle">Your Seed Was Not Sown...</h2>
-        <p class="payment-failure-intro">
-          The prayer you carried in your heart is still waiting. The hope you wanted to place before God has not yet been planted.
-        </p>
-        <p class="payment-failure-emphasis">Do not let this moment pass unfinished.</p>
-        <p class="payment-failure-copy">
-          Sow your seed with faith for the person you love, the prayer you are holding onto, and the future you are asking Jesus to guide. Even the smallest seed begins with one faithful act.
-        </p>
-        <a class="payment-failure-retry" id="retryPaymentButton" href="#support">🌱 SOW YOUR SEED NOW</a>
-        <p class="payment-failure-verse">“For whatever one sows, that will he also reap.” — Galatians 6:7</p>
-      </div>
-    </dialog>
-
-    <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <footer class="footer">
       <nav class="footer-links" aria-label="Legal and information links">
@@ -795,11 +376,10 @@
       </nav>
     </footer>
 
-    <script src="src/config.js?v=3"></script>
-    <script src="src/app.js?v=127" defer></script>
-    <script src="src/home-dodo-checkout.js?v=11" defer></script>
+    <script src="src/app.js?v=128" defer></script>
+    <script src="src/home-dodo-checkout.js?v=12" defer></script>
     <script src="src/home-books-carousel.js?v=1" defer></script>
-    <script src="src/shop-gallery.js?v=4" defer></script>
-    <script src="src/book-preview.js?v=5" defer></script>
+    <script src="src/shop-gallery.js?v=5" defer></script>
+    <script src="src/book-preview.js?v=6" defer></script>
   </body>
 </html>

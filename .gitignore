@@ -6,6 +6,4 @@ SUPERADMIN.txt
 node_modules/
 .DS_Store
 desktop-check.png
-supabase/.branches/
-supabase/.temp/
-supabase/.env
+supabase/

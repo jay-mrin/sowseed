@@ -5,203 +5,65 @@
   const countOutput = document.querySelector("#dodoSeedCount");
   const totalOutput = document.querySelector("#dodoTotalAmount");
   const totalSeedsOutput = document.querySelector("#dodoTotalSeeds");
-  const checkoutButton = document.querySelector("#dodoCheckoutButton");
-  const dodoPayButton = document.querySelector("#dodoPayButton");
-  const paymentPanel = document.querySelector("#dodoPaymentPanel");
-  const checkoutLoader = document.querySelector("#dodoCheckoutLoader");
-  const loaderText = document.querySelector("#dodoCheckoutLoaderText");
-  const paymentStatus = document.querySelector("#dodoPaymentStatus");
+  const bookChoice = document.querySelector("#dodoBookChoice");
   const emailInput = document.querySelector("#dodoCustomerEmail");
   const nameInput = document.querySelector("#dodoCustomerName");
-  const bookChoice = document.querySelector("#dodoBookChoice");
   const books = [...document.querySelectorAll("#libraryView .shop-book")].map((book) => ({
     title: book.querySelector("h4")?.textContent.trim() || "",
     minimumSeeds: Number.parseInt(book.querySelector(".shop-seed-cost")?.textContent.match(/\d+/)?.[0] || "", 10),
   })).filter((book) => book.title && Number.isSafeInteger(book.minimumSeeds));
   let seedCount = 1;
-  let submitting = false;
-  const donorTokenKey = "sow-your-seed-dodo-donor-token";
 
-  const getUnitPrice = () => Math.max(Number(totalOutput.dataset.unitPrice) || 11, 11);
-  const makeOption = (label, value) => {
+  function makeOption(label, value) {
     const option = document.createElement("option");
     option.textContent = label;
     option.value = value;
     return option;
-  };
-  const updateBookChoices = () => {
+  }
+
+  function update() {
+    countOutput.value = String(seedCount);
+    totalOutput.textContent = new Intl.NumberFormat("en-US", {
+      style: "currency", currency: "USD",
+    }).format(seedCount * 11);
+    totalSeedsOutput.textContent = `(${seedCount} ${seedCount === 1 ? "Seed" : "Seeds"})`;
+
     const previous = bookChoice.value;
     bookChoice.replaceChildren(makeOption("Choose an ebook for your seeds", ""));
     for (const book of books.filter((item) => item.minimumSeeds <= seedCount)) {
       bookChoice.add(makeOption(`${book.title} (${book.minimumSeeds}+ ${book.minimumSeeds === 1 ? "Seed" : "Seeds"})`, book.title));
     }
     if ([...bookChoice.options].some((option) => option.value === previous)) bookChoice.value = previous;
-  };
-  const updateTotal = () => {
-    countOutput.value = String(seedCount);
-    totalOutput.textContent = new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(getUnitPrice() * seedCount);
-    totalSeedsOutput.textContent = `(${seedCount} ${seedCount === 1 ? "Seed" : "Seeds"})`;
-    updateBookChoices();
-  };
+  }
 
-  const setStatus = (message, isError = false) => {
-    paymentStatus.textContent = message;
-    paymentStatus.classList.toggle("is-error", isError);
-    paymentStatus.hidden = !message;
-  };
-
-  const setLoading = (isLoading, message = "Opening Secure Payment for Your Seed.....") => {
-    submitting = isLoading;
-    checkoutButton.disabled = isLoading;
-    dodoPayButton.disabled = isLoading;
-    if (isLoading) paymentPanel.hidden = false;
-    paymentPanel.classList.toggle("is-loading", isLoading);
-    checkoutLoader.hidden = !isLoading;
-    loaderText.textContent = message;
-    checkoutButton.classList.add("is-checkout-open");
-    checkoutButton.setAttribute("aria-expanded", "true");
-  };
-
-  const cleanDodoReturnParameters = () => {
-    const url = new URL(window.location.href);
-    for (const key of ["dodo_return", "dodo_cancelled", "payment_id", "status", "email", "license_key"]) {
-      url.searchParams.delete(key);
-    }
-    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
-  };
-
-  const confirmReturnedPayment = async (paymentId) => {
-    const checkout = window.SowYourSeedCheckout;
-    if (!checkout?.callEdge) throw new Error("The payment service is still loading. Please refresh this page.");
-
-    let lastError;
-    for (let attempt = 0; attempt < 5; attempt += 1) {
-      try {
-        return await checkout.callEdge("confirm-dodo-payment", {
-          body: {
-            paymentId,
-            donorAccessToken: window.sessionStorage.getItem(donorTokenKey) || "",
-          },
-        });
-      } catch (error) {
-        lastError = error;
-        if (error?.status !== 422 || attempt === 4) throw error;
-        await new Promise((resolve) => window.setTimeout(resolve, 1200));
-      }
-    }
-    throw lastError;
-  };
-
-  const handleDodoReturn = async () => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("dodo_cancelled") === "1") {
-      window.sessionStorage.removeItem(donorTokenKey);
-      paymentPanel.hidden = true;
-      checkoutButton.classList.remove("is-checkout-open");
-      checkoutButton.setAttribute("aria-expanded", "false");
-      setStatus("");
-      cleanDodoReturnParameters();
-      window.SowYourSeedCheckout?.openPaymentFailure?.();
-      return;
-    }
-
-    if (params.get("dodo_return") !== "1") return;
-    const paymentId = String(params.get("payment_id") || "").trim();
-    if (!paymentId) {
-      paymentPanel.hidden = false;
-      checkoutButton.classList.add("is-checkout-open");
-      checkoutButton.setAttribute("aria-expanded", "true");
-      setLoading(false);
-      setStatus("Dodo returned without a payment reference. Please contact support if you were charged.", true);
-      cleanDodoReturnParameters();
-      return;
-    }
-
-    setStatus("");
-    setLoading(true, "Confirming your Dodo payment and creating your order…");
-    try {
-      const payload = await confirmReturnedPayment(paymentId);
-      await window.SowYourSeedCheckout.finishDodoPayment(payload);
-      window.sessionStorage.removeItem(donorTokenKey);
-      form.reset();
-      seedCount = 1;
-      updateTotal();
-      paymentPanel.hidden = true;
-      checkoutButton.classList.remove("is-checkout-open");
-      checkoutButton.setAttribute("aria-expanded", "false");
-    } catch (error) {
-      setStatus(error?.message || "Dodo payment confirmation failed. Please contact support if you were charged.", true);
-      window.SowYourSeedCheckout?.openPaymentFailure?.();
-    } finally {
-      setLoading(false);
-      cleanDodoReturnParameters();
-    }
-  };
-
-  document.querySelector("#dodoDecreaseSeeds").addEventListener("click", () => {
-    if (submitting) return;
+  document.querySelector("#dodoDecreaseSeeds")?.addEventListener("click", () => {
     seedCount = Math.max(1, seedCount - 1);
-    updateTotal();
+    update();
   });
-  document.querySelector("#dodoIncreaseSeeds").addEventListener("click", () => {
-    if (submitting) return;
+  document.querySelector("#dodoIncreaseSeeds")?.addEventListener("click", () => {
     seedCount = Math.min(999, seedCount + 1);
-    updateTotal();
+    update();
+  });
+
+  window.addEventListener("library:choose-book", (event) => {
+    seedCount = Math.max(seedCount, event.detail.minimumSeeds);
+    update();
+    bookChoice.value = event.detail.title;
   });
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
-    if (submitting || !emailInput.reportValidity() || !bookChoice.reportValidity()) return;
-
-    setStatus("");
-    paymentPanel.hidden = false;
-    checkoutButton.classList.add("is-checkout-open");
-    checkoutButton.setAttribute("aria-expanded", "true");
-    dodoPayButton.focus();
+    if (!emailInput.reportValidity() || !bookChoice.reportValidity()) return;
+    const subject = `Christ Garden Library request: ${bookChoice.value}`;
+    const body = [
+      `Ebook: ${bookChoice.value}`,
+      `Seeds: ${seedCount}`,
+      `Seed value shown: ${totalOutput.textContent}`,
+      `Name: ${nameInput.value.trim() || "Not provided"}`,
+      `Email: ${emailInput.value.trim()}`,
+    ].join("\n");
+    window.location.href = `mailto:sowyourseed@christgarden.church?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   });
 
-  dodoPayButton.addEventListener("click", async () => {
-    if (submitting || !emailInput.reportValidity() || !bookChoice.reportValidity()) return;
-
-    setStatus("");
-    setLoading(true);
-    try {
-      const checkout = window.SowYourSeedCheckout;
-      if (!checkout?.callEdge) throw new Error("Dodo checkout is still loading. Please try again.");
-      const donorAccessToken = `${crypto.randomUUID()}-${crypto.randomUUID()}`;
-      window.sessionStorage.setItem(donorTokenKey, donorAccessToken);
-      const payload = await checkout.callEdge("create-dodo-checkout", {
-        body: {
-          seedCount,
-          email: emailInput.value.trim(),
-          name: nameInput.value.trim(),
-          message: `Selected ebook: ${bookChoice.value}`,
-          donorAccessToken,
-        },
-      });
-      if (!payload.checkoutUrl) throw new Error("Dodo did not return a secure checkout link.");
-      window.location.assign(payload.checkoutUrl);
-    } catch (error) {
-      window.sessionStorage.removeItem(donorTokenKey);
-      setLoading(false);
-      setStatus(error?.message || "Dodo checkout could not start. Please try again.", true);
-    }
-  });
-
-  new MutationObserver(updateTotal).observe(totalOutput, {
-    attributes: true,
-    attributeFilter: ["data-unit-price"],
-  });
-  updateTotal();
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => void handleDodoReturn(), { once: true });
-  } else {
-    void handleDodoReturn();
-  }
+  update();
 })();

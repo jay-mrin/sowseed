@@ -2,20 +2,15 @@
   "name": "sow-your-seed",
   "version": "1.0.0",
   "private": true,
-  "description": "Personalised digital writing custom-order platform with Supabase payment backends.",
+  "description": "Static Christ Garden Library website.",
   "scripts": {
     "dev": "python3 -m http.server 5173",
-    "check:js": "node --check src/app.js",
-    "check:repo": "node --test tests/repository-integrity.test.mjs",
-    "lint": "eslint src/*.js tests/*.mjs",
-    "test": "node --test tests/*.test.mjs",
-    "check": "npm run check:js && npm run lint && npm test",
-    "supabase:functions:serve": "supabase functions serve --env-file .env",
-    "supabase:db:push": "supabase db push",
-    "supabase:deploy": "supabase functions deploy public-bootstrap create-dodo-checkout confirm-dodo-payment dodo-webhook create-paypal-order capture-paypal-order prepare-paypal-subscription confirm-paypal-subscription paypal-webhook admin-profile admin-settings admin-donations admin-subscriptions admin-analytics track-checkout-event"
+    "check:js": "node --check src/app.js && node --check src/home-dodo-checkout.js && node --check src/book-preview.js",
+    "lint": "eslint src/*.js tests/static-site.test.mjs",
+    "test": "node --test tests/static-site.test.mjs",
+    "check": "npm run check:js && npm run lint && npm test"
   },
   "devDependencies": {
-    "eslint": "^9.39.5",
-    "supabase": "^2.39.2"
+    "eslint": "^9.39.5"
   }
 }

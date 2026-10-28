@@ -138,10 +138,12 @@
       flipHint.hidden = true;
       pagesOutput.hidden = false;
       getLink.hidden = false;
-      getLink.href = "#support";
+      getLink.href = "#home";
       getLink.removeAttribute("download");
-      getLink.textContent = `To Get: ${Number.isFinite(seedCost) ? seedCost : 2}+ 🌱`;
+      getLink.textContent = `Request with ${Number.isFinite(seedCost) ? seedCost : 2}+ 🌱`;
       getLink.removeAttribute("aria-label");
+      getLink.dataset.bookTitle = title;
+      getLink.dataset.minimumSeeds = String(Number.isFinite(seedCost) ? seedCost : 2);
     }
     renderFlipPage();
     dialog.showModal();
@@ -191,6 +193,13 @@
   });
 
   closeButton?.addEventListener("click", () => dialog.close());
+  getLink?.addEventListener("click", () => {
+    if (getLink.download || !getLink.dataset.bookTitle) return;
+    window.dispatchEvent(new CustomEvent("library:choose-book", {
+      detail: { title: getLink.dataset.bookTitle, minimumSeeds: Number(getLink.dataset.minimumSeeds) },
+    }));
+    dialog.close();
+  });
   flipPrev?.addEventListener("click", () => turnPage(-1));
   flipNext?.addEventListener("click", () => turnPage(1));
   flipStage?.addEventListener("touchstart", (event) => {
